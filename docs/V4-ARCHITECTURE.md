@@ -2,7 +2,26 @@
 
 > **Status:** Draft for owner review. No code has been built against this yet.
 > **Audience:** Non-technical owner. Plain English first, technical detail second.
-> **Goal:** Replace v3's AWS-heavy architecture with a stack that costs ~$25–50/month instead of ~$600/month.
+> **Goal:** Replace v3's AWS-heavy architecture with a stack that costs ~$25–50/month instead of ~$600/month, AND support v4's smarter product vision (ML-driven matching, AI features, multi-tenancy, integrations).
+
+---
+
+## 0. Product Vision (What v4 Is, Beyond Cost Savings)
+
+v4 isn't just "v3 but cheaper." It's a substantially smarter product. The architecture has to support all of this from day 1, not as bolt-ons:
+
+1. **Smarter matching algorithm** — improves over time as the system learns from outcomes (hires, rejections, time-to-hire, etc.).
+2. **Every action stored for machine learning** — clicks, searches, views, applications, hires, time-on-page. An events log is a first-class part of the database, not an afterthought.
+3. **Ranked sales reps in search** — when a client searches, results are ordered by "most likely successful hire" probability. The ranking model updates from observed outcomes.
+4. **Beautiful dashboards** — modern analytics feel, with aggregations and (where useful) real-time updates.
+5. **AI features** — coming. Likely uses: candidate summaries, search query understanding, automated outreach drafting, similarity-based matching via embeddings.
+6. **Multiple user types** — candidates, clients, recruiters, agency owners, RemoteRep admins, and more to be added.
+7. **Multi-tenant** — Agency A's data is invisible to Agency B. Enforced at the database level so it's impossible for a coding mistake to leak data between tenants.
+8. **External integrations** — coming. Targets include ATS (Greenhouse, Lever, Workday-class), payroll, calendars (Google/Outlook), Stripe (already present).
+
+These shape every section of this document. Where a section says "this is how we do X for ML/AI/multi-tenancy/integrations," that's why.
+
+**What we are deliberately NOT building yet:** custom ML training pipelines, GPU infrastructure, our own auth provider, custom analytics warehouse. We use third-party APIs (OpenAI/Anthropic) for AI and Postgres for analytics until the day they can't keep up — which is years away for a business of any reasonable size.
 
 ---
 
@@ -107,6 +126,108 @@ That's it. Five pieces. Each one does one job well.
 **What it is:** Already set up. Your code lives in `github.com/remoterobert/RemoteRep---v4`. Every code change is saved with full history.
 
 **Why it's relevant to architecture:** Railway watches your GitHub. When you push a change, Railway sees it and redeploys automatically. This is how you go from "Claude edited a file" to "users see the change live" without manual deploy steps.
+
+---
+
+## 2.5. How The Architecture Supports The Vision
+
+The five pieces from Section 2 are vendor choices. The refinements below are **patterns we follow inside that stack** to make the vision work. None of these add new vendors. All of them must be baked in from day 1, because retrofitting them later is painful.
+
+### A) Events table — first-class, from day 1
+
+Every meaningful user action writes one row to a single `events` table in Postgres. The payload uses Postgres' `jsonb` type so we can store any shape of data without schema migrations every time a new event type is added.
+
+```
+events
+├─ id (uuid)
+├─ tenant_id (uuid)        ← who owns this event (multi-tenancy)
+├─ user_id (uuid)          ← who did it
+├─ event_type (text)       ← "candidate.viewed", "search.run", "hire.completed", etc.
+├─ entity_type, entity_id  ← what was acted on
+├─ payload (jsonb)         ← any extra details
+└─ created_at (timestamp)
+```
+
+**Why it matters:** ML features need training data. If we don't capture events from launch, we have no training data when we want to train. **Capture broadly now, decide what's useful later.**
+
+**Scale considerations:** Postgres handles tens of millions of rows fine. If event volume becomes huge (10M+/day), we add ClickHouse or a similar columnar store. We're nowhere near that and won't be for a long time.
+
+### B) `pgvector` enabled in Supabase from day 1
+
+`pgvector` is a Postgres extension that lets us store and search "embeddings" — numeric fingerprints of text, images, or other data. Two AI/ML capabilities depend on it:
+
+- **Semantic search** — "find sales reps similar to this top performer" beyond exact keyword match.
+- **AI recommendations** — power the matching algorithm with embedding-based similarity.
+
+Enabling it is one click in Supabase. **Free.** Painful to retrofit if data already exists without embedding columns.
+
+### C) Multi-tenancy via Postgres Row-Level Security (RLS)
+
+Multi-tenancy is enforced at the **database layer**, not the application layer. Here's the difference:
+
+- **App-level (fragile):** Every query in the code remembers to filter by tenant. One forgotten filter = data leak.
+- **Database-level (safe):** Postgres itself refuses to return data from the wrong tenant. Even if a coding mistake happens, no data leaks.
+
+**Implementation:**
+- Every business-data table has a `tenant_id` column.
+- Every table has RLS policies like *"a user can only see/modify rows where `tenant_id` matches the tenant they belong to."*
+- RemoteRep admins get an override policy (they can see across tenants).
+- Supabase has first-class RLS support — this is one reason we picked it.
+
+### D) Role-based access (RBAC)
+
+Multiple user types means we can't hardcode "if user.type == 'candidate' then…" checks scattered through the code. Instead:
+
+- A `roles` table defines roles (candidate, client, recruiter, agency_owner, admin, etc.).
+- A `user_roles` table maps users → roles (a user can have multiple).
+- Permissions checks ask: "does this user have a role that allows action X on entity Y?"
+
+Easy to add new roles later. Easy to grant a user temporary admin access. Easy to audit.
+
+### E) Background jobs — staged approach
+
+Lots of things in v4 need to run on a schedule or in response to events, not when a user clicks a button:
+- Nightly recomputation of matching scores
+- Dashboard rollup aggregations
+- Periodic syncs with ATS / payroll / calendar integrations
+- Sending scheduled email digests
+
+**Phase 1 (launch):** Supabase Edge Functions on cron schedules. Built-in, free at low usage.
+
+**Phase 2 (when complexity grows):** Add Inngest ($0–20/mo, generous free tier) for workflows with retries, branching, long-running jobs. Or run a Railway worker service ($5–10/mo extra).
+
+We start with Phase 1 and only graduate when needed.
+
+### F) AI API calls go through a single wrapper
+
+All calls to OpenAI / Anthropic / any LLM go through one helper module in the codebase. **Never** call the AI SDK directly from feature code. The wrapper handles:
+
+- **Cost tracking** per user, per feature, per day. AI spend is the new "AWS bill" risk — unbounded usage can rack up serious money fast.
+- **Hard budget caps** — if today's spend hits a configured limit, the wrapper returns an error or cached response instead of calling the API.
+- **Rate limiting** — protect against runaway loops or abuse.
+- **Caching** — identical prompts return cached responses (huge cost saver).
+- **Provider switching** — start with one provider, easily swap or add a fallback later.
+
+**This is non-optional.** Every AI feature gets gated through this helper before it touches production.
+
+### G) Dashboard query strategy — materialized views
+
+"Beautiful dashboards" usually means aggregations: counts, sums, time-series. If we run those queries against the raw `events` table every time someone loads a dashboard, performance degrades as data grows.
+
+Instead, we use **Postgres materialized views** — pre-computed result tables, refreshed on a schedule (e.g., every 5 min for "today's metrics", nightly for historical reports). Dashboard queries hit the view, which is small and fast.
+
+This is a well-understood Postgres pattern. No new tools required.
+
+### H) Integration architecture (webhooks + OAuth + credential vault)
+
+Integrations with ATS, calendars, payroll have two directions:
+
+- **Inbound (webhook receivers):** External services POST to our Railway endpoints when something happens on their side. Need: signature verification, idempotency (don't double-process), retry handling.
+- **Outbound (we call their API):** Need stored OAuth tokens per tenant (one tenant's Greenhouse account ≠ another's), refresh handling, rate limiting.
+
+**Credential storage:** OAuth tokens, API keys etc. go in **Supabase Vault** — Postgres column-level encryption. Not plaintext, not in env vars, not in app code.
+
+**Background jobs (Section E)** handle scheduled syncs.
 
 ---
 
@@ -222,6 +343,7 @@ Three things deliberately left for follow-up documents:
 
 ## 8. Decisions This Document Locks In
 
+### Vendor decisions (easy to change)
 | Decision | Choice | Reversible? |
 |---|---|---|
 | Hosting platform | Railway | Yes — can move to Render/Fly/etc. with ~1 day of work |
@@ -229,11 +351,18 @@ Three things deliberately left for follow-up documents:
 | Email | Resend | Yes — swap providers ~1 hour |
 | File storage | Cloudflare R2 | Yes — S3-compatible, moves trivially |
 | Code repo | GitHub (`remoterobert/RemoteRep---v4`) | Yes — already moved once |
+| Background jobs (initial) | Supabase Edge Functions on cron | Yes — Inngest/Railway worker is the upgrade path |
 
+### Strategic decisions (harder to change)
 | Decision | Choice | Reversible? |
 |---|---|---|
-| Migration approach | Migrate ALL v3 data to v4 | Yes, but expensive to change later (would mean redoing migration scripts) |
+| Migration approach | Migrate ALL v3 data to v4 | Yes, but expensive to change (would mean redoing migration scripts) |
 | Architecture style | Modular (5 services, each replaceable) | Yes — could merge to monolith later if wanted |
+| Multi-tenancy enforcement | Database-level via Postgres RLS | **No** — retrofitting later is extremely painful. Bake in from day 1. |
+| Events table for ML | First-class part of schema from day 1 | **No** — without early adoption, we lose months of training data |
+| `pgvector` enabled | Day 1 | Trivial to enable upfront; awkward to retrofit |
+| AI API access pattern | Single wrapper module, never direct SDK calls | Reversible but undisciplined drift makes cost control impossible |
+| Auth provider | Supabase Auth (built into chosen DB) | Yes — but auth migration is always painful (passwords/sessions) |
 
 ---
 
