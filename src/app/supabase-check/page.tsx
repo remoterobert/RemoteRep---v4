@@ -76,18 +76,16 @@ export default async function SupabaseCheckPage() {
           🔍 Diagnostic — what process.env actually contains
         </h2>
         <p className="text-xs text-zinc-500 mb-2">
-          Lists all env var names visible at runtime that match /SUPA/i,
-          /RAILWAY/i, or NEXT_PUBLIC_*. Helps catch typos, missing vars,
-          or build-vs-runtime inlining issues.
+          Full dump of env var NAMES (values omitted — they may be secret).
+          If our Supabase vars aren't here, Railway isn't injecting them.
         </p>
         <pre className="text-xs bg-zinc-100 dark:bg-zinc-900 p-3 rounded overflow-x-auto">
 {JSON.stringify(
   {
     typeof_supabase_url: typeof process.env.NEXT_PUBLIC_SUPABASE_URL,
     typeof_supabase_anon_key: typeof process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    matching_env_keys: Object.keys(process.env)
-      .filter((k) => /SUPA|NEXT_PUBLIC|RAILWAY_ENVIRONMENT/.test(k))
-      .sort(),
+    total_env_var_count: Object.keys(process.env).length,
+    all_env_var_names_sorted: Object.keys(process.env).sort(),
   },
   null,
   2,
