@@ -2,18 +2,41 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
+async function getUserSafe() {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.getUser();
+    // "AuthSessionMissingError" = no signed-in user; that's an expected
+    // state on a fresh project, not a connection failure.
+    const isExpectedNoSession = error?.name === "AuthSessionMissingError";
+    return {
+      data,
+      realError: error && !isExpectedNoSession ? error : null,
+    };
+  } catch (e) {
+    return {
+      data: null,
+      realError: {
+        name: "ClientInitError",
+        message: e instanceof Error ? e.message : String(e),
+      },
+    };
+  }
+}
+
 export default async function SupabaseCheckPage() {
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getUser();
-
-  // "Auth session missing" is the EXPECTED response when no user is signed
-  // in — it means we successfully reached Supabase and got a valid reply.
-  // Anything else is a real connection or auth-config failure.
-  const isExpectedNoSession = error?.name === "AuthSessionMissingError";
-  const realError = error && !isExpectedNoSession ? error : null;
-
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const hasAnonKey = !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  // Only attempt the connection if both env vars are present.
+  let data: Awaited<ReturnType<typeof getUserSafe>>["data"] = null;
+  let realError: { name: string; message: string } | null = null;
+
+  if (supabaseUrl && hasAnonKey) {
+    const result = await getUserSafe();
+    data = result.data;
+    realError = result.realError;
+  }
 
   return (
     <main className="min-h-screen p-8 font-mono text-sm max-w-2xl mx-auto">
@@ -54,7 +77,11 @@ export default async function SupabaseCheckPage() {
           Calls supabase.auth.getUser() — succeeds on a fresh project (no
           tables required).
         </p>
-        {realError ? (
+        {!supabaseUrl || !hasAnonKey ? (
+          <div className="text-amber-600">
+            <p>⚠️ Skipped — env vars missing (see above)</p>
+          </div>
+        ) : realError ? (
           <div className="text-red-600">
             <p>❌ Real error: {realError.message}</p>
             <p className="text-xs mt-1">({realError.name})</p>
