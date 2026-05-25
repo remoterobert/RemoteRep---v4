@@ -1,0 +1,92 @@
+import { SendEmailCommand, SESv2Client } from '@aws-sdk/client-sesv2';
+import * as databaseService from './database';
+import createError from '../utilities/createError';
+import emailLanguage from '../utilities/emailLanguage';
+import replaceLanguage from '../utilities/replaceLanguage';
+
+const client = new SESv2Client({ region: process.env.AWS_REGION });
+
+const checkWhitelist = async (email: string) => {
+    if (process.env.DEPLOYMENT_STAGE !== 'prod') {
+        const get = await databaseService.get({
+            TableName: 'v3-emailaccess-all',
+            Key: { email },
+        });
+
+        return !!get.Item?.email;
+    } else return true;
+};
+
+const sender = async ({
+    target,
+    buttonHref,
+    subject,
+    summary,
+    title,
+    content,
+    buttonText,
+}: {
+    target: string;
+    buttonHref: string;
+    subject: string;
+    summary: string;
+    title: string;
+    content: string;
+    buttonText: string;
+}) => {
+    try {
+        if (!(await checkWhitelist(target.toLowerCase())))
+            throw createError(
+                403,
+                'This email address cannot be used outside the production environment.'
+            );
+
+        await client.send(
+            new SendEmailCommand({
+                Content: {
+                    Simple: {
+                        Subject: {
+                            Data: title,
+                        },
+                        Body: {
+                            Html: {
+                                Data: `<!DOCTYPE html><html lang="en" xmlns:v="urn:schemas-microsoft-com:vml"><head> <meta charset="utf-8"> <meta name="x-apple-disable-message-reformatting"> <meta name="viewport" content="width=device-width, initial-scale=1"> <meta name="format-detection" content="telephone=no, date=no, address=no, email=no, url=no"> <meta name="color-scheme" content="light dark"> <meta name="supported-color-schemes" content="light dark"> <!--[if mso]> <noscript> <xml> <o:OfficeDocumentSettings xmlns:o="urn:schemas-microsoft-com:office:office" > <o:PixelsPerInch>96</o:PixelsPerInch> </o:OfficeDocumentSettings> </xml> </noscript> <style> td, th, div, p, a, h1, h2, h3, h4, h5, h6 { font-family: 'Segoe UI', sans-serif; mso-line-height-rule: exactly; } </style> <![endif]--> <title>${subject}</title> <style> @media (max-width: 600px) { .sm-my-8 { margin-top: 32px !important; margin-bottom: 32px !important } .sm-px-4 { padding-left: 16px !important; padding-right: 16px !important } .sm-px-6 { padding-left: 24px !important; padding-right: 24px !important } .sm-leading-8 { line-height: 32px !important } } </style></head><body style="margin: 0; width: 100%; background-color: #111827; padding: 0; -webkit-font-smoothing: antialiased; word-break: break-word"> <div style="display: none"> ${summary} &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; &#8199;&#65279;&#847; </div> <div role="article" aria-roledescription="email" aria-label="${subject}" lang="en"> <div class="sm-px-4" style="background-color: #111827; font-family: Helvetica"> <table align="center" cellpadding="0" cellspacing="0" role="none"> <tr> <td style="width: 552px; max-width: 100%"> <div class="sm-my-8" style="margin-top: 48px; margin-bottom: 48px; text-align: center"> <a href="${process.env.FRONTEND_BASE_URL}"> <img src="${process.env.FRONTEND_BASE_URL}/white-logo-with-text.png" width="250" alt="RemoteRep.com" title="RemoteRep.com" style="max-width: 100%; vertical-align: middle; line-height: 1; border: 0"> </a> </div> <table style="width: 100%;" cellpadding="0" cellspacing="0" role="none"> <tr> <td class="sm-px-6" style="background-color: #fff; padding: 48px; font-size: 16px; color: #374151; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05)"> <h1 class="sm-leading-8" style="margin: 0 0 24px; font-size: 24px; font-weight: 600; color: #000"> ${title} </h1> <p style="margin: 0; line-height: 24px">${content}</p> <div role="separator" style="line-height: 24px">&zwj;</div> <div> <a href="${buttonHref}" style="display: inline-block; background-color: #004FBE; padding: 16px 24px; font-size: 16px; font-weight: 600; line-height: 1; color: #f9fafb; text-decoration: none"> <!--[if mso]> <i style="mso-font-width: -100%; letter-spacing: 32px; mso-text-raise: 30px" hidden>&nbsp;</i> <![endif]--> <span style="mso-text-raise: 16px"> ${buttonText} &rarr; </span> <!--[if mso]> <i style="mso-font-width: -100%; letter-spacing: 32px;" hidden>&nbsp;</i> <![endif]--> </a> </div> <div role="separator" style="line-height: 48px">&zwj;</div> </td> </tr> <tr role="separator"> <td style="line-height: 48px">&zwj;</td> </tr> <tr> <td style="padding-left: 24px; padding-right: 24px; text-align: center; font-size: 12px; color: #4b5563"> <p style="margin: 0; font-style: italic"> Transactional emails are essential to the functionality of RemoteRep.com.<br>If you wish to stop receiving emails, please contact support to request the deletion of your account. </p> </td> </tr> </table> </td> </tr> </table> </div> </div></body></html>`,
+                            },
+                            Text: {
+                                Data: `${title}\n\n${content}\n${buttonText}:\n${buttonHref}\n\nTransactional emails are essential to the functionality of RemoteRep.com.\nIf you wish to stop receiving emails, please contact support to request the deletion of your account.`,
+                            },
+                        },
+                    },
+                },
+                Destination: {
+                    ToAddresses: [target.toLowerCase()],
+                },
+                FromEmailAddress: 'RemoteRep Team <donotreply@remoterep.com>',
+            })
+        );
+    } catch (err) {
+        console.error(err);
+    }
+};
+
+const sendEmail = async ({
+    language,
+    target,
+    buttonHref,
+    replace,
+}: {
+    language: keyof typeof emailLanguage;
+    target: string;
+    buttonHref?: string;
+    replace?: { [k: string]: string };
+}) =>
+    await sender({
+        target,
+        buttonHref: buttonHref || `${process.env.FRONTEND_BASE_URL}/app`,
+        ...(replaceLanguage(
+            emailLanguage[language],
+            replace
+        ) as (typeof emailLanguage)[typeof language]),
+    });
+
+export { client, sendEmail };

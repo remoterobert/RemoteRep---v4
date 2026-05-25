@@ -1,0 +1,69 @@
+---
+title: 'Invited to apply'
+preheader: "You've been invited to apply for a listing by one of our clients."
+bodyClass: bg-gray-900/80
+---
+
+<x-main>
+    <div class="bg-gray-900/80 sm:px-4 font-serif">
+        <table align="center">
+            <tr>
+                <td class="w-[552px] max-w-full">
+                    <div class="my-12 sm:my-8 text-center">
+                        <a href="@{{frontendPublicUrl}}">
+                            <img
+                                src="@{{frontendPublicUrl}}/white-logo-with-text.png"
+                                width="250"
+                                alt="RemoteRep.com"
+                                title="RemoteRep.com"
+                            />
+                        </a>
+                    </div>
+
+                    <table class="w-full">
+                        <tr>
+                            <td
+                                class="p-12 sm:px-6 text-base text-gray-700 bg-white shadow-sm"
+                            >
+                                <h1
+                                    class="m-0 mb-6 text-2xl sm:leading-8 text-black font-semibold"
+                                >
+                                    Exciting news!
+                                </h1>
+
+                                <p class="m-0 leading-6">
+                                    You've been invited to apply for a listing
+                                    by one of our clients.
+                                </p>
+
+                                <x-spacer height="24px" />
+
+                                <x-button
+                                    href="@{{frontendPublicUrl}}/app/talent"
+                                >
+                                    Visit your dashboard &rarr;
+                                </x-button>
+
+                                <x-spacer height="48px" />
+                            </td>
+                        </tr>
+                        <tr role="separator">
+                            <td class="leading-12">&zwj;</td>
+                        </tr>
+                        <tr>
+                            <td class="text-center text-gray-600 text-xs px-6">
+                                <p class="m-0 italic">
+                                    Transactional emails are essential to the
+                                    functionality of RemoteRep.com.<br />If you
+                                    wish to stop receiving emails, please
+                                    contact support to request the deletion of
+                                    your account.
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </div>
+</x-main>
