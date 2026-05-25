@@ -72,6 +72,30 @@ export default async function SupabaseCheckPage() {
       </section>
 
       <section className="mb-6">
+        <h2 className="font-bold mb-2">
+          🔍 Diagnostic — what process.env actually contains
+        </h2>
+        <p className="text-xs text-zinc-500 mb-2">
+          Lists all env var names visible at runtime that match /SUPA/i,
+          /RAILWAY/i, or NEXT_PUBLIC_*. Helps catch typos, missing vars,
+          or build-vs-runtime inlining issues.
+        </p>
+        <pre className="text-xs bg-zinc-100 dark:bg-zinc-900 p-3 rounded overflow-x-auto">
+{JSON.stringify(
+  {
+    typeof_supabase_url: typeof process.env.NEXT_PUBLIC_SUPABASE_URL,
+    typeof_supabase_anon_key: typeof process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    matching_env_keys: Object.keys(process.env)
+      .filter((k) => /SUPA|NEXT_PUBLIC|RAILWAY_ENVIRONMENT/.test(k))
+      .sort(),
+  },
+  null,
+  2,
+)}
+        </pre>
+      </section>
+
+      <section className="mb-6">
         <h2 className="font-bold mb-2">Connection test</h2>
         <p className="text-xs text-zinc-500 mb-2">
           Calls supabase.auth.getUser() — succeeds on a fresh project (no
