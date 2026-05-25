@@ -198,6 +198,21 @@ Lots of things in v4 need to run on a schedule or in response to events, not whe
 
 We start with Phase 1 and only graduate when needed.
 
+### E.5) Where custom business logic lives — Unified Next.js (decided 2026-05-25)
+
+v4 uses **one codebase**: a Next.js app that contains both the frontend (pages users see) AND the backend (API endpoints under `app/api/*/route.ts`). One Railway service runs the whole thing.
+
+This is in contrast to v3, which had a separate Express backend. Reasons for unifying:
+- **One codebase** = easier to maintain, single deploy, shared TypeScript types end-to-end.
+- **One Railway service** = lower hosting cost ($5–15/mo instead of $10–20/mo).
+- **Standard modern pattern** = lots of community examples, easy to find help.
+
+The browser can still talk directly to Supabase for simple cases (real-time subscriptions, direct file uploads to Storage), but the **default pattern** is: browser → Next.js API route → Supabase / Stripe / GHL / etc. This keeps business logic in normal server code where it's easy to read, test, and modify — rather than scattered across RLS policies and Edge Functions.
+
+**Multi-tenancy enforcement still happens at TWO layers** (defense in depth):
+- Database-level RLS policies (catches anything that bypasses the API)
+- API-route-level checks (catches things before they hit the database)
+
 ### F) AI API calls go through a single wrapper
 
 All calls to OpenAI / Anthropic / any LLM go through one helper module in the codebase. **Never** call the AI SDK directly from feature code. The wrapper handles:
@@ -358,11 +373,13 @@ Three things deliberately left for follow-up documents:
 |---|---|---|
 | Migration approach | Migrate ALL v3 data to v4 | Yes, but expensive to change (would mean redoing migration scripts) |
 | Architecture style | Modular (5 services, each replaceable) | Yes — could merge to monolith later if wanted |
-| Multi-tenancy enforcement | Database-level via Postgres RLS | **No** — retrofitting later is extremely painful. Bake in from day 1. |
+| Backend codebase | Unified Next.js (frontend + API routes in one app) | Yes — could split off Express backend later if needed for mobile/etc. |
+| Multi-tenancy enforcement | Database-level RLS + API-route checks (defense in depth) | **No** — retrofitting later is extremely painful. Bake in from day 1. |
 | Events table for ML | First-class part of schema from day 1 | **No** — without early adoption, we lose months of training data |
 | `pgvector` enabled | Day 1 | Trivial to enable upfront; awkward to retrofit |
 | AI API access pattern | Single wrapper module, never direct SDK calls | Reversible but undisciplined drift makes cost control impossible |
 | Auth provider | Supabase Auth (built into chosen DB) | Yes — but auth migration is always painful (passwords/sessions) |
+| GoHighLevel (CRM) | Keep — port the v3 integration | Yes, but expensive to remove |
 
 ---
 
