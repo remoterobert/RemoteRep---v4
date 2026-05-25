@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // v3 archive is for reference only — not part of the v4 build
+    "v3-archive/**",
   ]),
 ]);
 
