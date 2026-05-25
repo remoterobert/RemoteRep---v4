@@ -1,5 +1,7 @@
 # CLAUDE.md — Instructions for Claude
 
+@AGENTS.md
+
 This file is the source of truth for how Claude works on this project.
 **The owner is non-technical.** Every rule below exists to protect the project from accidental damage and to keep the owner in control.
 

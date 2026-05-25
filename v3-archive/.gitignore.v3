@@ -1,0 +1,7 @@
+node_modules/
+.next/
+dist/
+.env
+
+# Local-only safety fallback (pre-v4 git history snapshot)
+.git.old/
