@@ -35,7 +35,20 @@ export async function updateSession(request: NextRequest) {
   );
 
   // Refreshes the user's auth session if needed.
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Route protection: redirect unauthenticated users away from protected paths.
+  const pathname = request.nextUrl.pathname;
+  const isProtected = pathname.startsWith("/dashboard");
+
+  if (isProtected && !user) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("error", "Please sign in to continue.");
+    return NextResponse.redirect(url);
+  }
 
   return supabaseResponse;
 }
