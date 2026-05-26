@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
@@ -9,65 +10,112 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Belt + suspenders: proxy also redirects unauth'd users, but check here too.
-  if (!user) {
-    redirect("/login");
+  if (!user) redirect("/login");
+
+  // Check for tenant memberships. If none, send to onboarding.
+  const { data: memberships } = await supabase
+    .from("tenant_members")
+    .select("tenant_id, role, status, tenants!inner(id, name, type, slug)")
+    .eq("user_id", user.id)
+    .eq("status", "active");
+
+  if (!memberships || memberships.length === 0) {
+    redirect("/onboarding/choose-role");
   }
 
-  // Fetch the matching public.users row (auto-created on signup via trigger).
+  type Membership = {
+    tenant_id: string;
+    role: string;
+    tenants: { id: string; name: string; type: string; slug: string };
+  };
+  const m = memberships[0] as unknown as Membership;
+
+  const isHiring =
+    m.tenants.type === "client_company" || m.tenants.type === "agency";
+
+  // Fetch user profile + hiring intents (for hiring) or specialties (for candidate)
   const { data: profile } = await supabase
     .from("users")
-    .select("id, email, display_name, status, created_at")
+    .select("first_name, last_name, status, created_at")
     .eq("id", user.id)
     .single();
 
+  const { data: intents } = isHiring
+    ? await supabase
+        .from("tenant_hiring_intents")
+        .select("sales_role")
+        .eq("tenant_id", m.tenant_id)
+        .eq("status", "active")
+    : { data: null };
+
+  const { data: specialties } = !isHiring
+    ? await supabase
+        .from("candidate_specialties")
+        .select("sales_role")
+        .eq("user_id", user.id)
+    : { data: null };
+
   return (
-    <main className="min-h-screen p-6 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-semibold mb-6">Dashboard</h1>
+    <main className="flex-1 p-6 max-w-2xl mx-auto w-full">
+      <h1 className="text-2xl font-semibold mb-1">
+        Welcome{profile?.first_name ? `, ${profile.first_name}` : ""}.
+      </h1>
+      <p className="text-sm text-zinc-500 mb-6">
+        {m.tenants.name} · {m.role.replace("_", " ")}
+      </p>
 
-      <section className="mb-6 rounded border border-zinc-200 dark:border-zinc-800 p-4">
-        <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-3">
-          Signed in
-        </h2>
-        <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2 text-sm">
-          <dt className="text-zinc-500">Email</dt>
-          <dd>{user.email}</dd>
-          <dt className="text-zinc-500">User ID</dt>
-          <dd className="font-mono text-xs break-all">{user.id}</dd>
-          <dt className="text-zinc-500">Email confirmed</dt>
-          <dd>{user.email_confirmed_at ? "✅ Yes" : "❌ Not yet"}</dd>
-        </dl>
-      </section>
-
-      <section className="mb-6 rounded border border-zinc-200 dark:border-zinc-800 p-4">
-        <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-3">
-          public.users row (auto-created by trigger)
-        </h2>
-        {profile ? (
-          <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2 text-sm">
-            <dt className="text-zinc-500">Email</dt>
-            <dd>{profile.email}</dd>
-            <dt className="text-zinc-500">Display name</dt>
-            <dd>{profile.display_name ?? "(not set)"}</dd>
-            <dt className="text-zinc-500">Status</dt>
-            <dd>
-              <span className="font-mono text-xs bg-zinc-100 dark:bg-zinc-800 rounded px-1.5 py-0.5">
-                {profile.status}
-              </span>
-            </dd>
-            <dt className="text-zinc-500">Created</dt>
-            <dd>{new Date(profile.created_at).toLocaleString()}</dd>
-          </dl>
-        ) : (
-          <p className="text-sm text-red-600">
-            ⚠️ No matching row in public.users — trigger may have failed.
+      {isHiring ? (
+        <section className="mb-6 rounded border border-zinc-200 dark:border-zinc-800 p-4">
+          <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-3">
+            Your hiring
+          </h2>
+          <p className="text-sm mb-3">
+            You&apos;re currently hiring for:{" "}
+            {intents && intents.length > 0 ? (
+              intents.map((i, idx) => (
+                <span key={i.sales_role}>
+                  <strong>{i.sales_role}</strong>
+                  {idx < intents.length - 1 ? ", " : ""}
+                </span>
+              ))
+            ) : (
+              <em className="text-zinc-500">(none set)</em>
+            )}
           </p>
-        )}
-      </section>
+          <Link
+            href="/candidates"
+            className="inline-block rounded bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 px-4 py-2 text-sm font-medium"
+          >
+            Browse candidates →
+          </Link>
+        </section>
+      ) : (
+        <section className="mb-6 rounded border border-zinc-200 dark:border-zinc-800 p-4">
+          <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-3">
+            Your profile
+          </h2>
+          <p className="text-sm mb-3">
+            Roles you&apos;re qualified for:{" "}
+            {specialties && specialties.length > 0 ? (
+              specialties.map((s, idx) => (
+                <span key={s.sales_role}>
+                  <strong>{s.sales_role}</strong>
+                  {idx < specialties.length - 1 ? ", " : ""}
+                </span>
+              ))
+            ) : (
+              <em className="text-zinc-500">(none set)</em>
+            )}
+          </p>
+          <p className="text-xs text-amber-700 dark:text-amber-400 italic">
+            🚧 Browse opportunities coming in Phase 3 (listings).
+          </p>
+        </section>
+      )}
 
-      <p className="text-xs text-zinc-400">
-        This is the Phase 1c dashboard. No tenant, no role, no real features
-        yet. Phase 1d adds role selection and tenant creation.
+      <p className="text-xs text-zinc-400 mt-8">
+        Account status:{" "}
+        <span className="font-mono">{profile?.status ?? "unknown"}</span>
       </p>
     </main>
   );
