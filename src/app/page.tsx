@@ -22,7 +22,7 @@ export default async function Home() {
         {user ? (
           <Link
             href="/dashboard"
-            className="inline-block rounded bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 px-5 py-2.5 text-sm font-medium"
+            className="inline-block rounded bg-primary text-white hover:opacity-90 transition-opacity px-5 py-2.5 text-sm font-medium"
           >
             Go to dashboard
           </Link>
@@ -30,7 +30,7 @@ export default async function Home() {
           <div className="flex items-center justify-center gap-3">
             <Link
               href="/signup"
-              className="rounded bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 px-5 py-2.5 text-sm font-medium"
+              className="rounded bg-primary text-white hover:opacity-90 transition-opacity px-5 py-2.5 text-sm font-medium"
             >
               Create account
             </Link>

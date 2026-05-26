@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "@/app/(auth)/actions";
@@ -9,10 +10,28 @@ export async function Nav() {
   } = await supabase.auth.getUser();
 
   return (
-    <nav className="border-b border-zinc-200 dark:border-zinc-800">
+    <nav className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-dark-background">
       <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
-        <Link href="/" className="font-semibold">
-          RemoteRep v4
+        <Link href="/" className="flex items-center gap-2">
+          <Image
+            src="/v3-logo.svg"
+            alt="RemoteRep"
+            width={28}
+            height={32}
+            className="dark:hidden"
+            priority
+          />
+          <Image
+            src="/v3-white-logo.svg"
+            alt="RemoteRep"
+            width={28}
+            height={32}
+            className="hidden dark:block"
+            priority
+          />
+          <span className="font-semibold text-dark-foreground dark:text-white">
+            RemoteRep
+          </span>
         </Link>
 
         <div className="flex items-center gap-4 text-sm">
@@ -20,15 +39,17 @@ export async function Nav() {
             <>
               <Link
                 href="/dashboard"
-                className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+                className="text-light-grey hover:text-primary dark:hover:text-white transition-colors"
               >
                 Dashboard
               </Link>
-              <span className="text-xs text-zinc-400">{user.email}</span>
+              <span className="text-xs text-light-grey hidden sm:inline">
+                {user.email}
+              </span>
               <form action={logout}>
                 <button
                   type="submit"
-                  className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+                  className="text-light-grey hover:text-primary dark:hover:text-white transition-colors"
                 >
                   Sign out
                 </button>
@@ -38,13 +59,13 @@ export async function Nav() {
             <>
               <Link
                 href="/login"
-                className="text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+                className="text-light-grey hover:text-primary dark:hover:text-white transition-colors"
               >
                 Sign in
               </Link>
               <Link
                 href="/signup"
-                className="rounded bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 px-3 py-1.5 text-xs font-medium"
+                className="rounded bg-primary text-white px-4 py-1.5 text-xs font-medium hover:opacity-90 transition-opacity"
               >
                 Sign up
               </Link>

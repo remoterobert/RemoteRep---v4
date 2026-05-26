@@ -66,13 +66,13 @@ export default async function CandidatesPage({
           <span className="text-zinc-500">View:</span>
           <Link
             href={`?view=list${selectedRole ? `&role=${encodeURIComponent(selectedRole)}` : ""}`}
-            className={`rounded px-2 py-1 ${view === "list" ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900" : "border border-zinc-300 dark:border-zinc-700"}`}
+            className={`rounded px-2 py-1 ${view === "list" ? "bg-primary text-white" : "border border-zinc-300 dark:border-zinc-700"}`}
           >
             List
           </Link>
           <Link
             href={`?view=tile${selectedRole ? `&role=${encodeURIComponent(selectedRole)}` : ""}`}
-            className={`rounded px-2 py-1 ${view === "tile" ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900" : "border border-zinc-300 dark:border-zinc-700"}`}
+            className={`rounded px-2 py-1 ${view === "tile" ? "bg-primary text-white" : "border border-zinc-300 dark:border-zinc-700"}`}
           >
             Tile
           </Link>

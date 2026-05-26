@@ -84,7 +84,7 @@ export default async function DashboardPage() {
           </p>
           <Link
             href="/candidates"
-            className="inline-block rounded bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 px-4 py-2 text-sm font-medium"
+            className="inline-block rounded bg-primary text-white px-4 py-2 text-sm font-medium hover:opacity-90 transition-opacity"
           >
             Browse candidates →
           </Link>

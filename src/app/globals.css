@@ -2,25 +2,60 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #101936;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #080e24;
+    --foreground: #ededed;
+  }
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* === RemoteRep brand palette (from v3) === */
+  /* See docs/V3-DESIGN-NOTES.md for the full system. */
+
+  /* Brand */
+  --color-primary: #004fbe;
+  --color-secondary: #fbdc3b;
+  --color-primary-blue: #0079fe;
+
+  /* UI status */
+  --color-success: #22c55e;
+  --color-warning: #eab308;
+  --color-danger: #ef4444;
+
+  /* Layout / surfaces */
+  --color-side-menu: #141f40;
+  --color-dark-foreground: #101936;
+  --color-light-foreground: #172349;
+  --color-dark-background: #080e24;
+  --color-second-background: #e7e7e7;
+  --color-field-outline: #2a306d;
+  --color-mid-blue: #3f5296;
+
+  /* Greys */
+  --color-light-grey: #818594;
+  --color-dark-text-grey: #bdbdbd;
+
+  /* Application status */
+  --color-bookmarked: #0079fe;
+  --color-invited: #f2994a;
+  --color-applied: #f2c94c;
+  --color-interviewing: #27ae60;
+  --color-shortlisted: #9b51e0;
+  --color-hired: #56ccf2;
+  --color-subscribed: #da3e3e;
+  --color-rating: #f0a044;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }
