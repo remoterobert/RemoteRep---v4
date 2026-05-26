@@ -4,7 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 // Supabase redirects users here after they click the email verification link.
 // We exchange the auth code for a session, then send them on.
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams, origin: urlOrigin } = new URL(request.url);
+  // Trust explicit NEXT_PUBLIC_SITE_URL over the internal URL Railway
+  // exposes (which is localhost:8080 inside the container).
+  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? urlOrigin;
+
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/dashboard";
 
