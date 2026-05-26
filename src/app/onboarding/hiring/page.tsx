@@ -109,33 +109,30 @@ export default async function HiringOnboardingPage({
             />
           </div>
 
-          <div>
-            <label
-              htmlFor="hiring_for"
-              className="block text-sm font-medium mb-1"
-            >
-              What role are you hiring for?
-            </label>
-            <select
-              id="hiring_for"
-              name="hiring_for"
-              required
-              defaultValue=""
-              className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
-            >
-              <option value="" disabled>
-                Choose one…
-              </option>
+          <fieldset>
+            <legend className="text-sm font-medium mb-2">
+              What roles are you hiring for? (choose all that apply)
+            </legend>
+            <div className="space-y-1">
               {SALES_ROLES.map((r) => (
-                <option key={r} value={r}>
+                <label
+                  key={r}
+                  className="flex items-center gap-2 text-sm py-1 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    name="hiring_for"
+                    value={r}
+                    className="rounded"
+                  />
                   {r}
-                </option>
+                </label>
               ))}
-            </select>
+            </div>
             <p className="text-xs text-zinc-500 mt-1">
-              You can add more roles later.
+              You can change these later.
             </p>
-          </div>
+          </fieldset>
 
           <button
             type="submit"

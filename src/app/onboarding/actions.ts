@@ -8,17 +8,14 @@ export async function completeHiringOnboarding(formData: FormData) {
   const firstName = String(formData.get("first_name") ?? "").trim();
   const lastName = String(formData.get("last_name") ?? "").trim();
   const companyName = String(formData.get("company_name") ?? "").trim();
-  const hiringFor = String(formData.get("hiring_for") ?? "").trim();
+  const hiringFor = formData
+    .getAll("hiring_for")
+    .map((v) => String(v))
+    .filter(isSalesRole) as SalesRole[];
 
-  if (!firstName || !lastName || !companyName || !hiringFor) {
+  if (!firstName || !lastName || !companyName || hiringFor.length === 0) {
     redirect(
-      `/onboarding/hiring?error=${encodeURIComponent("All fields are required.")}`,
-    );
-  }
-
-  if (!isSalesRole(hiringFor)) {
-    redirect(
-      `/onboarding/hiring?error=${encodeURIComponent("Invalid sales role.")}`,
+      `/onboarding/hiring?error=${encodeURIComponent("Please fill in your name and company, and pick at least one role.")}`,
     );
   }
 
