@@ -61,8 +61,12 @@ export default async function ChatDetailPage({ params }: { params: Params }) {
     })
     .join(", ");
 
-  const tenantName =
-    (chat as { tenants: { name: string } | null }).tenants?.name ?? "";
+  const chatTenants = (chat as unknown as {
+    tenants: { name: string } | { name: string }[] | null;
+  }).tenants;
+  const tenantName = Array.isArray(chatTenants)
+    ? (chatTenants[0]?.name ?? "")
+    : (chatTenants?.name ?? "");
 
   const { data: initialMessages } = await supabase
     .from("messages")
