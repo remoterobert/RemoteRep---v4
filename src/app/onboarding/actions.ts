@@ -63,5 +63,5 @@ export async function completeCandidateOnboarding(formData: FormData) {
     );
   }
 
-  redirect("/dashboard");
+  redirect("/opportunities");
 }

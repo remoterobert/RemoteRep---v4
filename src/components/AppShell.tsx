@@ -37,9 +37,8 @@ const clientNavigation: NavItem[] = [
 // Talent/candidate navigation — mirrors v3's talentNavigation
 const talentNavigation: NavItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: HomeIcon },
-  { name: "Hiring Center", href: "#", icon: BuildingOfficeIcon },
+  { name: "Opportunities", href: "/opportunities", icon: ClipboardDocumentListIcon },
   { name: "Browse clients", href: "#", icon: BuildingOffice2Icon },
-  { name: "Browse listings", href: "#", icon: ClipboardDocumentListIcon },
   { name: "Chats", href: "#", icon: ChatBubbleLeftRightIcon },
   { name: "Affiliates", href: "#", icon: ShareIcon },
   { name: "Support", href: "#", icon: LifebuoyIcon, newTab: true },
