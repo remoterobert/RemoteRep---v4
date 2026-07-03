@@ -5,12 +5,23 @@ export const dynamic = "force-dynamic";
 export default async function AdminUsersPage() {
   const supabase = await createClient();
 
-  const { data: users } = await supabase
+  const { data: users, error } = await supabase
     .from("users")
     .select(
-      "id, email, first_name, last_name, status, created_at, last_seen_at, tenant_members!inner(role, tenants!inner(name, type))",
+      "id, email, first_name, last_name, status, created_at, last_seen_at, tenant_members(role, tenants(name, type))",
     )
     .order("created_at", { ascending: false });
+
+  if (error) {
+    return (
+      <div>
+        <h2 className="text-lg font-semibold mb-4">Users</h2>
+        <div className="rounded border border-red-300 bg-red-50 dark:bg-red-950 dark:border-red-900 p-3 text-sm text-red-800 dark:text-red-200">
+          Error loading users: {error.message}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
