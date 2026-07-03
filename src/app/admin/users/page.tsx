@@ -8,7 +8,7 @@ export default async function AdminUsersPage() {
   const { data: users, error } = await supabase
     .from("users")
     .select(
-      "id, email, first_name, last_name, status, created_at, last_seen_at, tenant_members:tenant_members!tenant_members_user_id_fkey(role, tenants(name, type))",
+      "id, email, first_name, last_name, status, created_at, last_seen_at, tenant_members!user_id(role, tenants(name, type))",
     )
     .order("created_at", { ascending: false });
 
