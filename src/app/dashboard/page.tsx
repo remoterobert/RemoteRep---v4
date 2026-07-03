@@ -98,6 +98,28 @@ async function CandidateDashboard({
     .eq("owner_user_id", userId)
     .eq("target_type", "listing");
 
+  // Applications where this candidate is the recipient (companies who've invited them)
+  const { data: invitations, count: invitationCount } = await supabase
+    .from("applications")
+    .select(
+      "id, tenant_id, status, message, applied_at, tenants!inner(name)",
+      { count: "exact" },
+    )
+    .eq("candidate_user_id", userId)
+    .eq("status", "invited")
+    .order("applied_at", { ascending: false })
+    .limit(5);
+
+  type InvitationRow = {
+    id: string;
+    tenant_id: string;
+    status: string;
+    message: string | null;
+    applied_at: string;
+    tenants: { name: string };
+  };
+  const recentInvitations = (invitations ?? []) as unknown as InvitationRow[];
+
   const completion = computeProfileCompletion({
     ...(candidateProfile as CandidateProfileForCompletion | null),
     specialties,
@@ -134,8 +156,12 @@ async function CandidateDashboard({
         <MetricCard
           icon={<EnvelopeIcon className="h-4 w-4" />}
           label="Companies interested"
-          value={0}
-          comparison="Coming soon"
+          value={invitationCount ?? 0}
+          comparison={
+            (invitationCount ?? 0) > 0
+              ? "Reply to keep momentum"
+              : "Complete your profile to get discovered"
+          }
         />
         <MetricCard
           icon={<BookmarkIcon className="h-4 w-4" />}
@@ -163,11 +189,35 @@ async function CandidateDashboard({
             <h2 className="text-sm font-semibold text-light-grey uppercase tracking-wider mb-3">
               Recent engagement
             </h2>
-            <p className="text-sm text-light-grey italic">
-              No companies have engaged with your profile yet. Once they do, the
-              opportunities that viewed / bookmarked / invited you will appear
-              here.
-            </p>
+            {recentInvitations.length === 0 ? (
+              <p className="text-sm text-light-grey italic">
+                No companies have engaged with your profile yet. Once one
+                invites you or bookmarks your profile, they&apos;ll appear here.
+              </p>
+            ) : (
+              <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                {recentInvitations.map((inv) => (
+                  <li key={inv.id} className="py-3 first:pt-0 last:pb-0">
+                    <div className="flex items-baseline justify-between gap-2 mb-1">
+                      <span className="font-semibold text-sm">
+                        {inv.tenants.name}
+                      </span>
+                      <span className="text-xs text-light-grey">
+                        {new Date(inv.applied_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <p className="text-xs text-light-grey">
+                      <span className="inline-block text-[10px] bg-invited/10 text-invited rounded px-1.5 py-0.5 font-semibold mr-1">
+                        Invited
+                      </span>
+                      {inv.message
+                        ? `"${inv.message}"`
+                        : "wants to talk with you about a role."}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
 
           {/* Suggestions */}

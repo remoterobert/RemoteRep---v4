@@ -1,11 +1,27 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { CheckIcon } from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/server";
-import { filterByRole } from "@/lib/sample-candidates";
+import { inviteCandidate } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-type SearchParams = Promise<{ view?: "list" | "tile"; role?: string }>;
+type SearchParams = Promise<{
+  view?: "list" | "tile";
+  role?: string;
+  error?: string;
+}>;
+
+type CandidateRow = {
+  user_id: string;
+  headline: string | null;
+  about: string | null;
+  years_of_experience: number | null;
+  sales_types: string[] | null;
+  deal_amounts: string[] | null;
+  users: { first_name: string | null; last_name: string | null } | null;
+  candidate_specialties: { sales_role: string }[];
+};
 
 export default async function CandidatesPage({
   searchParams,
@@ -18,7 +34,6 @@ export default async function CandidatesPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Must be a member of a hiring tenant
   const { data: memberships } = await supabase
     .from("tenant_members")
     .select("tenant_id, role, status, tenants!inner(id, name, type)")
@@ -29,41 +44,76 @@ export default async function CandidatesPage({
     redirect("/onboarding/choose-role");
   }
 
-  // Find the first hiring tenant the user belongs to
   type MembershipRow = {
     tenant_id: string;
     role: string;
     tenants: { id: string; name: string; type: string };
   };
-  const hiringMembership = (memberships as unknown as MembershipRow[]).find(
-    (m) =>
-      m.tenants.type === "client_company" || m.tenants.type === "agency",
+  const hiring = (memberships as unknown as MembershipRow[]).find(
+    (m) => m.tenants.type === "client_company" || m.tenants.type === "agency",
   );
+  if (!hiring) redirect("/dashboard");
 
-  if (!hiringMembership) {
-    // They're a candidate — redirect to dashboard since /candidates is for hiring users
-    redirect("/dashboard");
-  }
-
-  // Active hiring intents for this tenant
   const { data: intents } = await supabase
     .from("tenant_hiring_intents")
     .select("sales_role")
-    .eq("tenant_id", hiringMembership.tenant_id)
+    .eq("tenant_id", hiring.tenant_id)
     .eq("status", "active");
 
   const params = await searchParams;
   const view = params.view === "tile" ? "tile" : "list";
-  const selectedRole = params.role ?? intents?.[0]?.sales_role ?? null;
+  const selectedRole = params.role ?? null;
+  const error = params.error;
 
-  const candidates = filterByRole(selectedRole);
+  const activeIntentRoles = new Set(
+    (intents ?? []).map((i) => i.sales_role as string),
+  );
+
+  // Fetch real public candidate profiles
+  const { data: rawCandidates } = await supabase
+    .from("candidate_profiles")
+    .select(
+      "user_id, headline, about, years_of_experience, sales_types, deal_amounts, users!inner(first_name, last_name), candidate_specialties(sales_role)",
+    )
+    .eq("visibility", "public")
+    .limit(100);
+
+  const candidates = (rawCandidates ?? []) as unknown as CandidateRow[];
+
+  // Filter by chip selection OR default to hiring intents' roles
+  const filtered = candidates.filter((c) => {
+    const specialtySet = new Set(c.candidate_specialties.map((s) => s.sales_role));
+    if (selectedRole === "all") return true;
+    if (selectedRole) return specialtySet.has(selectedRole);
+    // Default: filter by any of the hiring intents' roles (if any set)
+    if (activeIntentRoles.size === 0) return true;
+    for (const r of activeIntentRoles) {
+      if (specialtySet.has(r)) return true;
+    }
+    return false;
+  });
+
+  // Fetch existing invitations for this tenant so we can mark already-invited candidates
+  const { data: invitedRows } = await supabase
+    .from("applications")
+    .select("candidate_user_id")
+    .eq("tenant_id", hiring.tenant_id)
+    .eq("status", "invited");
+  const alreadyInvited = new Set(
+    (invitedRows ?? []).map((r) => r.candidate_user_id as string),
+  );
 
   return (
     <main className="flex-1 p-6 max-w-5xl mx-auto w-full">
       <div className="flex items-baseline justify-between mb-2 flex-wrap gap-2">
-        <h1 className="text-2xl font-semibold">Matched candidates</h1>
+        <div>
+          <h1 className="text-2xl font-semibold">Candidates</h1>
+          <p className="text-sm text-light-grey mt-0.5">
+            {hiring.tenants.name} · click Invite on candidates who fit
+          </p>
+        </div>
         <div className="flex items-center gap-2 text-sm">
-          <span className="text-zinc-500">View:</span>
+          <span className="text-light-grey">View:</span>
           <Link
             href={`?view=list${selectedRole ? `&role=${encodeURIComponent(selectedRole)}` : ""}`}
             className={`rounded px-2 py-1 ${view === "list" ? "bg-primary text-white" : "border border-zinc-300 dark:border-zinc-700"}`}
@@ -79,36 +129,29 @@ export default async function CandidatesPage({
         </div>
       </div>
 
-      <p className="text-sm text-zinc-500 mb-2">
-        Showing candidates for{" "}
-        <strong className="text-zinc-700 dark:text-zinc-300">
-          {hiringMembership.tenants.name}
-        </strong>
-        {selectedRole && (
-          <>
-            {" "}
-            • Role:{" "}
-            <strong className="text-zinc-700 dark:text-zinc-300">
-              {selectedRole}
-            </strong>
-          </>
-        )}
-      </p>
-      <p className="text-xs text-amber-700 dark:text-amber-400 mb-6 italic">
-        🚧 Phase 1d: these are sample candidates so you can see the UI. Real
-        candidate profiles appear here in Phase 2 when actual sales reps sign
-        up.
-      </p>
+      {error && (
+        <div
+          role="alert"
+          className="mb-4 rounded border border-red-300 bg-red-50 dark:bg-red-950 dark:border-red-900 p-3 text-sm text-red-800 dark:text-red-200"
+        >
+          {error}
+        </div>
+      )}
 
-      {/* Role filter chips */}
       {intents && intents.length > 0 && (
-        <div className="flex items-center gap-2 mb-6 flex-wrap">
-          <span className="text-xs text-zinc-500">Filter:</span>
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <span className="text-xs text-light-grey">Filter:</span>
           <Link
             href={`?view=${view}`}
             className={`text-xs rounded px-2 py-1 ${!selectedRole ? "bg-zinc-200 dark:bg-zinc-800" : "border border-zinc-300 dark:border-zinc-700"}`}
           >
-            All
+            My hiring roles
+          </Link>
+          <Link
+            href={`?view=${view}&role=all`}
+            className={`text-xs rounded px-2 py-1 ${selectedRole === "all" ? "bg-zinc-200 dark:bg-zinc-800" : "border border-zinc-300 dark:border-zinc-700"}`}
+          >
+            All roles
           </Link>
           {intents.map((i) => (
             <Link
@@ -122,95 +165,182 @@ export default async function CandidatesPage({
         </div>
       )}
 
-      {view === "tile" ? (
+      {filtered.length === 0 ? (
+        <div className="p-8 text-center border border-zinc-200 dark:border-zinc-800 rounded">
+          <p className="text-sm text-light-grey mb-2">
+            {candidates.length === 0
+              ? "No candidates have completed their profile yet."
+              : "No candidates match your active hiring roles."}
+          </p>
+          <p className="text-xs text-light-grey">
+            {candidates.length === 0
+              ? "As sales reps sign up and set their profile to public, they'll appear here."
+              : (
+                <>
+                  Try{" "}
+                  <Link href={`?view=${view}&role=all`} className="underline">
+                    All roles
+                  </Link>
+                  .
+                </>
+              )}
+          </p>
+        </div>
+      ) : view === "tile" ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {candidates.map((c) => (
-            <article
-              key={c.id}
-              className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-4"
-            >
-              <div className="flex items-start gap-3 mb-3">
-                <div className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-sm font-semibold">
-                  {c.initials}
-                </div>
-                <div className="flex-1">
-                  <h2 className="font-semibold text-sm">{c.display_name}</h2>
-                  <p className="text-xs text-zinc-500">
-                    {c.years_experience} yrs experience
-                  </p>
-                </div>
-              </div>
-              <p className="text-xs text-zinc-600 dark:text-zinc-400 mb-3 line-clamp-2">
-                {c.headline}
-              </p>
-              <div className="flex flex-wrap gap-1 mb-3">
-                {c.specialty_roles.map((r) => (
-                  <span
-                    key={r}
-                    className="text-[10px] bg-zinc-100 dark:bg-zinc-800 rounded px-1.5 py-0.5"
-                  >
-                    {r}
-                  </span>
-                ))}
-              </div>
-              <button
-                type="button"
-                disabled
-                title="Coming soon — Phase 2"
-                className="w-full text-xs rounded border border-zinc-300 dark:border-zinc-700 px-2 py-1.5 text-zinc-400 cursor-not-allowed"
-              >
-                Invite (coming soon)
-              </button>
-            </article>
+          {filtered.map((c) => (
+            <CandidateCard
+              key={c.user_id}
+              candidate={c}
+              invited={alreadyInvited.has(c.user_id)}
+              view="tile"
+            />
           ))}
         </div>
       ) : (
         <div className="space-y-3">
-          {candidates.map((c) => (
-            <article
-              key={c.id}
-              className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 flex items-start gap-4"
-            >
-              <div className="w-12 h-12 shrink-0 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-sm font-semibold">
-                {c.initials}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline gap-3 mb-1">
-                  <h2 className="font-semibold">{c.display_name}</h2>
-                  <span className="text-xs text-zinc-500">
-                    {c.years_experience} yrs experience
-                  </span>
-                </div>
-                <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-2">
-                  {c.headline}
-                </p>
-                <div className="flex flex-wrap gap-1 text-xs">
-                  {c.specialty_roles.map((r) => (
-                    <span
-                      key={r}
-                      className="bg-zinc-100 dark:bg-zinc-800 rounded px-2 py-0.5"
-                    >
-                      {r}
-                    </span>
-                  ))}
-                  <span className="text-zinc-400 mx-1">•</span>
-                  <span className="text-zinc-500">
-                    Avg deal: {c.avg_deal_size}
-                  </span>
-                </div>
-              </div>
-              <button
-                type="button"
-                disabled
-                title="Coming soon — Phase 2"
-                className="shrink-0 text-xs rounded border border-zinc-300 dark:border-zinc-700 px-3 py-1.5 text-zinc-400 cursor-not-allowed"
-              >
-                Invite (coming soon)
-              </button>
-            </article>
+          {filtered.map((c) => (
+            <CandidateCard
+              key={c.user_id}
+              candidate={c}
+              invited={alreadyInvited.has(c.user_id)}
+              view="list"
+            />
           ))}
         </div>
       )}
     </main>
+  );
+}
+
+function displayName(c: CandidateRow): string {
+  const fn = c.users?.first_name?.trim();
+  const ln = c.users?.last_name?.trim();
+  if (fn || ln) return `${fn ?? ""} ${ln ?? ""}`.trim();
+  return "Candidate";
+}
+
+function initials(c: CandidateRow): string {
+  const fn = c.users?.first_name?.trim();
+  const ln = c.users?.last_name?.trim();
+  const a = fn?.[0] ?? "";
+  const b = ln?.[0] ?? "";
+  return (a + b).toUpperCase() || "?";
+}
+
+function CandidateCard({
+  candidate,
+  invited,
+  view,
+}: {
+  candidate: CandidateRow;
+  invited: boolean;
+  view: "tile" | "list";
+}) {
+  const specialties = candidate.candidate_specialties.map((s) => s.sales_role);
+  const name = displayName(candidate);
+  const inits = initials(candidate);
+
+  const InviteBtn = invited ? (
+    <span className="inline-flex items-center gap-1 text-xs bg-interviewing/10 text-interviewing rounded px-2 py-1 font-medium">
+      <CheckIcon className="h-3 w-3" />
+      Invited
+    </span>
+  ) : (
+    <form action={inviteCandidate} className="contents">
+      <input type="hidden" name="candidate_user_id" value={candidate.user_id} />
+      <button
+        type="submit"
+        className="text-xs rounded bg-primary text-white px-3 py-1.5 font-medium hover:opacity-90"
+      >
+        Invite
+      </button>
+    </form>
+  );
+
+  if (view === "tile") {
+    return (
+      <article className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-4">
+        <div className="flex items-start gap-3 mb-3">
+          <div className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-sm font-semibold">
+            {inits}
+          </div>
+          <div className="flex-1">
+            <h2 className="font-semibold text-sm">{name}</h2>
+            {candidate.years_of_experience != null && (
+              <p className="text-xs text-light-grey">
+                {candidate.years_of_experience} yrs experience
+              </p>
+            )}
+          </div>
+        </div>
+        {candidate.headline && (
+          <p className="text-xs text-zinc-600 dark:text-zinc-400 mb-3 line-clamp-2">
+            {candidate.headline}
+          </p>
+        )}
+        <div className="flex flex-wrap gap-1 mb-3">
+          {specialties.map((r) => (
+            <span
+              key={r}
+              className="text-[10px] bg-primary/10 text-primary rounded px-1.5 py-0.5 font-semibold"
+            >
+              {r}
+            </span>
+          ))}
+          {candidate.sales_types?.map((t) => (
+            <span
+              key={t}
+              className="text-[10px] bg-zinc-100 dark:bg-zinc-800 rounded px-1.5 py-0.5"
+            >
+              {t}
+            </span>
+          ))}
+        </div>
+        <div className="flex justify-end">{InviteBtn}</div>
+      </article>
+    );
+  }
+
+  return (
+    <article className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 flex items-start gap-4">
+      <div className="w-12 h-12 shrink-0 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-sm font-semibold">
+        {inits}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline gap-3 mb-1 flex-wrap">
+          <h2 className="font-semibold">{name}</h2>
+          {candidate.years_of_experience != null && (
+            <span className="text-xs text-light-grey">
+              {candidate.years_of_experience} yrs experience
+            </span>
+          )}
+        </div>
+        {candidate.headline && (
+          <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-2">
+            {candidate.headline}
+          </p>
+        )}
+        <div className="flex flex-wrap gap-1 text-xs">
+          {specialties.map((r) => (
+            <span
+              key={r}
+              className="bg-primary/10 text-primary rounded px-2 py-0.5 font-semibold"
+            >
+              {r}
+            </span>
+          ))}
+          {candidate.sales_types?.map((t) => (
+            <span
+              key={t}
+              className="bg-zinc-100 dark:bg-zinc-800 rounded px-2 py-0.5"
+            >
+              {t}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="shrink-0">{InviteBtn}</div>
+    </article>
   );
 }
