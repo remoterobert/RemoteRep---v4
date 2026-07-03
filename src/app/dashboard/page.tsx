@@ -11,6 +11,7 @@ import {
   computeProfileCompletion,
   type CandidateProfileForCompletion,
 } from "@/lib/profile-completion";
+import { computeCompanyCompletion } from "@/lib/company-completion";
 
 export const dynamic = "force-dynamic";
 
@@ -324,12 +325,13 @@ async function CandidateDashboard({
 }
 
 // ============================================================
-// Hiring dashboard (unchanged from before, minor visual tune-up)
+// Hiring dashboard — mirror of the candidate one
 // ============================================================
 async function HiringDashboard({
   tenantName,
   tenantId,
   firstName,
+  justSaved,
 }: {
   tenantName: string;
   tenantId: string;
@@ -337,42 +339,248 @@ async function HiringDashboard({
   justSaved: boolean;
 }) {
   const supabase = await createClient();
-  const { data: intents } = await supabase
-    .from("tenant_hiring_intents")
-    .select("sales_role")
-    .eq("tenant_id", tenantId)
-    .eq("status", "active");
+
+  const [{ data: intents }, { data: clientProfile }, { count: invitedCount }, { data: recentInvites }] =
+    await Promise.all([
+      supabase
+        .from("tenant_hiring_intents")
+        .select("sales_role")
+        .eq("tenant_id", tenantId)
+        .eq("status", "active"),
+      supabase
+        .from("client_profiles")
+        .select(
+          "about, hiring_pitch, website_url, industry_slug, headcount, founded_year, visibility, logo_url",
+        )
+        .eq("tenant_id", tenantId)
+        .maybeSingle(),
+      supabase
+        .from("applications")
+        .select("id", { count: "exact", head: true })
+        .eq("tenant_id", tenantId)
+        .eq("status", "invited"),
+      supabase
+        .from("applications")
+        .select("id, candidate_user_id, applied_at, status, users!inner(first_name, last_name)")
+        .eq("tenant_id", tenantId)
+        .eq("status", "invited")
+        .order("applied_at", { ascending: false })
+        .limit(5),
+    ]);
+
+  type InviteRow = {
+    id: string;
+    candidate_user_id: string;
+    applied_at: string;
+    status: string;
+    users: { first_name: string | null; last_name: string | null };
+  };
+  const invites = (recentInvites ?? []) as unknown as InviteRow[];
+
+  const completion = computeCompanyCompletion({
+    ...(clientProfile ?? {}),
+    tenant_name: tenantName,
+    hiring_intent_count: intents?.length ?? 0,
+  });
 
   return (
-    <main className="flex-1 p-6 max-w-2xl mx-auto w-full">
-      <h1 className="text-2xl font-semibold mb-1">
-        Welcome{firstName ? `, ${firstName}` : ""}.
-      </h1>
-      <p className="text-sm text-light-grey mb-6">{tenantName}</p>
-
-      <section className="mb-6 rounded border border-zinc-200 dark:border-zinc-800 p-4">
-        <h2 className="text-sm font-semibold text-light-grey uppercase tracking-wider mb-3">
-          Your hiring
-        </h2>
-        <p className="text-sm mb-3">
-          You&apos;re currently hiring for:{" "}
-          {intents && intents.length > 0 ? (
-            intents.map((i, idx) => (
-              <span key={i.sales_role}>
-                <strong>{i.sales_role}</strong>
-                {idx < intents.length - 1 ? ", " : ""}
-              </span>
-            ))
-          ) : (
-            <em className="text-light-grey">(none set)</em>
-          )}
+    <main className="flex-1 p-6 max-w-6xl mx-auto w-full">
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold mb-1">
+          Welcome{firstName ? `, ${firstName}` : ""}.
+        </h1>
+        <p className="text-sm text-light-grey">
+          {tenantName} · here&apos;s how your hiring is going.
         </p>
-        <Link
-          href="/candidates"
-          className="inline-block rounded bg-primary text-white px-4 py-2 text-sm font-medium hover:opacity-90 transition-opacity"
+      </div>
+
+      {justSaved && (
+        <div
+          role="status"
+          className="mb-4 rounded border border-green-300 bg-green-50 dark:bg-green-950 dark:border-green-900 p-3 text-sm text-green-800 dark:text-green-200"
         >
-          Browse candidates →
-        </Link>
+          ✅ Saved.
+        </div>
+      )}
+
+      {/* Metrics */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <MetricCard
+          icon={<EyeIcon className="h-4 w-4" />}
+          label="Candidates viewed"
+          value={0}
+          comparison="Coming soon"
+        />
+        <MetricCard
+          icon={<EnvelopeIcon className="h-4 w-4" />}
+          label="Invitations sent"
+          value={invitedCount ?? 0}
+          comparison={
+            (invitedCount ?? 0) > 0
+              ? "Good — active outreach"
+              : "Browse candidates and invite"
+          }
+        />
+        <MetricCard
+          icon={<BookmarkIcon className="h-4 w-4" />}
+          label="Awaiting reply"
+          value={invitedCount ?? 0}
+          comparison="Replies unlock in-app chat (coming)"
+        />
+        <MetricCard
+          icon={<ChartBarIcon className="h-4 w-4" />}
+          label="Match rank"
+          value="—"
+          comparison="Unlocks with 20+ profile views"
+        />
+      </div>
+
+      {/* Two columns: activity + suggestions | completion wizard */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+        <div className="space-y-6">
+          {/* Recent activity */}
+          <section className="rounded border border-zinc-200 dark:border-zinc-800 p-4">
+            <div className="flex items-baseline justify-between mb-3">
+              <h2 className="text-sm font-semibold text-light-grey uppercase tracking-wider">
+                Recent activity
+              </h2>
+              <Link
+                href="/candidates"
+                className="text-xs text-primary hover:opacity-80"
+              >
+                Browse candidates →
+              </Link>
+            </div>
+            {invites.length === 0 ? (
+              <p className="text-sm text-light-grey italic">
+                No candidates invited yet. Head to{" "}
+                <Link href="/candidates" className="underline">
+                  Browse candidates
+                </Link>{" "}
+                to reach out.
+              </p>
+            ) : (
+              <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                {invites.map((inv) => {
+                  const name =
+                    inv.users.first_name || inv.users.last_name
+                      ? `${inv.users.first_name ?? ""} ${inv.users.last_name ?? ""}`.trim()
+                      : "Candidate";
+                  return (
+                    <li key={inv.id} className="py-3 first:pt-0 last:pb-0">
+                      <div className="flex items-baseline justify-between gap-2 mb-1">
+                        <span className="font-semibold text-sm">{name}</span>
+                        <span className="text-xs text-light-grey">
+                          {new Date(inv.applied_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="text-xs text-light-grey">
+                        <span className="inline-block text-[10px] bg-invited/10 text-invited rounded px-1.5 py-0.5 font-semibold mr-1">
+                          Invited
+                        </span>
+                        awaiting reply
+                      </p>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+
+          {/* Suggestions */}
+          <section className="rounded border border-zinc-200 dark:border-zinc-800 p-4">
+            <h2 className="text-sm font-semibold text-light-grey uppercase tracking-wider mb-3">
+              Suggestions to improve your response rate
+            </h2>
+            {completion.suggestions.length === 0 ? (
+              <p className="text-sm text-light-grey italic">
+                Nothing pressing — your company profile is in great shape.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {completion.suggestions.map((s, i) => (
+                  <li key={i} className="text-sm flex items-start gap-2">
+                    <span className="text-xs bg-secondary/20 text-dark-foreground dark:text-secondary rounded px-1.5 py-0.5 mt-0.5 shrink-0">
+                      +{s.impactPct}%
+                    </span>
+                    <span>{s.text}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+
+        {/* Right: company profile completion wizard */}
+        <aside className="rounded border border-zinc-200 dark:border-zinc-800 p-4 h-fit">
+          <h2 className="text-sm font-semibold text-light-grey uppercase tracking-wider mb-3">
+            Company profile
+          </h2>
+
+          <div className="mb-4">
+            <div className="flex items-baseline justify-between mb-1">
+              <span className="text-3xl font-semibold">{completion.percent}%</span>
+              <span className="text-xs text-light-grey">
+                {completion.completedCount} of {completion.totalFields} sections
+              </span>
+            </div>
+            <div className="h-2 bg-zinc-200 dark:bg-zinc-800 rounded overflow-hidden">
+              <div
+                className="h-full bg-primary transition-all"
+                style={{ width: `${completion.percent}%` }}
+              />
+            </div>
+          </div>
+
+          <ul className="text-xs space-y-1.5 mb-4">
+            {completion.fields.map((f) => (
+              <li key={f.key} className="flex items-center gap-2">
+                <span
+                  className={
+                    f.done
+                      ? "h-4 w-4 rounded-full bg-primary text-white flex items-center justify-center text-[10px]"
+                      : "h-4 w-4 rounded-full border border-zinc-300 dark:border-zinc-700 flex items-center justify-center text-[10px] text-light-grey"
+                  }
+                >
+                  {f.done ? "✓" : ""}
+                </span>
+                <span className={f.done ? "text-light-grey line-through" : ""}>
+                  {f.label}
+                </span>
+              </li>
+            ))}
+          </ul>
+
+          <Link
+            href="/company/edit"
+            className="block text-center rounded bg-primary text-white px-3 py-2 text-sm font-medium hover:opacity-90 transition-opacity"
+          >
+            {completion.percent === 100 ? "Edit company" : "Complete profile →"}
+          </Link>
+        </aside>
+      </div>
+
+      {/* Bottom: hiring roles */}
+      <section className="mt-6 rounded border border-zinc-200 dark:border-zinc-800 p-4">
+        <h2 className="text-sm font-semibold text-light-grey uppercase tracking-wider mb-2">
+          Roles you&apos;re hiring for
+        </h2>
+        {intents && intents.length > 0 ? (
+          <div className="flex flex-wrap gap-1">
+            {intents.map((i) => (
+              <span
+                key={i.sales_role}
+                className="text-xs bg-primary/10 text-primary rounded px-2 py-0.5 font-semibold"
+              >
+                {i.sales_role}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-light-grey italic">
+            None active. Add hiring roles in your company settings.
+          </p>
+        )}
       </section>
     </main>
   );
