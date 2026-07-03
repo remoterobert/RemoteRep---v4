@@ -14,13 +14,14 @@ type SearchParams = Promise<{
 
 type CandidateRow = {
   user_id: string;
+  first_name: string | null;
+  last_name: string | null;
   headline: string | null;
-  about: string | null;
   years_of_experience: number | null;
   sales_types: string[] | null;
   deal_amounts: string[] | null;
-  users: { first_name: string | null; last_name: string | null } | null;
-  candidate_specialties: { sales_role: string }[];
+  visibility: string | null;
+  specialties: string[];
 };
 
 export default async function CandidatesPage({
@@ -69,23 +70,58 @@ export default async function CandidatesPage({
     (intents ?? []).map((i) => i.sales_role as string),
   );
 
-  // Fetch real public candidate profiles
-  const { data: rawCandidates } = await supabase
-    .from("candidate_profiles")
+  // Get every user who's a candidate (has at least one specialty), plus
+  // their profile if it exists. No visibility filter — MVP shows all reps
+  // regardless of profile completeness. A "hidden" toggle can filter here
+  // in a later phase.
+  const { data: rawRows } = await supabase
+    .from("candidate_specialties")
     .select(
-      "user_id, headline, about, years_of_experience, sales_types, deal_amounts, users!inner(first_name, last_name), candidate_specialties(sales_role)",
+      "user_id, sales_role, users!inner(first_name, last_name), candidate_profiles(headline, years_of_experience, sales_types, deal_amounts, visibility)",
     )
-    .eq("visibility", "public")
-    .limit(100);
+    .limit(500);
 
-  const candidates = (rawCandidates ?? []) as unknown as CandidateRow[];
+  type RawRow = {
+    user_id: string;
+    sales_role: string;
+    users: { first_name: string | null; last_name: string | null };
+    candidate_profiles: {
+      headline: string | null;
+      years_of_experience: number | null;
+      sales_types: string[] | null;
+      deal_amounts: string[] | null;
+      visibility: string | null;
+    } | null;
+  };
+
+  // Group specialties by user_id
+  const byUser = new Map<string, CandidateRow>();
+  for (const r of (rawRows ?? []) as unknown as RawRow[]) {
+    const existing = byUser.get(r.user_id);
+    if (existing) {
+      existing.specialties.push(r.sales_role);
+    } else {
+      byUser.set(r.user_id, {
+        user_id: r.user_id,
+        first_name: r.users.first_name,
+        last_name: r.users.last_name,
+        headline: r.candidate_profiles?.headline ?? null,
+        years_of_experience:
+          r.candidate_profiles?.years_of_experience ?? null,
+        sales_types: r.candidate_profiles?.sales_types ?? null,
+        deal_amounts: r.candidate_profiles?.deal_amounts ?? null,
+        visibility: r.candidate_profiles?.visibility ?? null,
+        specialties: [r.sales_role],
+      });
+    }
+  }
+  const candidates = Array.from(byUser.values());
 
   // Filter by chip selection OR default to hiring intents' roles
   const filtered = candidates.filter((c) => {
-    const specialtySet = new Set(c.candidate_specialties.map((s) => s.sales_role));
+    const specialtySet = new Set(c.specialties);
     if (selectedRole === "all") return true;
     if (selectedRole) return specialtySet.has(selectedRole);
-    // Default: filter by any of the hiring intents' roles (if any set)
     if (activeIntentRoles.size === 0) return true;
     for (const r of activeIntentRoles) {
       if (specialtySet.has(r)) return true;
@@ -169,21 +205,21 @@ export default async function CandidatesPage({
         <div className="p-8 text-center border border-zinc-200 dark:border-zinc-800 rounded">
           <p className="text-sm text-light-grey mb-2">
             {candidates.length === 0
-              ? "No candidates have completed their profile yet."
-              : "No candidates match your active hiring roles."}
+              ? "No sales reps have signed up yet."
+              : "No reps match your active hiring roles."}
           </p>
           <p className="text-xs text-light-grey">
-            {candidates.length === 0
-              ? "As sales reps sign up and set their profile to public, they'll appear here."
-              : (
-                <>
-                  Try{" "}
-                  <Link href={`?view=${view}&role=all`} className="underline">
-                    All roles
-                  </Link>
-                  .
-                </>
-              )}
+            {candidates.length === 0 ? (
+              "Once sales reps sign up, they'll appear here."
+            ) : (
+              <>
+                Try{" "}
+                <Link href={`?view=${view}&role=all`} className="underline">
+                  All roles
+                </Link>
+                .
+              </>
+            )}
           </p>
         </div>
       ) : view === "tile" ? (
@@ -214,15 +250,15 @@ export default async function CandidatesPage({
 }
 
 function displayName(c: CandidateRow): string {
-  const fn = c.users?.first_name?.trim();
-  const ln = c.users?.last_name?.trim();
+  const fn = c.first_name?.trim();
+  const ln = c.last_name?.trim();
   if (fn || ln) return `${fn ?? ""} ${ln ?? ""}`.trim();
   return "Candidate";
 }
 
 function initials(c: CandidateRow): string {
-  const fn = c.users?.first_name?.trim();
-  const ln = c.users?.last_name?.trim();
+  const fn = c.first_name?.trim();
+  const ln = c.last_name?.trim();
   const a = fn?.[0] ?? "";
   const b = ln?.[0] ?? "";
   return (a + b).toUpperCase() || "?";
@@ -237,7 +273,7 @@ function CandidateCard({
   invited: boolean;
   view: "tile" | "list";
 }) {
-  const specialties = candidate.candidate_specialties.map((s) => s.sales_role);
+  const specialties = candidate.specialties;
   const name = displayName(candidate);
   const inits = initials(candidate);
 
