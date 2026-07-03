@@ -4,7 +4,15 @@ import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
+type SearchParams = Promise<{ saved?: string }>;
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const params = await searchParams;
+  const justSaved = params.saved === "1";
   const supabase = await createClient();
   const {
     data: { user },
@@ -90,27 +98,43 @@ export default async function DashboardPage() {
           </Link>
         </section>
       ) : (
-        <section className="mb-6 rounded border border-zinc-200 dark:border-zinc-800 p-4">
-          <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-3">
-            Your profile
-          </h2>
-          <p className="text-sm mb-3">
-            Roles you&apos;re qualified for:{" "}
-            {specialties && specialties.length > 0 ? (
-              specialties.map((s, idx) => (
-                <span key={s.sales_role}>
-                  <strong>{s.sales_role}</strong>
-                  {idx < specialties.length - 1 ? ", " : ""}
-                </span>
-              ))
-            ) : (
-              <em className="text-zinc-500">(none set)</em>
-            )}
-          </p>
+        <>
+          {justSaved && (
+            <div
+              role="status"
+              className="mb-4 rounded border border-green-300 bg-green-50 dark:bg-green-950 dark:border-green-900 p-3 text-sm text-green-800 dark:text-green-200"
+            >
+              ✅ Profile saved.
+            </div>
+          )}
+          <section className="mb-6 rounded border border-zinc-200 dark:border-zinc-800 p-4">
+            <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-wider mb-3">
+              Your profile
+            </h2>
+            <p className="text-sm mb-3">
+              Roles you&apos;re qualified for:{" "}
+              {specialties && specialties.length > 0 ? (
+                specialties.map((s, idx) => (
+                  <span key={s.sales_role}>
+                    <strong>{s.sales_role}</strong>
+                    {idx < specialties.length - 1 ? ", " : ""}
+                  </span>
+                ))
+              ) : (
+                <em className="text-zinc-500">(none set)</em>
+              )}
+            </p>
+            <Link
+              href="/profile/edit"
+              className="inline-block rounded bg-primary text-white px-4 py-2 text-sm font-medium hover:opacity-90 transition-opacity"
+            >
+              Edit profile →
+            </Link>
+          </section>
           <p className="text-xs text-amber-700 dark:text-amber-400 italic">
             🚧 Browse opportunities coming in Phase 3 (listings).
           </p>
-        </section>
+        </>
       )}
 
       <p className="text-xs text-zinc-400 mt-8">
