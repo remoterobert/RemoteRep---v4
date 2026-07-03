@@ -29,7 +29,7 @@ const clientNavigation: NavItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: HomeIcon },
   { name: "Hiring Center", href: "#", icon: BuildingOfficeIcon },
   { name: "Browse talent", href: "/candidates", icon: UserGroupIcon },
-  { name: "Chats", href: "#", icon: ChatBubbleLeftRightIcon },
+  { name: "Chats", href: "/chats", icon: ChatBubbleLeftRightIcon },
   { name: "Affiliates", href: "#", icon: ShareIcon },
   { name: "Support", href: "#", icon: LifebuoyIcon, newTab: true },
 ];
@@ -39,7 +39,7 @@ const talentNavigation: NavItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: HomeIcon },
   { name: "Opportunities", href: "/opportunities", icon: ClipboardDocumentListIcon },
   { name: "Browse clients", href: "#", icon: BuildingOffice2Icon },
-  { name: "Chats", href: "#", icon: ChatBubbleLeftRightIcon },
+  { name: "Chats", href: "/chats", icon: ChatBubbleLeftRightIcon },
   { name: "Affiliates", href: "#", icon: ShareIcon },
   { name: "Support", href: "#", icon: LifebuoyIcon, newTab: true },
 ];
