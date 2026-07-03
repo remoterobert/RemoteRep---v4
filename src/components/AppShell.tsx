@@ -11,6 +11,7 @@ import {
   BuildingOffice2Icon,
   BellIcon,
   ChevronDownIcon,
+  ShieldCheckIcon,
 } from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "@/app/(auth)/actions";
@@ -79,6 +80,17 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
     m.tenants.type === "client_company" || m.tenants.type === "agency";
   const navigation = isHiring ? clientNavigation : talentNavigation;
 
+  // Check platform admin — controls the extra "Admin" sidebar entry.
+  const { data: adminMembership } = await supabase
+    .from("tenant_members")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("role", "platform_admin")
+    .eq("status", "active")
+    .limit(1)
+    .maybeSingle();
+  const isPlatformAdmin = !!adminMembership;
+
   const { data: profile } = await supabase
     .from("users")
     .select("first_name, last_name")
@@ -127,6 +139,20 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
                       </Link>
                     </li>
                   ))}
+                  {isPlatformAdmin && (
+                    <li>
+                      <Link
+                        href="/admin"
+                        className="text-secondary hover:bg-primary-blue group flex gap-x-3 rounded-md p-3 text-sm leading-6 font-semibold transition-colors border-t border-white/10 mt-2 pt-4"
+                      >
+                        <ShieldCheckIcon
+                          className="h-6 w-6 shrink-0"
+                          aria-hidden="true"
+                        />
+                        Admin
+                      </Link>
+                    </li>
+                  )}
                 </ul>
               </li>
 
