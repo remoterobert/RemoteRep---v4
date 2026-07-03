@@ -30,7 +30,7 @@ export async function signup(formData: FormData) {
   const supabase = await createClient();
   const origin = await getSiteOrigin();
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -40,6 +40,13 @@ export async function signup(formData: FormData) {
 
   if (error) {
     redirect(`/signup?error=${encodeURIComponent(error.message)}`);
+  }
+
+  // If email confirmation is disabled (or session was returned), the user
+  // is already signed in — skip the "check your email" page and go
+  // straight into onboarding.
+  if (data.session || data.user?.email_confirmed_at) {
+    redirect("/onboarding/choose-role");
   }
 
   redirect("/signup/check-email");
