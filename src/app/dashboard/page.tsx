@@ -12,6 +12,7 @@ import {
   type CandidateProfileForCompletion,
 } from "@/lib/profile-completion";
 import { computeCompanyCompletion } from "@/lib/company-completion";
+import { respondToInvitation } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -99,27 +100,30 @@ async function CandidateDashboard({
     .eq("owner_user_id", userId)
     .eq("target_type", "listing");
 
-  // Applications where this candidate is the recipient (companies who've invited them)
-  const { data: invitations, count: invitationCount } = await supabase
+  // Applications where this candidate is the recipient — include recent responded
+  // ones too so the candidate can see history, not just pending.
+  const { data: invitations } = await supabase
     .from("applications")
     .select(
-      "id, tenant_id, status, message, applied_at, tenants!inner(name)",
-      { count: "exact" },
+      "id, tenant_id, status, message, applied_at, last_status_change_at, tenants!inner(name)",
     )
     .eq("candidate_user_id", userId)
-    .eq("status", "invited")
-    .order("applied_at", { ascending: false })
-    .limit(5);
+    .in("status", ["invited", "interviewing"])
+    .order("last_status_change_at", { ascending: false })
+    .limit(10);
 
   type InvitationRow = {
     id: string;
     tenant_id: string;
-    status: string;
+    status: "invited" | "interviewing";
     message: string | null;
     applied_at: string;
+    last_status_change_at: string;
     tenants: { name: string };
   };
   const recentInvitations = (invitations ?? []) as unknown as InvitationRow[];
+  const pendingInvitations = recentInvitations.filter((i) => i.status === "invited");
+  const invitationCount = pendingInvitations.length;
 
   const completion = computeProfileCompletion({
     ...(candidateProfile as CandidateProfileForCompletion | null),
@@ -193,7 +197,7 @@ async function CandidateDashboard({
             {recentInvitations.length === 0 ? (
               <p className="text-sm text-light-grey italic">
                 No companies have engaged with your profile yet. Once one
-                invites you or bookmarks your profile, they&apos;ll appear here.
+                invites you, they&apos;ll appear here.
               </p>
             ) : (
               <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
@@ -204,17 +208,70 @@ async function CandidateDashboard({
                         {inv.tenants.name}
                       </span>
                       <span className="text-xs text-light-grey">
-                        {new Date(inv.applied_at).toLocaleDateString()}
+                        {new Date(
+                          inv.last_status_change_at ?? inv.applied_at,
+                        ).toLocaleDateString()}
                       </span>
                     </div>
-                    <p className="text-xs text-light-grey">
-                      <span className="inline-block text-[10px] bg-invited/10 text-invited rounded px-1.5 py-0.5 font-semibold mr-1">
-                        Invited
-                      </span>
-                      {inv.message
-                        ? `"${inv.message}"`
-                        : "wants to talk with you about a role."}
+                    <p className="text-xs text-light-grey mb-2">
+                      {inv.status === "invited" ? (
+                        <>
+                          <span className="inline-block text-[10px] bg-invited/10 text-invited rounded px-1.5 py-0.5 font-semibold mr-1">
+                            Invited
+                          </span>
+                          {inv.message
+                            ? `"${inv.message}"`
+                            : "wants to talk with you about a role."}
+                        </>
+                      ) : (
+                        <>
+                          <span className="inline-block text-[10px] bg-interviewing/10 text-interviewing rounded px-1.5 py-0.5 font-semibold mr-1">
+                            Interviewing
+                          </span>
+                          You said yes — company will reach out to schedule.
+                        </>
+                      )}
                     </p>
+                    {inv.status === "invited" && (
+                      <div className="flex gap-2">
+                        <form action={respondToInvitation} className="contents">
+                          <input
+                            type="hidden"
+                            name="application_id"
+                            value={inv.id}
+                          />
+                          <input
+                            type="hidden"
+                            name="response"
+                            value="interested"
+                          />
+                          <button
+                            type="submit"
+                            className="text-xs rounded bg-primary text-white px-3 py-1.5 font-medium hover:opacity-90 transition-opacity"
+                          >
+                            I&apos;m interested
+                          </button>
+                        </form>
+                        <form action={respondToInvitation} className="contents">
+                          <input
+                            type="hidden"
+                            name="application_id"
+                            value={inv.id}
+                          />
+                          <input
+                            type="hidden"
+                            name="response"
+                            value="not_interested"
+                          />
+                          <button
+                            type="submit"
+                            className="text-xs rounded border border-zinc-300 dark:border-zinc-700 px-3 py-1.5 font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                          >
+                            Not now
+                          </button>
+                        </form>
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -340,7 +397,7 @@ async function HiringDashboard({
 }) {
   const supabase = await createClient();
 
-  const [{ data: intents }, { data: clientProfile }, { count: invitedCount }, { data: recentInvites }] =
+  const [{ data: intents }, { data: clientProfile }, { data: allApps }] =
     await Promise.all([
       supabase
         .from("tenant_hiring_intents")
@@ -356,26 +413,27 @@ async function HiringDashboard({
         .maybeSingle(),
       supabase
         .from("applications")
-        .select("id", { count: "exact", head: true })
+        .select(
+          "id, candidate_user_id, applied_at, last_status_change_at, status, users!inner(first_name, last_name)",
+        )
         .eq("tenant_id", tenantId)
-        .eq("status", "invited"),
-      supabase
-        .from("applications")
-        .select("id, candidate_user_id, applied_at, status, users!inner(first_name, last_name)")
-        .eq("tenant_id", tenantId)
-        .eq("status", "invited")
-        .order("applied_at", { ascending: false })
-        .limit(5),
+        .in("status", ["invited", "interviewing", "withdrawn"])
+        .order("last_status_change_at", { ascending: false })
+        .limit(20),
     ]);
 
   type InviteRow = {
     id: string;
     candidate_user_id: string;
     applied_at: string;
-    status: string;
+    last_status_change_at: string;
+    status: "invited" | "interviewing" | "withdrawn";
     users: { first_name: string | null; last_name: string | null };
   };
-  const invites = (recentInvites ?? []) as unknown as InviteRow[];
+  const invites = (allApps ?? []) as unknown as InviteRow[];
+  const invitedCount = invites.filter((i) => i.status === "invited").length;
+  const interviewingCount = invites.filter((i) => i.status === "interviewing").length;
+  const recentInvites = invites.slice(0, 6);
 
   const completion = computeCompanyCompletion({
     ...(clientProfile ?? {}),
@@ -414,18 +472,22 @@ async function HiringDashboard({
         <MetricCard
           icon={<EnvelopeIcon className="h-4 w-4" />}
           label="Invitations sent"
-          value={invitedCount ?? 0}
+          value={invitedCount + interviewingCount}
           comparison={
-            (invitedCount ?? 0) > 0
+            invitedCount + interviewingCount > 0
               ? "Good — active outreach"
               : "Browse candidates and invite"
           }
         />
         <MetricCard
           icon={<BookmarkIcon className="h-4 w-4" />}
-          label="Awaiting reply"
-          value={invitedCount ?? 0}
-          comparison="Replies unlock in-app chat (coming)"
+          label="Interested"
+          value={interviewingCount}
+          comparison={
+            interviewingCount > 0
+              ? "Reach out to schedule"
+              : "Waiting on candidate replies"
+          }
         />
         <MetricCard
           icon={<ChartBarIcon className="h-4 w-4" />}
@@ -451,7 +513,7 @@ async function HiringDashboard({
                 Browse candidates →
               </Link>
             </div>
-            {invites.length === 0 ? (
+            {recentInvites.length === 0 ? (
               <p className="text-sm text-light-grey italic">
                 No candidates invited yet. Head to{" "}
                 <Link href="/candidates" className="underline">
@@ -461,24 +523,47 @@ async function HiringDashboard({
               </p>
             ) : (
               <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                {invites.map((inv) => {
+                {recentInvites.map((inv) => {
                   const name =
                     inv.users.first_name || inv.users.last_name
                       ? `${inv.users.first_name ?? ""} ${inv.users.last_name ?? ""}`.trim()
                       : "Candidate";
+
+                  const statusStyle =
+                    inv.status === "interviewing"
+                      ? "bg-interviewing/10 text-interviewing"
+                      : inv.status === "withdrawn"
+                        ? "bg-zinc-200 text-light-grey dark:bg-zinc-800"
+                        : "bg-invited/10 text-invited";
+                  const statusLabel =
+                    inv.status === "interviewing"
+                      ? "Interested"
+                      : inv.status === "withdrawn"
+                        ? "Passed"
+                        : "Invited";
+                  const detail =
+                    inv.status === "interviewing"
+                      ? "wants to talk — reach out to schedule"
+                      : inv.status === "withdrawn"
+                        ? "not looking right now"
+                        : "awaiting reply";
                   return (
                     <li key={inv.id} className="py-3 first:pt-0 last:pb-0">
                       <div className="flex items-baseline justify-between gap-2 mb-1">
                         <span className="font-semibold text-sm">{name}</span>
                         <span className="text-xs text-light-grey">
-                          {new Date(inv.applied_at).toLocaleDateString()}
+                          {new Date(
+                            inv.last_status_change_at ?? inv.applied_at,
+                          ).toLocaleDateString()}
                         </span>
                       </div>
                       <p className="text-xs text-light-grey">
-                        <span className="inline-block text-[10px] bg-invited/10 text-invited rounded px-1.5 py-0.5 font-semibold mr-1">
-                          Invited
+                        <span
+                          className={`inline-block text-[10px] rounded px-1.5 py-0.5 font-semibold mr-1 ${statusStyle}`}
+                        >
+                          {statusLabel}
                         </span>
-                        awaiting reply
+                        {detail}
                       </p>
                     </li>
                   );

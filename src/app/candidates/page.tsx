@@ -129,15 +129,21 @@ export default async function CandidatesPage({
     return false;
   });
 
-  // Fetch existing invitations for this tenant so we can mark already-invited candidates
-  const { data: invitedRows } = await supabase
+  // Fetch existing applications for this tenant so we can reflect the current
+  // status of each candidate on the browse cards.
+  const { data: appRows } = await supabase
     .from("applications")
-    .select("candidate_user_id")
+    .select("candidate_user_id, status")
     .eq("tenant_id", hiring.tenant_id)
-    .eq("status", "invited");
-  const alreadyInvited = new Set(
-    (invitedRows ?? []).map((r) => r.candidate_user_id as string),
-  );
+    .in("status", ["invited", "interviewing", "withdrawn"]);
+  type AppStatus = "invited" | "interviewing" | "withdrawn";
+  const statusByCandidate = new Map<string, AppStatus>();
+  for (const r of appRows ?? []) {
+    statusByCandidate.set(
+      r.candidate_user_id as string,
+      r.status as AppStatus,
+    );
+  }
 
   return (
     <main className="flex-1 p-6 max-w-5xl mx-auto w-full">
@@ -228,7 +234,7 @@ export default async function CandidatesPage({
             <CandidateCard
               key={c.user_id}
               candidate={c}
-              invited={alreadyInvited.has(c.user_id)}
+              status={statusByCandidate.get(c.user_id) ?? null}
               view="tile"
             />
           ))}
@@ -239,7 +245,7 @@ export default async function CandidatesPage({
             <CandidateCard
               key={c.user_id}
               candidate={c}
-              invited={alreadyInvited.has(c.user_id)}
+              status={statusByCandidate.get(c.user_id) ?? null}
               view="list"
             />
           ))}
@@ -266,33 +272,55 @@ function initials(c: CandidateRow): string {
 
 function CandidateCard({
   candidate,
-  invited,
+  status,
   view,
 }: {
   candidate: CandidateRow;
-  invited: boolean;
+  status: "invited" | "interviewing" | "withdrawn" | null;
   view: "tile" | "list";
 }) {
   const specialties = candidate.specialties;
   const name = displayName(candidate);
   const inits = initials(candidate);
 
-  const InviteBtn = invited ? (
-    <span className="inline-flex items-center gap-1 text-xs bg-interviewing/10 text-interviewing rounded px-2 py-1 font-medium">
-      <CheckIcon className="h-3 w-3" />
-      Invited
-    </span>
-  ) : (
-    <form action={inviteCandidate} className="contents">
-      <input type="hidden" name="candidate_user_id" value={candidate.user_id} />
-      <button
-        type="submit"
-        className="text-xs rounded bg-primary text-white px-3 py-1.5 font-medium hover:opacity-90"
-      >
-        Invite
-      </button>
-    </form>
-  );
+  let InviteBtn: React.ReactNode;
+  if (status === "interviewing") {
+    InviteBtn = (
+      <span className="inline-flex items-center gap-1 text-xs bg-interviewing/10 text-interviewing rounded px-2 py-1 font-medium">
+        <CheckIcon className="h-3 w-3" />
+        Interested
+      </span>
+    );
+  } else if (status === "invited") {
+    InviteBtn = (
+      <span className="inline-flex items-center gap-1 text-xs bg-invited/10 text-invited rounded px-2 py-1 font-medium">
+        <CheckIcon className="h-3 w-3" />
+        Awaiting reply
+      </span>
+    );
+  } else if (status === "withdrawn") {
+    InviteBtn = (
+      <span className="inline-flex items-center gap-1 text-xs bg-zinc-200 dark:bg-zinc-800 text-light-grey rounded px-2 py-1 font-medium">
+        Passed
+      </span>
+    );
+  } else {
+    InviteBtn = (
+      <form action={inviteCandidate} className="contents">
+        <input
+          type="hidden"
+          name="candidate_user_id"
+          value={candidate.user_id}
+        />
+        <button
+          type="submit"
+          className="text-xs rounded bg-primary text-white px-3 py-1.5 font-medium hover:opacity-90"
+        >
+          Invite
+        </button>
+      </form>
+    );
+  }
 
   if (view === "tile") {
     return (
