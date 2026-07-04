@@ -10,11 +10,11 @@ import {
   ClipboardDocumentListIcon,
   BuildingOffice2Icon,
   BellIcon,
-  ChevronDownIcon,
   ShieldCheckIcon,
 } from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/server";
 import { logout } from "@/app/(auth)/actions";
+import { UserMenu } from "@/components/UserMenu";
 
 type NavItem = {
   name: string;
@@ -179,21 +179,12 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
               <BellIcon className="h-6 w-6 text-dark-foreground dark:text-white" />
             </button>
 
-            <form action={logout} className="contents">
-              <button
-                type="submit"
-                className="flex items-center gap-2 -m-1.5 p-1.5 hover:opacity-80 transition-opacity"
-                aria-label="Sign out"
-              >
-                <div className="h-8 w-8 rounded-full bg-primary text-white text-xs font-semibold flex items-center justify-center">
-                  {(profile?.first_name?.[0] ?? user.email?.[0] ?? "?").toUpperCase()}
-                </div>
-                <span className="text-sm text-dark-foreground dark:text-white hidden sm:inline">
-                  {displayName}
-                </span>
-                <ChevronDownIcon className="h-4 w-4 text-dark-foreground dark:text-white" />
-              </button>
-            </form>
+            <UserMenu
+              email={user.email ?? ""}
+              displayName={displayName}
+              initials={(profile?.first_name?.[0] ?? user.email?.[0] ?? "?").toUpperCase()}
+              isHiring={isHiring}
+            />
           </div>
         </div>
       </header>
