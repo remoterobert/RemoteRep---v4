@@ -453,13 +453,22 @@ async function HiringDashboard({
 
   return (
     <main className="flex-1 p-6 max-w-6xl mx-auto w-full">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold mb-1">
-          Welcome{firstName ? `, ${firstName}` : ""}.
-        </h1>
-        <p className="text-sm text-light-grey">
-          {tenantName} · here&apos;s how your hiring is going.
-        </p>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold mb-1">
+            Welcome{firstName ? `, ${firstName}` : ""}.
+          </h1>
+          <p className="text-sm text-light-grey">
+            {tenantName} · here&apos;s how your hiring is going.
+          </p>
+        </div>
+        <Link
+          href="/company/listings/new"
+          className="inline-flex items-center gap-1.5 rounded bg-primary text-white px-4 py-2 text-sm font-semibold hover:opacity-90 transition-opacity shrink-0"
+        >
+          <ClipboardDocumentListIcon className="h-4 w-4" />
+          New listing
+        </Link>
       </div>
 
       {justSaved && (
