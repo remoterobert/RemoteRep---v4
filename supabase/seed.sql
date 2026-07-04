@@ -36,12 +36,12 @@ BEGIN
   -- =====================================================================
   -- Companies (tenants)
   -- =====================================================================
-  INSERT INTO public.tenants (id, name, type) VALUES
-    ('d0000001-0000-4000-8000-000000000001', '[Demo] Northstar SaaS', 'client_company'),
-    ('d0000002-0000-4000-8000-000000000002', '[Demo] Verto Health', 'client_company'),
-    ('d0000003-0000-4000-8000-000000000003', '[Demo] Blackrock Security', 'client_company'),
-    ('d0000004-0000-4000-8000-000000000004', '[Demo] Threadline Commerce', 'client_company'),
-    ('d0000005-0000-4000-8000-000000000005', '[Demo] Meadow Real Estate', 'client_company')
+  INSERT INTO public.tenants (id, slug, name, type) VALUES
+    ('d0000001-0000-4000-8000-000000000001', 'demo-northstar-saas',       '[Demo] Northstar SaaS',       'client_company'),
+    ('d0000002-0000-4000-8000-000000000002', 'demo-verto-health',         '[Demo] Verto Health',         'client_company'),
+    ('d0000003-0000-4000-8000-000000000003', 'demo-blackrock-security',   '[Demo] Blackrock Security',   'client_company'),
+    ('d0000004-0000-4000-8000-000000000004', 'demo-threadline-commerce',  '[Demo] Threadline Commerce',  'client_company'),
+    ('d0000005-0000-4000-8000-000000000005', 'demo-meadow-real-estate',   '[Demo] Meadow Real Estate',   'client_company')
   ON CONFLICT (id) DO NOTHING;
 
   -- =====================================================================
