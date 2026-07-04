@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ChevronLeftIcon } from "@heroicons/react/24/outline";
+import {
+  ChevronLeftIcon,
+  BriefcaseIcon,
+} from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/server";
+import { ChatSidebar } from "../ChatSidebar";
 import { ChatThread } from "./ChatThread";
 
 export const dynamic = "force-dynamic";
@@ -17,8 +21,6 @@ export default async function ChatDetailPage({ params }: { params: Params }) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Verify caller is a participant (RLS also enforces this, but nice to
-  // 404 rather than "empty list").
   const { data: participation } = await supabase
     .from("chat_participants")
     .select("chat_id, last_read_at")
@@ -30,13 +32,21 @@ export default async function ChatDetailPage({ params }: { params: Params }) {
 
   const { data: chat } = await supabase
     .from("chats")
-    .select("id, tenant_id, related_application_id, tenants(name)")
+    .select("id, tenant_id, related_application_id, tenants(name, type)")
     .eq("id", chatId)
     .single();
 
   if (!chat) notFound();
 
-  // Other participants (for header)
+  const chatTenants = (
+    chat as unknown as {
+      tenants: { name: string; type: string } | { name: string; type: string }[] | null;
+    }
+  ).tenants;
+  const tenantInfo = Array.isArray(chatTenants) ? chatTenants[0] : chatTenants;
+  const tenantName = tenantInfo?.name ?? "";
+  const tenantType = tenantInfo?.type ?? "";
+
   const { data: otherParticipants } = await supabase
     .from("chat_participants")
     .select("user_id, users!inner(first_name, last_name, email)")
@@ -61,27 +71,18 @@ export default async function ChatDetailPage({ params }: { params: Params }) {
     })
     .join(", ");
 
-  const chatTenants = (chat as unknown as {
-    tenants: { name: string } | { name: string }[] | null;
-  }).tenants;
-  const tenantName = Array.isArray(chatTenants)
-    ? (chatTenants[0]?.name ?? "")
-    : (chatTenants?.name ?? "");
-
   const { data: initialMessages } = await supabase
     .from("messages")
     .select("id, chat_id, author_user_id, body, created_at, edited_at, deleted_at")
     .eq("chat_id", chatId)
     .order("created_at", { ascending: true });
 
-  // Mark chat as read for this user (best-effort)
   await supabase
     .from("chat_participants")
     .update({ last_read_at: new Date().toISOString() })
     .eq("chat_id", chatId)
     .eq("user_id", user.id);
 
-  // Build display name map so client can label authors
   const { data: allParts } = await supabase
     .from("chat_participants")
     .select("user_id, users!inner(first_name, last_name, email)")
@@ -104,33 +105,78 @@ export default async function ChatDetailPage({ params }: { params: Params }) {
     nameByUserId[p.user_id] = label;
   }
 
-  return (
-    <main className="flex flex-col h-[calc(100vh-4.5rem)] max-w-3xl mx-auto w-full">
-      {/* Header */}
-      <header className="border-b border-zinc-200 dark:border-zinc-800 px-6 py-3 flex items-center gap-3">
-        <Link
-          href="/chats"
-          aria-label="Back to chats"
-          className="text-light-grey hover:text-primary transition-colors"
-        >
-          <ChevronLeftIcon className="h-5 w-5" />
-        </Link>
-        <div className="min-w-0 flex-1">
-          <h1 className="font-semibold text-sm truncate">
-            {headerNames || "Conversation"}
-          </h1>
-          {tenantName && (
-            <p className="text-xs text-light-grey truncate">{tenantName}</p>
-          )}
-        </div>
-      </header>
+  // My perspective (hiring vs candidate) drives the icebreaker set
+  const { data: myMemberships } = await supabase
+    .from("tenant_members")
+    .select("role, tenants!inner(type)")
+    .eq("user_id", user.id)
+    .eq("status", "active");
+  type M = { role: string; tenants: { type: string } };
+  const myRows = (myMemberships ?? []) as unknown as M[];
+  const iAmHiring = myRows.some(
+    (m) => m.tenants.type === "client_company" || m.tenants.type === "agency",
+  );
 
-      <ChatThread
-        chatId={chatId}
-        currentUserId={user.id}
-        initialMessages={initialMessages ?? []}
-        nameByUserId={nameByUserId}
-      />
-    </main>
+  const icebreakers = iAmHiring
+    ? [
+        "Do you have time for a quick call this week?",
+        "Tell me about your best quarter — what made it work?",
+        "What are you looking for in your next role?",
+      ]
+    : [
+        "Thanks for reaching out! Could you tell me more about the role?",
+        "What's the compensation structure like?",
+        "When are you looking to bring someone on board?",
+      ];
+
+  return (
+    <div className="flex h-[calc(100vh-4.5rem)] max-w-6xl mx-auto w-full">
+      {/* Sidebar visible on desktop only */}
+      <div className="hidden lg:flex">
+        <ChatSidebar activeChatId={chatId} />
+      </div>
+
+      <main className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <header className="border-b border-zinc-200 dark:border-zinc-800 px-4 lg:px-6 py-3 flex items-center gap-3 shrink-0">
+          <Link
+            href="/chats"
+            aria-label="Back to chats"
+            className="text-light-grey hover:text-primary transition-colors lg:hidden"
+          >
+            <ChevronLeftIcon className="h-5 w-5" />
+          </Link>
+          <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold shrink-0">
+            {(headerNames.split(" ")[0]?.[0] ?? "?").toUpperCase()}
+          </div>
+          <div className="min-w-0 flex-1">
+            <h1 className="font-semibold text-sm truncate">
+              {headerNames || "Conversation"}
+            </h1>
+            {tenantName && (
+              <p className="text-xs text-light-grey truncate flex items-center gap-1">
+                <BriefcaseIcon className="h-3 w-3" />
+                {tenantName}
+                {tenantType && tenantType !== "solo_talent" && (
+                  <span className="text-light-grey">
+                    · {tenantType.replace("_", " ")}
+                  </span>
+                )}
+              </p>
+            )}
+          </div>
+        </header>
+
+        <ChatThread
+          chatId={chatId}
+          currentUserId={user.id}
+          initialMessages={initialMessages ?? []}
+          nameByUserId={nameByUserId}
+          icebreakers={icebreakers}
+          otherName={headerNames || "them"}
+          iAmHiring={iAmHiring}
+        />
+      </main>
+    </div>
   );
 }
