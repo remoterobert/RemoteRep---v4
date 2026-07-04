@@ -511,8 +511,8 @@ function CandidateCard({
   const name = displayName(candidate);
   const inits = initials(candidate);
   const detailHref = listingId
-    ? `/candidates/${candidate.user_id}?listing=${listingId}`
-    : `/candidates/${candidate.user_id}`;
+    ? `/profiles/${candidate.user_id}?listing=${listingId}`
+    : `/profiles/${candidate.user_id}`;
 
   let InviteBtn: React.ReactNode;
   if (status === "interviewing") {

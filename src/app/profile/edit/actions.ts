@@ -38,6 +38,10 @@ export async function saveProfile(formData: FormData) {
   const about = getStr(formData, "about");
   const photo_url = getStr(formData, "photo_url");
   const video_url = getStr(formData, "video_url");
+  const skills = getStr(formData, "skills");
+  const city = getStr(formData, "city");
+  const state_region = getStr(formData, "state_region");
+  const country = getStr(formData, "country");
   const visibility = formData.get("visibility") === "public" ? "public" : "hidden";
 
   // --- Section 2: experience summary ---
@@ -72,6 +76,10 @@ export async function saveProfile(formData: FormData) {
       about: about || null,
       photo_url: photo_url || null,
       video_url: video_url || null,
+      skills: skills || null,
+      city: city || null,
+      state_region: state_region || null,
+      country: country || null,
       visibility,
       years_of_experience,
       education,

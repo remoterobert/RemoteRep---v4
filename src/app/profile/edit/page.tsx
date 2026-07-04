@@ -51,7 +51,7 @@ export default async function EditProfilePage({
     supabase
       .from("candidate_profiles")
       .select(
-        "headline, about, photo_url, video_url, visibility, years_of_experience, education, industry_slugs, sales_types, decision_makers, sales_environments, sales_cycles, deal_amounts, sales_volumes, lead_types, technologies",
+        "headline, about, photo_url, video_url, skills, city, state_region, country, visibility, years_of_experience, education, industry_slugs, sales_types, decision_makers, sales_environments, sales_cycles, deal_amounts, sales_volumes, lead_types, technologies",
       )
       .eq("user_id", user.id)
       .maybeSingle(),
@@ -81,6 +81,10 @@ export default async function EditProfilePage({
     about: profileRow?.about ?? "",
     photo_url: profileRow?.photo_url ?? "",
     video_url: profileRow?.video_url ?? "",
+    skills: profileRow?.skills ?? "",
+    city: profileRow?.city ?? "",
+    state_region: profileRow?.state_region ?? "",
+    country: profileRow?.country ?? "",
     visibility:
       (profileRow?.visibility as "public" | "hidden" | undefined) ?? "public",
     years_of_experience: profileRow?.years_of_experience ?? null,

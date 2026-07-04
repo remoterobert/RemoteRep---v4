@@ -1,10 +1,12 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AdjustmentsHorizontalIcon,
   XMarkIcon,
+  MagnifyingGlassIcon,
+  ChevronDownIcon,
 } from "@heroicons/react/24/outline";
 import {
   SALES_ROLES,
@@ -22,231 +24,131 @@ import {
   EDUCATION_LEVELS,
 } from "@/lib/listings/options";
 
-/**
- * Every filterable facet the /opportunities page understands. `single`
- * facets bind to at-most-one URL value; `multi` facets bind to any number
- * (repeated ?key=A&key=B). Reserved `param` names must match what
- * page.tsx reads from searchParams.
- */
-const FACETS = [
-  { param: "role", label: "Sales role", options: SALES_ROLES, kind: "single" as const },
-  { param: "commitment", label: "Commitment", options: COMMITMENTS, kind: "multi" as const },
-  { param: "comp_type", label: "Compensation type", options: COMPENSATION_TYPES, kind: "multi" as const },
-  { param: "sales_type", label: "Sales type", options: SALES_TYPES, kind: "multi" as const },
-  { param: "decision_maker", label: "Decision-maker", options: DECISION_MAKERS, kind: "multi" as const },
-  { param: "environment", label: "Environment", options: SALES_ENVIRONMENTS, kind: "multi" as const },
-  { param: "cycle", label: "Sales cycle", options: SALES_CYCLES, kind: "multi" as const },
-  { param: "deal", label: "Deal size", options: DEAL_AMOUNTS, kind: "multi" as const },
-  { param: "volume", label: "Annual volume", options: SALES_VOLUMES, kind: "multi" as const },
-  { param: "lead", label: "Lead type", options: LEAD_TYPES, kind: "multi" as const },
-  { param: "tech", label: "Tools", options: TECHNOLOGIES, kind: "multi" as const },
-  { param: "education", label: "Education", options: EDUCATION_LEVELS, kind: "multi" as const },
-  { param: "industry", label: "Industry", options: INDUSTRIES, kind: "multi" as const, searchable: true },
+type Facet =
+  | {
+      param: string;
+      label: string;
+      options: readonly string[];
+      kind: "single" | "multi";
+      searchable?: boolean;
+    }
+  | { param: string; label: string; kind: "numeric"; placeholder: string };
+
+const FACETS: Facet[] = [
+  { param: "role", label: "Sales role", options: SALES_ROLES, kind: "single" },
+  { param: "commitment", label: "Commitment", options: COMMITMENTS, kind: "multi" },
+  { param: "comp_type", label: "Compensation type", options: COMPENSATION_TYPES, kind: "multi" },
+  { param: "min_pay", label: "Min. pay", kind: "numeric", placeholder: "75000" },
+  { param: "min_exp", label: "Min. experience", kind: "numeric", placeholder: "3" },
+  { param: "sales_type", label: "Sales type", options: SALES_TYPES, kind: "multi" },
+  { param: "decision_maker", label: "Decision-maker", options: DECISION_MAKERS, kind: "multi" },
+  { param: "environment", label: "Environment", options: SALES_ENVIRONMENTS, kind: "multi" },
+  { param: "cycle", label: "Sales cycle", options: SALES_CYCLES, kind: "multi" },
+  { param: "deal", label: "Deal size", options: DEAL_AMOUNTS, kind: "multi" },
+  { param: "volume", label: "Annual volume", options: SALES_VOLUMES, kind: "multi" },
+  { param: "lead", label: "Lead type", options: LEAD_TYPES, kind: "multi" },
+  { param: "tech", label: "Tools", options: TECHNOLOGIES, kind: "multi" },
+  { param: "education", label: "Education", options: EDUCATION_LEVELS, kind: "multi" },
+  { param: "industry", label: "Industry", options: INDUSTRIES, kind: "multi", searchable: true },
 ];
 
-type Facet = (typeof FACETS)[number];
-
-export function FilterPanel() {
+/**
+ * Horizontal filter bar. Each facet is a pill button. Clicking a pill
+ * opens a floating popover with its options. Selected pills are colored
+ * and show the count/value. Layout: sits above the content, wraps naturally.
+ *
+ * State: URL search params. All read/write goes through the router so
+ * filters survive back-button and are shareable.
+ */
+export function FilterPanel({
+  showResultsCount,
+}: {
+  showResultsCount?: number;
+}) {
   const router = useRouter();
   const sp = useSearchParams();
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [industryQuery, setIndustryQuery] = useState("");
-  const [expandedIndustry, setExpandedIndustry] = useState(false);
 
-  // Compute active-filter chips across all facets for the "clear" banner.
   const activeChips = useMemo(() => {
     const chips: Array<{ param: string; value: string; label: string }> = [];
     for (const f of FACETS) {
-      const values = sp.getAll(f.param);
-      for (const v of values) {
-        chips.push({ param: f.param, value: v, label: `${f.label}: ${v}` });
+      if (f.kind === "numeric") {
+        const v = sp.get(f.param);
+        if (v) {
+          const display =
+            f.param === "min_pay"
+              ? `${f.label}: $${Number(v).toLocaleString()}+`
+              : `${f.label}: ${v}+ yrs`;
+          chips.push({ param: f.param, value: v, label: display });
+        }
+      } else {
+        for (const v of sp.getAll(f.param)) {
+          chips.push({ param: f.param, value: v, label: `${f.label}: ${v}` });
+        }
       }
-    }
-    const minPay = sp.get("min_pay");
-    if (minPay) {
-      chips.push({
-        param: "min_pay",
-        value: minPay,
-        label: `Min pay: $${Number(minPay).toLocaleString()}+`,
-      });
-    }
-    const minExp = sp.get("min_exp");
-    if (minExp) {
-      chips.push({
-        param: "min_exp",
-        value: minExp,
-        label: `Min exp: ${minExp}+ yrs`,
-      });
     }
     return chips;
   }, [sp]);
 
-  function toggleValue(param: string, value: string, kind: Facet["kind"]) {
-    const params = new URLSearchParams(sp.toString());
-    if (kind === "single") {
-      if (params.get(param) === value) params.delete(param);
-      else params.set(param, value);
-    } else {
-      const existing = params.getAll(param);
-      if (existing.includes(value)) {
-        params.delete(param);
-        existing.filter((v) => v !== value).forEach((v) => params.append(param, v));
-      } else {
-        params.append(param, value);
-      }
-    }
-    params.set("view", sp.get("view") ?? "tile");
-    router.push(`/opportunities?${params.toString()}`);
-  }
-
-  function setScalar(param: string, value: string) {
-    const params = new URLSearchParams(sp.toString());
-    if (value === "") params.delete(param);
-    else params.set(param, value);
-    router.push(`/opportunities?${params.toString()}`);
-  }
-
-  function removeChip(param: string, value: string) {
-    const params = new URLSearchParams(sp.toString());
-    if (param === "min_pay" || param === "min_exp") {
-      params.delete(param);
-    } else {
-      const existing = params.getAll(param);
-      params.delete(param);
-      existing.filter((v) => v !== value).forEach((v) => params.append(param, v));
-    }
-    router.push(`/opportunities?${params.toString()}`);
-  }
+  const activeCount = activeChips.length;
 
   function clearAll() {
     const params = new URLSearchParams();
     const view = sp.get("view");
     if (view) params.set("view", view);
-    router.push(`/opportunities?${params.toString()}`);
+    router.push(`?${params.toString()}`);
   }
 
-  // Close mobile drawer with Escape.
-  useEffect(() => {
-    if (!mobileOpen) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setMobileOpen(false);
+  function removeChip(param: string, value: string) {
+    const params = new URLSearchParams(sp.toString());
+    if (
+      param === "min_pay" ||
+      param === "min_exp" ||
+      FACETS.find((f) => f.param === param)?.kind === "single"
+    ) {
+      params.delete(param);
+    } else {
+      const existing = params.getAll(param);
+      params.delete(param);
+      existing
+        .filter((v) => v !== value)
+        .forEach((v) => params.append(param, v));
     }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [mobileOpen]);
-
-  const panel = (
-    <div className="space-y-5">
-      {/* Numeric scalars */}
-      <NumericBlock
-        param="min_pay"
-        label="Minimum pay (USD)"
-        placeholder="e.g. 75000"
-        current={sp.get("min_pay") ?? ""}
-        onCommit={(v) => setScalar("min_pay", v)}
-      />
-      <NumericBlock
-        param="min_exp"
-        label="Minimum experience (years)"
-        placeholder="e.g. 3"
-        current={sp.get("min_exp") ?? ""}
-        onCommit={(v) => setScalar("min_exp", v)}
-      />
-
-      {FACETS.map((f) => {
-        if (f.param === "industry") {
-          // Special-case industries: search + expandable to keep panel short.
-          const active = new Set(sp.getAll(f.param));
-          const filtered = f.options.filter((o) =>
-            o.toLowerCase().includes(industryQuery.trim().toLowerCase()),
-          );
-          const visible = expandedIndustry ? filtered : filtered.slice(0, 8);
-          return (
-            <div key={f.param}>
-              <div className="text-xs font-semibold uppercase tracking-wider text-light-grey mb-2">
-                {f.label}
-              </div>
-              <input
-                type="search"
-                value={industryQuery}
-                onChange={(e) => setIndustryQuery(e.target.value)}
-                placeholder="Search 68 industries…"
-                className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2 py-1.5 text-xs mb-2"
-              />
-              <div className="flex flex-wrap gap-1">
-                {visible.map((opt) => {
-                  const isActive = active.has(opt);
-                  return (
-                    <button
-                      key={opt}
-                      type="button"
-                      onClick={() => toggleValue(f.param, opt, f.kind)}
-                      className={`text-[11px] rounded-full px-2 py-1 border transition-colors ${
-                        isActive
-                          ? "bg-primary text-white border-primary"
-                          : "border-zinc-300 dark:border-zinc-700 hover:border-primary/50"
-                      }`}
-                    >
-                      {opt}
-                    </button>
-                  );
-                })}
-              </div>
-              {filtered.length > 8 && (
-                <button
-                  type="button"
-                  onClick={() => setExpandedIndustry((v) => !v)}
-                  className="text-[11px] text-primary hover:opacity-80 mt-1.5"
-                >
-                  {expandedIndustry
-                    ? "Show fewer"
-                    : `Show all ${filtered.length} →`}
-                </button>
-              )}
-            </div>
-          );
-        }
-
-        const active = new Set(sp.getAll(f.param));
-        return (
-          <div key={f.param}>
-            <div className="text-xs font-semibold uppercase tracking-wider text-light-grey mb-2">
-              {f.label}
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {f.options.map((opt) => {
-                const isActive =
-                  f.kind === "single"
-                    ? sp.get(f.param) === opt
-                    : active.has(opt);
-                return (
-                  <button
-                    key={opt}
-                    type="button"
-                    onClick={() => toggleValue(f.param, opt, f.kind)}
-                    className={`text-[11px] rounded-full px-2 py-1 border transition-colors ${
-                      isActive
-                        ? "bg-primary text-white border-primary"
-                        : "border-zinc-300 dark:border-zinc-700 hover:border-primary/50"
-                    }`}
-                  >
-                    {opt}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
+    router.push(`?${params.toString()}`);
+  }
 
   return (
-    <>
-      {/* Active-chips banner (visible on all viewports) */}
+    <div className="mb-4">
+      {/* The filter bar */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="inline-flex items-center gap-1 text-xs font-semibold text-light-grey uppercase tracking-wider mr-1">
+          <AdjustmentsHorizontalIcon className="h-4 w-4" />
+          Filters
+        </span>
+
+        {FACETS.map((f) => (
+          <FacetPill key={f.param} facet={f} />
+        ))}
+
+        {activeCount > 0 && (
+          <button
+            type="button"
+            onClick={clearAll}
+            className="text-xs text-light-grey hover:text-primary underline ml-auto"
+          >
+            Clear all ({activeCount})
+          </button>
+        )}
+
+        {showResultsCount !== undefined && (
+          <span className="text-xs text-light-grey ml-auto">
+            {showResultsCount} result{showResultsCount === 1 ? "" : "s"}
+          </span>
+        )}
+      </div>
+
+      {/* Active-filter chips below */}
       {activeChips.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 mb-4">
-          <span className="text-xs text-light-grey mr-1">Filtering:</span>
+        <div className="flex flex-wrap items-center gap-1.5 mt-3">
           {activeChips.map((c) => (
             <span
               key={`${c.param}-${c.value}`}
@@ -263,70 +165,174 @@ export function FilterPanel() {
               </button>
             </span>
           ))}
-          <button
-            type="button"
-            onClick={clearAll}
-            className="text-[11px] text-light-grey hover:text-primary underline ml-1"
-          >
-            Clear all
-          </button>
         </div>
       )}
-
-      {/* Mobile trigger */}
-      <button
-        type="button"
-        onClick={() => setMobileOpen(true)}
-        className="lg:hidden inline-flex items-center gap-1.5 rounded border border-zinc-300 dark:border-zinc-700 px-3 py-1.5 text-sm font-medium mb-4"
-      >
-        <AdjustmentsHorizontalIcon className="h-4 w-4" />
-        Filters{activeChips.length > 0 && ` (${activeChips.length})`}
-      </button>
-
-      {/* Desktop sidebar */}
-      <aside className="hidden lg:block sticky top-[88px] self-start w-[260px] shrink-0 pr-2 pb-8 overflow-y-auto max-h-[calc(100vh-100px)]">
-        <div className="text-sm font-semibold mb-4 flex items-center gap-1.5">
-          <AdjustmentsHorizontalIcon className="h-4 w-4" />
-          Filters
-        </div>
-        {panel}
-      </aside>
-
-      {/* Mobile drawer */}
-      {mobileOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 flex">
-          <div
-            className="absolute inset-0 bg-black/50"
-            onClick={() => setMobileOpen(false)}
-          />
-          <div className="relative ml-auto w-[320px] max-w-[85vw] h-full bg-white dark:bg-[#0b1220] shadow-2xl overflow-y-auto">
-            <div className="sticky top-0 bg-white dark:bg-[#0b1220] border-b border-zinc-200 dark:border-white/[0.06] flex items-center justify-between px-4 py-3">
-              <div className="text-sm font-semibold">Filters</div>
-              <button
-                type="button"
-                onClick={() => setMobileOpen(false)}
-                aria-label="Close filters"
-                className="p-1 rounded hover:bg-zinc-100 dark:hover:bg-white/[0.06]"
-              >
-                <XMarkIcon className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="p-4">{panel}</div>
-          </div>
-        </div>
-      )}
-    </>
+    </div>
   );
 }
 
-function NumericBlock({
-  label,
+/**
+ * One facet pill. Renders a button showing the facet name + count of
+ * active values, and opens a popover when clicked.
+ */
+function FacetPill({ facet }: { facet: Facet }) {
+  const router = useRouter();
+  const sp = useSearchParams();
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onClick(e: MouseEvent) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const isNumeric = facet.kind === "numeric";
+  const active = isNumeric
+    ? sp.get(facet.param)
+      ? 1
+      : 0
+    : sp.getAll(facet.param).length;
+
+  function toggleValue(value: string) {
+    if (facet.kind === "numeric") return;
+    const params = new URLSearchParams(sp.toString());
+    if (facet.kind === "single") {
+      if (params.get(facet.param) === value) params.delete(facet.param);
+      else params.set(facet.param, value);
+    } else {
+      const existing = params.getAll(facet.param);
+      if (existing.includes(value)) {
+        params.delete(facet.param);
+        existing
+          .filter((v) => v !== value)
+          .forEach((v) => params.append(facet.param, v));
+      } else {
+        params.append(facet.param, value);
+      }
+    }
+    router.push(`?${params.toString()}`);
+  }
+
+  function setNumeric(value: string) {
+    const params = new URLSearchParams(sp.toString());
+    if (value === "") params.delete(facet.param);
+    else params.set(facet.param, value);
+    router.push(`?${params.toString()}`);
+  }
+
+  const pillClass = active
+    ? "bg-primary/10 text-primary border-primary"
+    : "bg-white dark:bg-white/[0.02] border-zinc-300 dark:border-zinc-700 hover:border-primary/40";
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className={`text-xs rounded-full px-3 py-1.5 border font-medium inline-flex items-center gap-1.5 transition-colors ${pillClass}`}
+      >
+        {facet.label}
+        {active > 0 && !isNumeric && facet.kind === "multi" && (
+          <span className="rounded-full bg-primary text-white text-[10px] px-1.5 py-0.5 font-bold">
+            {active}
+          </span>
+        )}
+        {facet.kind === "single" && active > 0 && (
+          <span className="text-[10px] font-bold">
+            · {sp.get(facet.param)}
+          </span>
+        )}
+        {isNumeric && active > 0 && (
+          <span className="text-[10px] font-bold">
+            · {sp.get(facet.param)}
+          </span>
+        )}
+        <ChevronDownIcon
+          className={`h-3 w-3 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 min-w-[240px] max-w-sm rounded-lg border border-zinc-200 dark:border-white/[0.08] bg-white dark:bg-[#0b1220] shadow-xl p-3">
+          {facet.kind === "numeric" ? (
+            <NumericInput
+              placeholder={facet.placeholder}
+              current={sp.get(facet.param) ?? ""}
+              onCommit={setNumeric}
+            />
+          ) : (
+            <>
+              {facet.searchable && (
+                <div className="relative mb-2">
+                  <MagnifyingGlassIcon className="absolute left-2 top-2 h-3.5 w-3.5 text-light-grey pointer-events-none" />
+                  <input
+                    type="search"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Search…"
+                    className="w-full pl-7 pr-2 py-1.5 text-xs rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900"
+                  />
+                </div>
+              )}
+              <div className="flex flex-wrap gap-1 max-h-72 overflow-y-auto">
+                {facet.options
+                  .filter((opt) =>
+                    facet.searchable && query
+                      ? opt.toLowerCase().includes(query.toLowerCase())
+                      : true,
+                  )
+                  .map((opt) => {
+                    const isActive =
+                      facet.kind === "single"
+                        ? sp.get(facet.param) === opt
+                        : sp.getAll(facet.param).includes(opt);
+                    return (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => toggleValue(opt)}
+                        className={`text-[11px] rounded-full px-2 py-1 border transition-colors ${
+                          isActive
+                            ? "bg-primary text-white border-primary"
+                            : "border-zinc-300 dark:border-zinc-700 hover:border-primary/50"
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    );
+                  })}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NumericInput({
   placeholder,
   current,
   onCommit,
 }: {
-  param: string;
-  label: string;
   placeholder: string;
   current: string;
   onCommit: (v: string) => void;
@@ -334,27 +340,32 @@ function NumericBlock({
   const [local, setLocal] = useState(current);
   useEffect(() => setLocal(current), [current]);
   return (
-    <div>
-      <div className="text-xs font-semibold uppercase tracking-wider text-light-grey mb-2">
-        {label}
-      </div>
+    <div className="flex items-center gap-2">
       <input
         type="number"
         value={local}
         onChange={(e) => setLocal(e.target.value)}
-        onBlur={() => {
-          if (local !== current) onCommit(local);
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            (e.target as HTMLInputElement).blur();
-          }
-        }}
         placeholder={placeholder}
         min={0}
-        className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2 py-1.5 text-xs"
+        autoFocus
+        className="flex-1 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2 py-1 text-sm"
       />
+      <button
+        type="button"
+        onClick={() => onCommit(local)}
+        className="rounded bg-primary text-white px-3 py-1 text-xs font-semibold hover:opacity-90"
+      >
+        Apply
+      </button>
+      {current && (
+        <button
+          type="button"
+          onClick={() => onCommit("")}
+          className="text-xs text-light-grey hover:text-primary"
+        >
+          Clear
+        </button>
+      )}
     </div>
   );
 }
