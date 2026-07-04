@@ -35,7 +35,7 @@ export default async function EditCompanyPage({
   const { data: profile } = await supabase
     .from("client_profiles")
     .select(
-      "about, hiring_pitch, website_url, industry_slug, headcount, founded_year, visibility",
+      "about, hiring_pitch, website_url, industry_slug, city, state_region, country, headcount, founded_year, visibility",
     )
     .eq("tenant_id", m.tenant_id)
     .maybeSingle();
@@ -226,6 +226,60 @@ export default async function EditCompanyPage({
             Industry is a slug for now — a proper picker (from all 68 v3
             industries) comes when candidates start filtering by it.
           </p>
+
+          <div className="grid grid-cols-3 gap-3 pt-2">
+            <div>
+              <label
+                htmlFor="city"
+                className="block text-sm font-medium mb-1"
+              >
+                City
+              </label>
+              <input
+                id="city"
+                name="city"
+                type="text"
+                maxLength={100}
+                defaultValue={profile?.city ?? ""}
+                placeholder="e.g. Austin"
+                className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="state_region"
+                className="block text-sm font-medium mb-1"
+              >
+                State / Region
+              </label>
+              <input
+                id="state_region"
+                name="state_region"
+                type="text"
+                maxLength={100}
+                defaultValue={profile?.state_region ?? ""}
+                placeholder="e.g. Texas"
+                className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="country"
+                className="block text-sm font-medium mb-1"
+              >
+                Country
+              </label>
+              <input
+                id="country"
+                name="country"
+                type="text"
+                maxLength={100}
+                defaultValue={profile?.country ?? ""}
+                placeholder="e.g. USA"
+                className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
         </section>
 
         <div className="flex items-center gap-3 pt-4 border-t border-zinc-200 dark:border-zinc-800">

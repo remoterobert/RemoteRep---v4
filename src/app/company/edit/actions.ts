@@ -33,6 +33,9 @@ export async function saveCompanyProfile(formData: FormData) {
   const hiring_pitch = String(formData.get("hiring_pitch") ?? "").trim();
   const website_url = String(formData.get("website_url") ?? "").trim();
   const industry_slug = String(formData.get("industry_slug") ?? "").trim();
+  const city = String(formData.get("city") ?? "").trim();
+  const state_region = String(formData.get("state_region") ?? "").trim();
+  const country = String(formData.get("country") ?? "").trim();
   const headcountRaw = String(formData.get("headcount") ?? "").trim();
   const foundedYearRaw = String(formData.get("founded_year") ?? "").trim();
   const visibility =
@@ -54,6 +57,9 @@ export async function saveCompanyProfile(formData: FormData) {
       hiring_pitch: hiring_pitch || null,
       website_url: website_url || null,
       industry_slug: industry_slug || null,
+      city: city || null,
+      state_region: state_region || null,
+      country: country || null,
       headcount,
       founded_year,
       visibility,

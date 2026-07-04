@@ -40,6 +40,8 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // Route protection: redirect unauthenticated users away from protected paths.
+  // Public shareable routes (/listings/*, /profiles/*) are deliberately
+  // NOT protected — anyone can view a published listing or public profile.
   const pathname = request.nextUrl.pathname;
   const isProtected =
     pathname.startsWith("/dashboard") ||
@@ -56,6 +58,7 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("error", "Please sign in to continue.");
+    url.searchParams.set("redirect", pathname + request.nextUrl.search);
     return NextResponse.redirect(url);
   }
 

@@ -27,6 +27,10 @@ export type ProfileDefaults = {
   about: string;
   photo_url: string;
   video_url: string;
+  skills: string;
+  city: string;
+  state_region: string;
+  country: string;
   visibility: "public" | "hidden";
   years_of_experience: number | null;
   education: string | null;
@@ -142,6 +146,54 @@ export function ProfileEditForm({
           </p>
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div>
+            <label htmlFor="city" className="block text-sm font-medium mb-1">
+              City
+            </label>
+            <input
+              id="city"
+              name="city"
+              type="text"
+              maxLength={100}
+              defaultValue={profile.city}
+              placeholder="e.g. Austin"
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="state_region"
+              className="block text-sm font-medium mb-1"
+            >
+              State / Region
+            </label>
+            <input
+              id="state_region"
+              name="state_region"
+              type="text"
+              maxLength={100}
+              defaultValue={profile.state_region}
+              placeholder="e.g. Texas"
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label htmlFor="country" className="block text-sm font-medium mb-1">
+              Country
+            </label>
+            <input
+              id="country"
+              name="country"
+              type="text"
+              maxLength={100}
+              defaultValue={profile.country}
+              placeholder="e.g. USA"
+              className={inputCls}
+            />
+          </div>
+        </div>
+
         <fieldset>
           <legend className="block text-sm font-medium mb-2">Visibility</legend>
           <div className="flex flex-wrap items-center gap-4 text-sm">
@@ -214,6 +266,24 @@ export function ProfileEditForm({
               ))}
             </select>
           </div>
+        </div>
+
+        <div>
+          <label htmlFor="skills" className="block text-sm font-medium mb-1">
+            Skills
+          </label>
+          <textarea
+            id="skills"
+            name="skills"
+            rows={3}
+            maxLength={2000}
+            defaultValue={profile.skills}
+            placeholder="B2B sales, cold outreach, discovery, negotiation, MEDDIC, forecasting, closing, account expansion, objection handling…"
+            className={inputCls}
+          />
+          <p className="text-xs text-light-grey mt-1">
+            Comma-separated list of your sales skills. Show up in search.
+          </p>
         </div>
 
         <ChipMulti

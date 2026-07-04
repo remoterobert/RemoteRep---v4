@@ -337,37 +337,34 @@ export default async function OpportunitiesPage({
 
   return (
     <main className="flex-1 w-full">
-      <div className="max-w-[1400px] mx-auto p-6 lg:flex lg:gap-8">
-        <FilterPanel />
-
-        <div className="flex-1 min-w-0">
-          <div className="flex items-baseline justify-between mb-4 flex-wrap gap-2">
-            <div>
-              <h1 className="text-2xl font-semibold">Opportunities</h1>
-              <p className="text-sm text-light-grey mt-0.5">
-                Real open roles from companies on RemoteRep.{" "}
-                {filtered.length === 1
-                  ? "1 match"
-                  : `${filtered.length} matches`}
-                .
-              </p>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-light-grey">View:</span>
-              <Link
-                href={listHref}
-                className={`rounded px-2 py-1 ${view === "list" ? "bg-primary text-white" : "border border-zinc-300 dark:border-zinc-700"}`}
-              >
-                List
-              </Link>
-              <Link
-                href={tileHref}
-                className={`rounded px-2 py-1 ${view === "tile" ? "bg-primary text-white" : "border border-zinc-300 dark:border-zinc-700"}`}
-              >
-                Tile
-              </Link>
-            </div>
+      <div className="max-w-6xl mx-auto p-6">
+        <div className="flex items-baseline justify-between mb-4 flex-wrap gap-2">
+          <div>
+            <h1 className="text-2xl font-semibold">Opportunities</h1>
+            <p className="text-sm text-light-grey mt-0.5">
+              Real open roles from companies on RemoteRep.
+            </p>
           </div>
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-light-grey">View:</span>
+            <Link
+              href={listHref}
+              className={`rounded px-2 py-1 ${view === "list" ? "bg-primary text-white" : "border border-zinc-300 dark:border-zinc-700"}`}
+            >
+              List
+            </Link>
+            <Link
+              href={tileHref}
+              className={`rounded px-2 py-1 ${view === "tile" ? "bg-primary text-white" : "border border-zinc-300 dark:border-zinc-700"}`}
+            >
+              Tile
+            </Link>
+          </div>
+        </div>
+
+        <FilterPanel showResultsCount={filtered.length} />
+
+        <div className="min-w-0">
 
           {filtered.length === 0 ? (
             <div className="p-10 text-center border border-dashed border-zinc-300 dark:border-zinc-700 rounded-xl">
@@ -449,7 +446,7 @@ function OpportunityCard({
           </div>
           <div className="flex-1 min-w-0">
             <Link
-              href={`/opportunities/${opp.id}`}
+              href={`/listings/${opp.id}`}
               className="font-semibold text-sm truncate block hover:text-primary transition-colors"
             >
               {opp.title}
@@ -511,7 +508,7 @@ function OpportunityCard({
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-3 mb-1 flex-wrap">
           <Link
-            href={`/opportunities/${opp.id}`}
+            href={`/listings/${opp.id}`}
             className="font-semibold hover:text-primary transition-colors"
           >
             {opp.title}
