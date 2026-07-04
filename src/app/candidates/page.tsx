@@ -15,9 +15,13 @@ import {
 export const dynamic = "force-dynamic";
 
 const EXPERIENCE_TOOLTIP =
-  "How well this rep's experience matches your listing's requirements.";
+  "How well this rep's experience matches your listing's requirements. Green = meets or exceeds; yellow = partial; red = gap.";
 const GOALS_TOOLTIP =
   "How well what you're offering matches what this rep says they want next.";
+const EMPTY_GOALS_TOOLTIP =
+  "This rep hasn't set their goals yet, so there's nothing to compare against.";
+const EMPTY_EXPERIENCE_TOOLTIP =
+  "Your listing doesn't specify enough requirements to score against.";
 
 type SearchParams = Promise<{
   view?: "list" | "tile";
@@ -38,6 +42,8 @@ type CandidateRow = {
   specialties: string[];
   experienceMatch: number;
   goalsMatch: number;
+  experienceScored: number;
+  goalsScored: number;
 };
 
 export default async function CandidatesPage({
@@ -238,15 +244,21 @@ export default async function CandidatesPage({
   const candidates: CandidateRow[] = candidateEntries.map((c) => {
     let expScore = 0;
     let goalsScore = 0;
+    let expScored = 0;
+    let goalsScored = 0;
     if (selectedListingForMatch) {
-      expScore = computeExperienceMatch(
+      const expM = computeExperienceMatch(
         c.candidateForMatch,
         selectedListingForMatch,
-      ).score;
-      goalsScore = computeGoalsMatch(
+      );
+      const goalsM = computeGoalsMatch(
         goalsByUser.get(c.user_id) ?? null,
         selectedListingForMatch,
-      ).score;
+      );
+      expScore = expM.score;
+      expScored = expM.scored;
+      goalsScore = goalsM.score;
+      goalsScored = goalsM.scored;
     }
     return {
       user_id: c.user_id,
@@ -260,6 +272,8 @@ export default async function CandidatesPage({
       specialties: c.specialties,
       experienceMatch: expScore,
       goalsMatch: goalsScore,
+      experienceScored: expScored,
+      goalsScored: goalsScored,
     };
   });
 
@@ -566,10 +580,14 @@ function CandidateCard({
               size="sm"
               experience={candidate.experienceMatch}
               goals={candidate.goalsMatch}
+              experienceScored={candidate.experienceScored}
+              goalsScored={candidate.goalsScored}
               experienceLabel="Exp"
               goalsLabel="Goals"
               experienceTooltip={EXPERIENCE_TOOLTIP}
               goalsTooltip={GOALS_TOOLTIP}
+              emptyExperienceTooltip={EMPTY_EXPERIENCE_TOOLTIP}
+              emptyGoalsTooltip={EMPTY_GOALS_TOOLTIP}
             />
           </div>
         )}
@@ -626,10 +644,14 @@ function CandidateCard({
               size="sm"
               experience={candidate.experienceMatch}
               goals={candidate.goalsMatch}
+              experienceScored={candidate.experienceScored}
+              goalsScored={candidate.goalsScored}
               experienceLabel="Exp"
               goalsLabel="Goals"
               experienceTooltip={EXPERIENCE_TOOLTIP}
               goalsTooltip={GOALS_TOOLTIP}
+              emptyExperienceTooltip={EMPTY_EXPERIENCE_TOOLTIP}
+              emptyGoalsTooltip={EMPTY_GOALS_TOOLTIP}
             />
           </div>
         )}

@@ -21,9 +21,13 @@ import {
 export const dynamic = "force-dynamic";
 
 const EXPERIENCE_TOOLTIP =
-  "How well this rep's experience matches the selected listing.";
+  "How well this rep's experience matches the selected listing. Green = meets or exceeds; yellow = partial; red = gap.";
 const GOALS_TOOLTIP =
   "How well the selected listing satisfies what this rep wants next.";
+const EMPTY_GOALS_TOOLTIP =
+  "This rep hasn't set their goals yet, so there's nothing to compare against.";
+const EMPTY_EXPERIENCE_TOOLTIP =
+  "Your listing doesn't specify enough requirements to score against.";
 
 export default async function CandidateDetailPage({
   params,
@@ -269,10 +273,14 @@ export default async function CandidateDetailPage({
           <MatchBadges
             experience={expMatch.score}
             goals={goalsMatch.score}
+            experienceScored={expMatch.scored}
+            goalsScored={goalsMatch.scored}
             experienceLabel="Experience"
             goalsLabel="Goals"
             experienceTooltip={EXPERIENCE_TOOLTIP}
             goalsTooltip={GOALS_TOOLTIP}
+            emptyExperienceTooltip={EMPTY_EXPERIENCE_TOOLTIP}
+            emptyGoalsTooltip={EMPTY_GOALS_TOOLTIP}
           />
           <p className="text-xs text-light-grey mt-1.5">
             Hover each badge for what it means.
