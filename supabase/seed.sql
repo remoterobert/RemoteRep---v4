@@ -95,7 +95,7 @@ BEGIN
     ('a0000001-0000-4000-8000-000000000001', 'd0000001-0000-4000-8000-000000000001', v_creator_id,
      'Senior Account Executive — Mid-market SaaS',
      E'## About Northstar\n\nWe help mid-market SaaS teams cut their sales-tool spend by 30% with an all-in-one revenue platform. Series B, growing 40% YoY, and profitable.\n\n## What you''ll do\n\n- Own the full sales cycle from qualified inbound lead to close\n- Sell to VP Sales and CROs at 200–2,000 person SaaS companies\n- Run ~15 calls a week and close 3–4 deals per quarter\n\n## What we''re looking for\n\n- 3+ years of full-cycle SaaS AE experience\n- Comfortable running demos and negotiating multi-year deals\n- Consistent quota attainment (bring your last 4 quarters)\n\n## What we offer\n\n$100k base + uncapped commission ($220k OTE). Full health, dental, vision. 401k with 4% match. Fully remote.',
-     'Send a short note about your last full-cycle deal — who, how long, and what closed it.',
+     'Send a short note about your last full-cycle deal — who you sold to, how long the cycle took, and what actually closed it. We usually respond within 48 hours.',
      'https://calendly.com/demo-northstar/ae-intro',
      'published', 'public', now() - interval '3 days'),
 
@@ -115,7 +115,7 @@ BEGIN
     ('a0000002-0000-4000-8000-000000000001', 'd0000002-0000-4000-8000-000000000002', v_creator_id,
      'Account Executive — Telemedicine Growth',
      E'Verto connects patients with primary care doctors over video. We''re Series C and expanding into 12 new states this year.\n\n## What you''ll do\n\n- Close employer partnerships (100–5,000 employees) as a healthcare benefit\n- Work inbound leads from HR platforms + light outbound to benefits brokers\n- Average deal size: $40k ARR. Cycle: 6–8 weeks.\n\n## What we''re looking for\n\n- 2+ years selling into HR, benefits, or healthcare\n- Consultative — you educate before you pitch\n- Bachelor''s degree or equivalent experience\n\n## What we offer\n\n$85k base + commission ($170k OTE). Full benefits day one.',
-     'Tell us about a healthcare or benefits deal you''ve closed and what made it stick.',
+     'Tell us about a healthcare or benefits deal you''ve closed — who the buyer was, how you got in the door, and what made the deal stick after signing. A short paragraph is enough.',
      'https://calendly.com/demo-verto/intro',
      'published', 'public', now() - interval '2 days'),
 
@@ -129,7 +129,7 @@ BEGIN
     ('a0000003-0000-4000-8000-000000000001', 'd0000003-0000-4000-8000-000000000003', v_creator_id,
      'Enterprise Closer — Cybersecurity',
      E'## This role is not for you if\n\n- You need warm inbound to hit your number\n- You get uncomfortable with 9-month sales cycles\n- You want a soft target\n\n## This role IS for you if\n\n- You''ve closed $500k+ ACV deals into Fortune 1000 CIOs\n- You know how to navigate procurement, legal, and CFO objection cycles\n- You want $300k+ OTE with real accelerators past quota\n\n## The bar\n\n5+ years enterprise cyber sales. Track record of $2M+ annual bookings. References required.\n\n## What we offer\n\n$150k base + variable ($300k OTE) with 2x accelerators. 3 named accounts + open territory.',
-     'Share a redacted deal desk memo from a $500k+ deal you closed.',
+     'Share a redacted deal desk memo from a $500k+ deal you closed — feel free to anonymize the customer name, deal value, and any sensitive numbers. What matters is how you navigated the org.',
      'https://calendly.com/demo-blackrock/intro',
      'published', 'public', now() - interval '1 day'),
 
@@ -156,7 +156,7 @@ BEGIN
     ('a0000005-0000-4000-8000-000000000001', 'd0000005-0000-4000-8000-000000000005', v_creator_id,
      'Closer — Luxury Remote Real Estate',
      E'Close inbound leads from high-net-worth individuals looking to buy or sell $2M+ properties. Everything happens over video and phone.\n\n## What you''ll do\n\n- Convert 60–80 warm inbound leads per month into signed listing/buyer agreements\n- Coordinate with local field agents for showings\n- Own the client experience end-to-end\n\n## What we''re looking for\n\n- Active real estate license (any state)\n- 3+ years closing luxury or investment property deals\n- Executive presence — our clients are founders, athletes, and retired execs\n\n## What we offer\n\nCommission-only, uncapped. Top closers hit $400k+. Every lead is pre-qualified.',
-     'Include your license number and last 3 closed deals (address optional).',
+     'Include your license number, the state it''s active in, and your last 3 closed deals (property addresses optional but helpful). We move fast on qualified applicants.',
      'https://calendly.com/demo-meadow/intro',
      'published', 'public', now() - interval '4 days')
   ON CONFLICT (id) DO NOTHING;
