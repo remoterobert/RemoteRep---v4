@@ -4,8 +4,23 @@ import { BookmarkIcon as BookmarkOutline } from "@heroicons/react/24/outline";
 import { BookmarkIcon as BookmarkSolid } from "@heroicons/react/24/solid";
 import { createClient } from "@/lib/supabase/server";
 import { toggleOpportunityBookmark } from "../actions";
+import { MatchBadges } from "@/components/MatchBadges";
+import {
+  computeExperienceMatch,
+  computeGoalsMatch,
+  STATUS_COLOR,
+  STATUS_LABEL,
+  type CandidateForMatch,
+  type CandidateGoals,
+  type ListingForMatch,
+} from "@/lib/matching";
 
 export const dynamic = "force-dynamic";
+
+const EXPERIENCE_TOOLTIP =
+  "How well your sales experience matches what this company is looking for. Green means you meet or exceed. Red means gaps.";
+const GOALS_TOOLTIP =
+  "How well this role matches what you said you want next — comp, commitment, benefits, company size. Green means the role satisfies your goal.";
 
 export default async function OpportunityDetailPage({
   params,
@@ -23,7 +38,7 @@ export default async function OpportunityDetailPage({
   const { data: listing } = await supabase
     .from("listings")
     .select(
-      "id, tenant_id, title, description, instructions, calendar_link, status, visibility, published_at, tenants!inner(id, name), listing_details(sales_role, commitment, compensation_type, minimum_compensation, benefits), listing_requirements(*)",
+      "id, tenant_id, title, description, instructions, calendar_link, status, visibility, published_at, tenants!inner(id, name), listing_details(sales_role, commitment, compensation_type, minimum_compensation, compensation_details, benefits), listing_requirements(*)",
     )
     .eq("id", id)
     .eq("status", "published")
@@ -88,29 +103,58 @@ export default async function OpportunityDetailPage({
     technologies?: string[] | null;
   } | null;
 
-  // Bookmark state
-  const { data: bookmark } = await supabase
-    .from("bookmarks")
-    .select("id")
-    .eq("owner_user_id", user.id)
-    .eq("target_type", "listing")
-    .eq("target_id", l.id)
-    .maybeSingle();
+  // Everything we need to score the match, in parallel with the bookmark check.
+  const [
+    { data: bookmark },
+    { data: candidateProfile },
+    { data: candidateGoals },
+    { data: candidateSpecialties },
+    { data: clientProfile },
+    { data: sameTenantMembership },
+  ] = await Promise.all([
+    supabase
+      .from("bookmarks")
+      .select("id")
+      .eq("owner_user_id", user.id)
+      .eq("target_type", "listing")
+      .eq("target_id", l.id)
+      .maybeSingle(),
+    supabase
+      .from("candidate_profiles")
+      .select(
+        "years_of_experience, education, industry_slugs, sales_types, decision_makers, sales_environments, sales_cycles, deal_amounts, sales_volumes, lead_types, technologies",
+      )
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("candidate_goals")
+      .select(
+        "minimum_compensation, company_age_max, company_headcount_max, industries, sales_roles, commitment, benefits, compensation_types",
+      )
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("candidate_specialties")
+      .select("sales_role")
+      .eq("user_id", user.id),
+    supabase
+      .from("client_profiles")
+      .select("industry_slug, headcount, founded_year")
+      .eq("tenant_id", l.tenant_id)
+      .maybeSingle(),
+    supabase
+      .from("tenant_members")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("tenant_id", l.tenant_id)
+      .eq("status", "active")
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
   const isBookmarked = !!bookmark;
 
-  // Log a listing.viewed event (fire-and-forget). RLS: candidate viewing
-  // published listing is allowed by events insert policy. Skip if the
-  // viewer is a member of the owning tenant so views by internal team
-  // don't inflate the metric.
-  const { data: sameTenantMembership } = await supabase
-    .from("tenant_members")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("tenant_id", l.tenant_id)
-    .eq("status", "active")
-    .limit(1)
-    .maybeSingle();
-
+  // Log a listing.viewed event (skip if the viewer works at the owning tenant).
   if (!sameTenantMembership) {
     await supabase.from("events").insert({
       tenant_id: l.tenant_id,
@@ -122,6 +166,44 @@ export default async function OpportunityDetailPage({
     });
   }
 
+  // Assemble matching inputs and run the engine.
+  const candidateForMatch: CandidateForMatch = {
+    ...(candidateProfile ?? {}),
+    specialties: (candidateSpecialties ?? []).map(
+      (s) => s.sales_role as string,
+    ),
+  };
+  const listingForMatch: ListingForMatch = {
+    details,
+    requirements: reqs,
+    tenant: clientProfile ?? null,
+  };
+  const experienceMatch = computeExperienceMatch(
+    candidateForMatch,
+    listingForMatch,
+  );
+  const goalsMatch = computeGoalsMatch(
+    (candidateGoals ?? null) as CandidateGoals | null,
+    listingForMatch,
+  );
+
+  // For per-chip color-coding: a Set of the candidate's values per axis
+  // so requirement chips can render green/red individually.
+  const cand = candidateForMatch;
+  const CAND_SETS: Record<string, Set<string>> = {
+    industries: new Set(cand.industry_slugs ?? []),
+    sales_roles: new Set(cand.specialties ?? []),
+    sales_types: new Set(cand.sales_types ?? []),
+    decision_makers: new Set(cand.decision_makers ?? []),
+    sales_environments: new Set(cand.sales_environments ?? []),
+    sales_cycles: new Set(cand.sales_cycles ?? []),
+    deal_amounts: new Set(cand.deal_amounts ?? []),
+    sales_volumes: new Set(cand.sales_volumes ?? []),
+    lead_types: new Set(cand.lead_types ?? []),
+    technologies: new Set(cand.technologies ?? []),
+    education: new Set(cand.education ? [cand.education] : []),
+  };
+
   const posted = l.published_at
     ? new Date(l.published_at).toLocaleDateString(undefined, {
         month: "short",
@@ -131,7 +213,7 @@ export default async function OpportunityDetailPage({
     : "";
 
   return (
-    <main className="flex-1 p-6 max-w-4xl mx-auto w-full">
+    <main className="flex-1 p-6 max-w-5xl mx-auto w-full">
       <Link
         href="/opportunities"
         className="text-xs text-light-grey hover:text-primary transition-colors mb-3 inline-block"
@@ -139,7 +221,7 @@ export default async function OpportunityDetailPage({
         ← All opportunities
       </Link>
 
-      <div className="flex items-start justify-between gap-4 mb-4">
+      <div className="flex items-start justify-between gap-4 mb-4 flex-wrap">
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold mb-1">{l.title}</h1>
           <p className="text-sm text-light-grey">
@@ -169,7 +251,27 @@ export default async function OpportunityDetailPage({
         </form>
       </div>
 
-      {/* Snapshot chips */}
+      {/* Match badges */}
+      <div className="mb-6">
+        <MatchBadges
+          experience={experienceMatch.score}
+          goals={goalsMatch.score}
+          experienceLabel="Experience"
+          goalsLabel="Goals"
+          experienceTooltip={EXPERIENCE_TOOLTIP}
+          goalsTooltip={GOALS_TOOLTIP}
+        />
+        <p className="text-xs text-light-grey mt-1.5">
+          Hover each badge for what it means. Chips below turn green when your
+          profile matches, red when it doesn&apos;t. Update your{" "}
+          <Link href="/profile/edit" className="underline text-primary">
+            profile
+          </Link>{" "}
+          to improve match accuracy.
+        </p>
+      </div>
+
+      {/* Snapshot chips (listing-side info, uncolored) */}
       <div className="flex flex-wrap gap-1.5 text-xs mb-6">
         {details?.sales_role && (
           <span className="bg-primary/10 text-primary rounded px-2 py-0.5 font-semibold">
@@ -199,8 +301,7 @@ export default async function OpportunityDetailPage({
         )}
       </div>
 
-      {/* Two-column: description | requirements sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
         <div className="space-y-6">
           <section>
             <h2 className="text-sm font-semibold uppercase tracking-wider text-light-grey mb-3">
@@ -231,6 +332,19 @@ export default async function OpportunityDetailPage({
               )}
             </section>
           )}
+
+          {/* Match breakdown — per-criterion status. Helps reps quickly see
+              which specific things are hitting and missing. */}
+          <section>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-light-grey mb-3">
+              Match breakdown
+            </h2>
+            <MatchList
+              title="Experience"
+              criteria={experienceMatch.criteria}
+            />
+            <MatchList title="Goals" criteria={goalsMatch.criteria} />
+          </section>
         </div>
 
         <aside className="space-y-4">
@@ -275,48 +389,76 @@ export default async function OpportunityDetailPage({
                 />
               )}
             {reqs?.education && reqs.education.length > 0 && (
-              <Chips label="Education" values={reqs.education} />
+              <MatchChips
+                label="Education"
+                values={reqs.education}
+                candidateSet={CAND_SETS.education}
+              />
             )}
             {reqs?.sales_types && reqs.sales_types.length > 0 && (
-              <Chips label="Sales types" values={reqs.sales_types} />
+              <MatchChips
+                label="Sales types"
+                values={reqs.sales_types}
+                candidateSet={CAND_SETS.sales_types}
+              />
             )}
             {reqs?.decision_makers && reqs.decision_makers.length > 0 && (
-              <Chips
+              <MatchChips
                 label="Decision-makers"
                 values={reqs.decision_makers}
+                candidateSet={CAND_SETS.decision_makers}
               />
             )}
             {reqs?.sales_environments && reqs.sales_environments.length > 0 && (
-              <Chips
+              <MatchChips
                 label="Environments"
                 values={reqs.sales_environments}
+                candidateSet={CAND_SETS.sales_environments}
               />
             )}
             {reqs?.sales_cycles && reqs.sales_cycles.length > 0 && (
-              <Chips label="Sales cycles" values={reqs.sales_cycles} />
+              <MatchChips
+                label="Sales cycles"
+                values={reqs.sales_cycles}
+                candidateSet={CAND_SETS.sales_cycles}
+              />
             )}
             {reqs?.deal_amounts && reqs.deal_amounts.length > 0 && (
-              <Chips label="Deal size" values={reqs.deal_amounts} />
+              <MatchChips
+                label="Deal size"
+                values={reqs.deal_amounts}
+                candidateSet={CAND_SETS.deal_amounts}
+              />
             )}
             {reqs?.sales_volumes && reqs.sales_volumes.length > 0 && (
-              <Chips label="Annual volume" values={reqs.sales_volumes} />
+              <MatchChips
+                label="Annual volume"
+                values={reqs.sales_volumes}
+                candidateSet={CAND_SETS.sales_volumes}
+              />
             )}
             {reqs?.lead_types && reqs.lead_types.length > 0 && (
-              <Chips label="Leads" values={reqs.lead_types} />
+              <MatchChips
+                label="Leads"
+                values={reqs.lead_types}
+                candidateSet={CAND_SETS.lead_types}
+              />
             )}
             {reqs?.technologies && reqs.technologies.length > 0 && (
-              <Chips label="Tools" values={reqs.technologies} />
+              <MatchChips
+                label="Tools"
+                values={reqs.technologies}
+                candidateSet={CAND_SETS.technologies}
+              />
             )}
             {reqs?.industries && reqs.industries.length > 0 && (
-              <Chips label="Industries" values={reqs.industries} />
+              <MatchChips
+                label="Industries"
+                values={reqs.industries}
+                candidateSet={CAND_SETS.industries}
+              />
             )}
           </Card>
-
-          <p className="text-xs text-light-grey px-1">
-            Assess how each of these lines up with what you actually want next
-            — comp, cycle length, deal size, industry. If the fit is close but
-            not perfect, bookmark it and message the company anyway.
-          </p>
         </aside>
       </div>
     </main>
@@ -367,6 +509,89 @@ function Chips({ label, values }: { label: string; values: string[] }) {
           </span>
         ))}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Chips that color themselves green/red based on whether the value
+ * appears in `candidateSet`. Used on the "What they're looking for"
+ * card so the rep can eyeball each individual requirement.
+ */
+function MatchChips({
+  label,
+  values,
+  candidateSet,
+}: {
+  label: string;
+  values: string[];
+  candidateSet: Set<string>;
+}) {
+  return (
+    <div>
+      <div className="text-[11px] uppercase tracking-wider text-light-grey mb-1">
+        {label}
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {values.map((v) => {
+          const has = candidateSet.has(v);
+          return (
+            <span
+              key={v}
+              title={
+                has
+                  ? "In your profile ✓"
+                  : "Not in your profile — update to match"
+              }
+              className={`text-[11px] rounded-full px-2 py-0.5 cursor-help ${
+                has ? STATUS_COLOR.match : STATUS_COLOR.miss
+              }`}
+            >
+              {v}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function MatchList({
+  title,
+  criteria,
+}: {
+  title: string;
+  criteria: import("@/lib/matching").MatchCriterion[];
+}) {
+  const scored = criteria.filter((c) => c.status !== "not_required");
+  if (scored.length === 0) return null;
+  return (
+    <div className="mb-4">
+      <div className="text-[11px] uppercase tracking-wider text-light-grey font-semibold mb-2">
+        {title}
+      </div>
+      <ul className="space-y-1">
+        {scored.map((c) => (
+          <li
+            key={c.key}
+            className="flex items-center justify-between gap-2 text-sm"
+          >
+            <span className="min-w-0 truncate">{c.label}</span>
+            <span className="flex items-center gap-1.5 shrink-0">
+              {c.detail && (
+                <span className="text-[11px] text-light-grey">
+                  {c.detail}
+                </span>
+              )}
+              <span
+                className={`text-[10px] rounded-full px-1.5 py-0.5 font-semibold ${STATUS_COLOR[c.status]}`}
+              >
+                {STATUS_LABEL[c.status]}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
