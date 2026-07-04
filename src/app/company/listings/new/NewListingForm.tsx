@@ -96,14 +96,15 @@ export function NewListingForm({
   }
 
   return (
-    <form action={action} className="space-y-10">
+    <form action={action} className="space-y-6">
       {/* ============================================================
           Section 1 — Basics + AI writer
          ============================================================ */}
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-light-grey uppercase tracking-wider">
-          Basics
-        </h2>
+      <SectionCard
+        step={1}
+        title="Basics"
+        subtitle="Title + description. Draft with AI or write your own."
+      >
 
         <div>
           <label htmlFor="title" className="block text-sm font-medium mb-1">
@@ -307,15 +308,16 @@ export function NewListingForm({
             {description.length} / 5000 characters — minimum 100.
           </p>
         </div>
-      </section>
+      </SectionCard>
 
       {/* ============================================================
           Section 2 — Application instructions
          ============================================================ */}
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold text-light-grey uppercase tracking-wider">
-          Application instructions
-        </h2>
+      <SectionCard
+        step={2}
+        title="Application instructions"
+        subtitle="How reps should apply. Optional — if blank, they just say “I'm interested.”"
+      >
 
         <div>
           <label
@@ -354,15 +356,16 @@ export function NewListingForm({
             className={inputCls}
           />
         </div>
-      </section>
+      </SectionCard>
 
       {/* ============================================================
           Section 3 — Role details
          ============================================================ */}
-      <section className="space-y-5">
-        <h2 className="text-sm font-semibold text-light-grey uppercase tracking-wider">
-          Role details
-        </h2>
+      <SectionCard
+        step={3}
+        title="Role details"
+        subtitle="Structured facts about the role. These are what reps filter by."
+      >
 
         <div>
           <label
@@ -442,19 +445,16 @@ export function NewListingForm({
         </div>
 
         <ChipMulti name="benefits" label="Benefits" options={BENEFITS} />
-      </section>
+      </SectionCard>
 
       {/* ============================================================
           Section 4 — Requirements
          ============================================================ */}
-      <section className="space-y-5">
-        <h2 className="text-sm font-semibold text-light-grey uppercase tracking-wider">
-          Requirements
-        </h2>
-        <p className="text-xs text-light-grey">
-          These help us rank the listing for reps whose experience overlaps.
-          Leave anything blank you don&apos;t care about.
-        </p>
+      <SectionCard
+        step={4}
+        title="What the ideal rep brings"
+        subtitle="Optional. These help us rank your listing for reps whose experience overlaps. Leave anything blank you don't care about."
+      >
 
         <div>
           <label
@@ -522,12 +522,12 @@ export function NewListingForm({
           options={INDUSTRIES}
           placeholder="Search 68 industries — e.g., SaaS, healthcare, real estate…"
         />
-      </section>
+      </SectionCard>
 
       {/* ============================================================
           Submit — draft or publish
          ============================================================ */}
-      <div className="flex flex-wrap items-center gap-3 pt-6 border-t border-zinc-200 dark:border-zinc-800">
+      <div className="flex flex-wrap items-center gap-3 pt-2">
         <button
           type="submit"
           name="publish"
@@ -552,5 +552,39 @@ export function NewListingForm({
         </a>
       </div>
     </form>
+  );
+}
+
+function SectionCard({
+  step,
+  title,
+  subtitle,
+  children,
+}: {
+  step: number;
+  title: string;
+  subtitle: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-zinc-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.02] p-6 md:p-8">
+      <header className="flex items-start gap-3 pb-5 mb-6 border-b border-zinc-100 dark:border-white/[0.04]">
+        <div
+          aria-hidden="true"
+          className="h-9 w-9 shrink-0 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center shadow-sm"
+        >
+          {step}
+        </div>
+        <div className="min-w-0">
+          <h2 className="text-xl font-bold tracking-tight text-dark-foreground dark:text-white leading-tight">
+            {title}
+          </h2>
+          <p className="text-sm text-light-grey mt-0.5 leading-snug">
+            {subtitle}
+          </p>
+        </div>
+      </header>
+      <div className="space-y-5">{children}</div>
+    </section>
   );
 }
