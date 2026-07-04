@@ -104,7 +104,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background dark:bg-dark-background">
       {/* === Left sidebar (desktop) === */}
-      <aside className="hidden lg:fixed lg:inset-y-0 lg:z-40 lg:flex lg:w-[216px] lg:flex-col lg:shadow-xl">
+      <aside className="hidden lg:fixed lg:inset-y-0 lg:z-40 lg:flex lg:w-[216px] lg:flex-col lg:border-r lg:border-white/[0.06]">
         <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-side-menu px-4">
           <div className="flex h-16 shrink-0 items-center">
             <Image
