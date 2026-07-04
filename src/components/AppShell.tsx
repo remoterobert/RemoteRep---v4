@@ -96,10 +96,10 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
     .eq("id", user.id)
     .single();
 
-  const displayName =
+  const displayName: string =
     profile?.first_name && profile?.last_name
       ? `${profile.first_name} ${profile.last_name}`
-      : user.email;
+      : (user.email ?? "");
 
   return (
     <div className="min-h-screen bg-background dark:bg-dark-background">
