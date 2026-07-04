@@ -86,7 +86,7 @@ export async function ChatSidebar({
   });
 
   return (
-    <aside className="w-full lg:w-80 shrink-0 lg:border-r border-zinc-200 dark:border-zinc-800 flex flex-col bg-white dark:bg-light-foreground">
+    <aside className="w-full lg:w-80 shrink-0 lg:border-r border-zinc-200 dark:border-zinc-700/60 flex flex-col bg-white dark:bg-[#0e1830]">
       <header className="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-baseline justify-between">
         <h1 className="text-lg font-semibold">Chats</h1>
         {sorted.length > 0 && (

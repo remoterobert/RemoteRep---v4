@@ -33,14 +33,14 @@ export default async function ChatsIndexPage() {
   );
 
   return (
-    <div className="flex h-[calc(100vh-4.5rem)] max-w-6xl mx-auto w-full bg-zinc-50 dark:bg-dark-background">
+    <div className="flex h-[calc(100vh-4.5rem)] w-full bg-zinc-50 dark:bg-dark-background">
       <ChatSidebar />
 
       {/* Right pane: coaching empty state — desktop only */}
-      <main className="hidden lg:flex flex-1 flex-col items-center justify-center p-8">
+      <main className="hidden lg:flex flex-1 flex-col items-center justify-center p-8 bg-white dark:bg-dark-foreground">
         <div className="max-w-md w-full">
           {/* Hero card */}
-          <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-light-foreground p-8 text-center shadow-sm">
+          <div className="rounded-xl border border-zinc-200 dark:border-zinc-700/60 bg-white dark:bg-[#182647] p-8 text-center shadow-sm">
             <div className="mx-auto h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
               <ChatBubbleLeftRightIcon className="h-7 w-7 text-primary" />
             </div>
@@ -72,7 +72,7 @@ export default async function ChatsIndexPage() {
           </div>
 
           {/* How chats work */}
-          <div className="mt-6 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-light-foreground p-5">
+          <div className="mt-6 rounded-lg border border-zinc-200 dark:border-zinc-700/60 bg-white dark:bg-[#182647] p-5">
             <div className="flex items-center gap-2 mb-3">
               <SparklesIcon className="h-4 w-4 text-primary" />
               <h3 className="text-sm font-semibold uppercase tracking-wider text-light-grey">

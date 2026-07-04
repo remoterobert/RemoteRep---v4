@@ -130,7 +130,7 @@ export default async function ChatDetailPage({ params }: { params: Params }) {
       ];
 
   return (
-    <div className="flex h-[calc(100vh-4.5rem)] max-w-6xl mx-auto w-full bg-zinc-50 dark:bg-dark-background">
+    <div className="flex h-[calc(100vh-4.5rem)] w-full bg-zinc-50 dark:bg-dark-background">
       {/* Sidebar visible on desktop only */}
       <div className="hidden lg:flex">
         <ChatSidebar activeChatId={chatId} />
