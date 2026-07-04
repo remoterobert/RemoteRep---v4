@@ -53,23 +53,23 @@ BEGIN
     ('d0000001-0000-4000-8000-000000000001',
      'Northstar helps mid-market SaaS teams cut their sales-tool spend by 30% with an all-in-one revenue platform.',
      'Series B, growing 40% YoY, profitable. Warm inbound leads, no politics. Nobody has churned off our sales team in 18 months.',
-     'saas-companies', 120, 2019, 'public'),
+     'Software as a Service (SaaS) companies', 120, 2019, 'public'),
     ('d0000002-0000-4000-8000-000000000002',
      'Verto Health connects patients with primary care doctors over video, covered by most insurance plans.',
      'Sell a product people genuinely need. Founder was an ER doctor. Series C, 300+ patient signups per day.',
-     'healthcare', 340, 2018, 'public'),
+     'Remote healthcare and telemedicine services', 340, 2018, 'public'),
     ('d0000003-0000-4000-8000-000000000003',
      'Blackrock Security ships zero-trust access control for regulated industries — finance, healthcare, government.',
      'Enterprise deals with 6-figure ACVs. Selling to CIOs at $500M+ orgs. Long cycle but generous accelerators.',
-     'cybersecurity', 85, 2020, 'public'),
+     'Cybersecurity software providers', 85, 2020, 'public'),
     ('d0000004-0000-4000-8000-000000000004',
      'Threadline is the ops backbone for Shopify brands: inventory, orders, and returns in one dashboard.',
      'Mid-market ecomm brands love us — under 5% churn. Sell a product with 4.8 stars on G2.',
-     'e-commerce', 55, 2021, 'public'),
+     'E-commerce platforms', 55, 2021, 'public'),
     ('d0000005-0000-4000-8000-000000000005',
      'Meadow is the remote-first agency helping investors buy and sell luxury properties without leaving home.',
      'Uncapped commission on real closings. Sell to high-net-worth individuals who are ready to transact.',
-     'real-estate', 22, 2022, 'public')
+     'Remote real estate services', 22, 2022, 'public')
   ON CONFLICT (tenant_id) DO NOTHING;
 
   -- =====================================================================

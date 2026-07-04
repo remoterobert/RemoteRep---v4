@@ -17,9 +17,13 @@ import {
 export const dynamic = "force-dynamic";
 
 const EXPERIENCE_TOOLTIP =
-  "How well your sales experience matches this role's requirements.";
+  "How well your sales experience matches this role's requirements. Green = meets or exceeds; yellow = partial; red = gap.";
 const GOALS_TOOLTIP =
-  "How well this role satisfies what you said you want next.";
+  "How well this role satisfies what you said you want next — comp, commitment, benefits, company size.";
+const EMPTY_GOALS_TOOLTIP =
+  "You haven't set any goals yet. Fill in Section 3 of your profile so we can compare.";
+const EMPTY_EXPERIENCE_TOOLTIP =
+  "This listing doesn't specify enough requirements to score against.";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -69,6 +73,8 @@ type NormalizedListing = {
   postedDaysAgo: number;
   experienceMatch: number;
   goalsMatch: number;
+  experienceScored: number;
+  goalsScored: number;
 };
 
 function unwrapOne<T>(v: T | T[] | null | undefined): T | null {
@@ -140,8 +146,8 @@ function normalize(
     requirements: reqs as ListingForMatch["requirements"],
     tenant: clientProfile,
   };
-  const experienceMatch = computeExperienceMatch(candidate, listingForMatch).score;
-  const goalsMatch = computeGoalsMatch(goals, listingForMatch).score;
+  const expM = computeExperienceMatch(candidate, listingForMatch);
+  const goalsM = computeGoalsMatch(goals, listingForMatch);
 
   return {
     id: row.id,
@@ -154,8 +160,10 @@ function normalize(
     dealRange,
     compensationSummary,
     postedDaysAgo,
-    experienceMatch,
-    goalsMatch,
+    experienceMatch: expM.score,
+    goalsMatch: goalsM.score,
+    experienceScored: expM.scored,
+    goalsScored: goalsM.scored,
   };
 }
 
@@ -455,10 +463,14 @@ function OpportunityCard({
             size="sm"
             experience={opp.experienceMatch}
             goals={opp.goalsMatch}
+            experienceScored={opp.experienceScored}
+            goalsScored={opp.goalsScored}
             experienceLabel="Exp"
             goalsLabel="Goals"
             experienceTooltip={EXPERIENCE_TOOLTIP}
             goalsTooltip={GOALS_TOOLTIP}
+            emptyExperienceTooltip={EMPTY_EXPERIENCE_TOOLTIP}
+            emptyGoalsTooltip={EMPTY_GOALS_TOOLTIP}
           />
         </div>
         <p className="text-xs text-zinc-600 dark:text-zinc-400 mb-3 line-clamp-3">
@@ -512,10 +524,14 @@ function OpportunityCard({
             size="sm"
             experience={opp.experienceMatch}
             goals={opp.goalsMatch}
+            experienceScored={opp.experienceScored}
+            goalsScored={opp.goalsScored}
             experienceLabel="Exp"
             goalsLabel="Goals"
             experienceTooltip={EXPERIENCE_TOOLTIP}
             goalsTooltip={GOALS_TOOLTIP}
+            emptyExperienceTooltip={EMPTY_EXPERIENCE_TOOLTIP}
+            emptyGoalsTooltip={EMPTY_GOALS_TOOLTIP}
           />
         </div>
         <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-2 line-clamp-2">

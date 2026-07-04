@@ -18,9 +18,13 @@ import {
 export const dynamic = "force-dynamic";
 
 const EXPERIENCE_TOOLTIP =
-  "How well your sales experience matches what this company is looking for. Green means you meet or exceed. Red means gaps.";
+  "How well your sales experience matches what this company is looking for. Green means you meet or exceed the requirement; yellow is a partial match; red is a gap.";
 const GOALS_TOOLTIP =
   "How well this role matches what you said you want next — comp, commitment, benefits, company size. Green means the role satisfies your goal.";
+const EMPTY_GOALS_TOOLTIP =
+  "You haven't set any goals yet. Fill in Section 3 of your profile so we can compare listings to what you want next.";
+const EMPTY_EXPERIENCE_TOOLTIP =
+  "This listing doesn't specify any requirements to score against, so there's nothing to compare.";
 
 export default async function OpportunityDetailPage({
   params,
@@ -256,10 +260,14 @@ export default async function OpportunityDetailPage({
         <MatchBadges
           experience={experienceMatch.score}
           goals={goalsMatch.score}
+          experienceScored={experienceMatch.scored}
+          goalsScored={goalsMatch.scored}
           experienceLabel="Experience"
           goalsLabel="Goals"
           experienceTooltip={EXPERIENCE_TOOLTIP}
           goalsTooltip={GOALS_TOOLTIP}
+          emptyExperienceTooltip={EMPTY_EXPERIENCE_TOOLTIP}
+          emptyGoalsTooltip={EMPTY_GOALS_TOOLTIP}
         />
         <p className="text-xs text-light-grey mt-1.5">
           Hover each badge for what it means. Chips below turn green when your
