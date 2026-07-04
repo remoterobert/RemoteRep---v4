@@ -102,17 +102,19 @@ export default async function CompanyListingDetailPage({
     listing_details:
       | {
           sales_role: string | null;
-          commitment: string | null;
+          commitment: string[] | null;
           benefits: string[] | null;
-          compensation_type: string | null;
+          compensation_type: string[] | null;
           minimum_compensation: number | null;
+          compensation_details: string | null;
         }
       | Array<{
           sales_role: string | null;
-          commitment: string | null;
+          commitment: string[] | null;
           benefits: string[] | null;
-          compensation_type: string | null;
+          compensation_type: string[] | null;
           minimum_compensation: number | null;
+          compensation_details: string | null;
         }>
       | null;
     listing_requirements:
@@ -357,17 +359,32 @@ export default async function CompanyListingDetailPage({
         <aside className="space-y-4">
           <DetailCard title="Role details">
             <Kv label="Sales role" value={details?.sales_role ?? "—"} />
-            <Kv label="Commitment" value={details?.commitment ?? "—"} />
-            <Kv
-              label="Compensation"
-              value={
-                details?.compensation_type
-                  ? details?.minimum_compensation
-                    ? `${details.compensation_type} · $${details.minimum_compensation.toLocaleString()}+`
-                    : details.compensation_type
-                  : "—"
-              }
-            />
+            {details?.commitment && details.commitment.length > 0 && (
+              <Chips label="Commitment" values={details.commitment} />
+            )}
+            {details?.compensation_type &&
+              details.compensation_type.length > 0 && (
+                <Chips
+                  label="Compensation type"
+                  values={details.compensation_type}
+                />
+              )}
+            {details?.minimum_compensation != null && (
+              <Kv
+                label="Minimum comp"
+                value={`$${details.minimum_compensation.toLocaleString()}+`}
+              />
+            )}
+            {details?.compensation_details && (
+              <div>
+                <div className="text-[11px] uppercase tracking-wider text-light-grey mb-1">
+                  Comp details
+                </div>
+                <p className="text-xs whitespace-pre-wrap">
+                  {details.compensation_details}
+                </p>
+              </div>
+            )}
             {details?.benefits && details.benefits.length > 0 && (
               <Chips label="Benefits" values={details.benefits} />
             )}

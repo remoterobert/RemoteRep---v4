@@ -4,10 +4,11 @@ import { BookmarkIcon as BookmarkOutline } from "@heroicons/react/24/outline";
 import { BookmarkIcon as BookmarkSolid } from "@heroicons/react/24/solid";
 import { createClient } from "@/lib/supabase/server";
 import { toggleOpportunityBookmark } from "./actions";
+import { FilterPanel } from "./FilterPanel";
 
 export const dynamic = "force-dynamic";
 
-type SearchParams = Promise<{ view?: "list" | "tile"; role?: string }>;
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 type ListingRow = {
   id: string;
@@ -19,15 +20,15 @@ type ListingRow = {
   listing_details:
     | {
         sales_role: string | null;
-        commitment: string | null;
-        compensation_type: string | null;
+        commitment: string[] | null;
+        compensation_type: string[] | null;
         minimum_compensation: number | null;
         benefits: string[] | null;
       }
     | Array<{
         sales_role: string | null;
-        commitment: string | null;
-        compensation_type: string | null;
+        commitment: string[] | null;
+        compensation_type: string[] | null;
         minimum_compensation: number | null;
         benefits: string[] | null;
       }>
@@ -62,13 +63,14 @@ function normalize(row: ListingRow): NormalizedListing {
   const reqs = unwrapOne(row.listing_requirements);
 
   const companyName = tenant?.name ?? "Company";
-  const companyInitials = companyName
-    .split(/\s+/)
-    .map((w) => w[0])
-    .filter(Boolean)
-    .slice(0, 2)
-    .join("")
-    .toUpperCase() || "?";
+  const companyInitials =
+    companyName
+      .split(/\s+/)
+      .map((w) => w[0])
+      .filter(Boolean)
+      .slice(0, 2)
+      .join("")
+      .toUpperCase() || "?";
 
   const shortDescription = row.description
     .replace(/^#{1,6}\s+.*$/gm, "")
@@ -83,7 +85,9 @@ function normalize(row: ListingRow): NormalizedListing {
 
   const compensationSummary = details
     ? [
-        details.compensation_type,
+        details.compensation_type?.length
+          ? details.compensation_type.join(" / ")
+          : null,
         details.minimum_compensation
           ? `$${details.minimum_compensation.toLocaleString()}+`
           : null,
@@ -107,11 +111,21 @@ function normalize(row: ListingRow): NormalizedListing {
     companyInitials,
     shortDescription,
     salesRole: details?.sales_role ?? "",
-    commitment: details?.commitment ?? "",
+    commitment: details?.commitment?.join(" / ") ?? "",
     dealRange,
     compensationSummary,
     postedDaysAgo,
   };
+}
+
+/**
+ * Coerce a searchParam value into an array of strings. Next.js gives us
+ * `string | string[] | undefined` per key; the filter panel appends the
+ * same key multiple times so `?tech=A&tech=B` shows up as string[].
+ */
+function toArray(v: string | string[] | undefined): string[] {
+  if (!v) return [];
+  return Array.isArray(v) ? v : [v];
 }
 
 export default async function OpportunitiesPage({
@@ -124,6 +138,27 @@ export default async function OpportunitiesPage({
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  const params = await searchParams;
+  const view = params.view === "list" ? "list" : "tile";
+
+  const roleParam =
+    typeof params.role === "string" ? params.role : undefined;
+  const minPay = typeof params.min_pay === "string" ? params.min_pay : "";
+  const minExp = typeof params.min_exp === "string" ? params.min_exp : "";
+
+  const commitmentF = toArray(params.commitment);
+  const compTypeF = toArray(params.comp_type);
+  const salesTypeF = toArray(params.sales_type);
+  const decisionF = toArray(params.decision_maker);
+  const envF = toArray(params.environment);
+  const cycleF = toArray(params.cycle);
+  const dealF = toArray(params.deal);
+  const volumeF = toArray(params.volume);
+  const leadF = toArray(params.lead);
+  const techF = toArray(params.tech);
+  const educationF = toArray(params.education);
+  const industryF = toArray(params.industry);
 
   const { data: specialtiesData } = await supabase
     .from("candidate_specialties")
@@ -142,134 +177,154 @@ export default async function OpportunitiesPage({
     (bookmarkRows ?? []).map((b) => b.target_id as string),
   );
 
-  const params = await searchParams;
-  const view = params.view === "list" ? "list" : "tile";
-  const selectedRole = params.role ?? null;
-
-  const { data: listingRows } = await supabase
+  // Base query: every live, public listing.
+  let q = supabase
     .from("listings")
     .select(
-      "id, title, description, published_at, created_at, tenants(name), listing_details(sales_role, commitment, compensation_type, minimum_compensation, benefits), listing_requirements(deal_amounts)",
+      "id, title, description, published_at, created_at, tenants(name), listing_details!inner(sales_role, commitment, compensation_type, minimum_compensation, benefits), listing_requirements!inner(deal_amounts, sales_types, decision_makers, sales_environments, sales_cycles, sales_volumes, lead_types, technologies, education, industries, years_of_experience_min)",
     )
     .eq("status", "published")
     .eq("visibility", "public")
     .order("published_at", { ascending: false, nullsFirst: false })
     .limit(200);
 
+  // Apply single-value filters against listing_details.
+  if (roleParam) {
+    q = q.eq("listing_details.sales_role", roleParam);
+  }
+  if (minPay && !Number.isNaN(Number(minPay))) {
+    q = q.gte("listing_details.minimum_compensation", Number(minPay));
+  }
+
+  // Array-column filters: overlaps(A, B) is true when A and B share ≥1 value.
+  // We use it so a listing that accepts Full-time+Part-time matches a rep who
+  // filters for either.
+  if (commitmentF.length)
+    q = q.overlaps("listing_details.commitment", commitmentF);
+  if (compTypeF.length)
+    q = q.overlaps("listing_details.compensation_type", compTypeF);
+
+  // Requirements-side arrays.
+  if (salesTypeF.length)
+    q = q.overlaps("listing_requirements.sales_types", salesTypeF);
+  if (decisionF.length)
+    q = q.overlaps("listing_requirements.decision_makers", decisionF);
+  if (envF.length)
+    q = q.overlaps("listing_requirements.sales_environments", envF);
+  if (cycleF.length)
+    q = q.overlaps("listing_requirements.sales_cycles", cycleF);
+  if (dealF.length)
+    q = q.overlaps("listing_requirements.deal_amounts", dealF);
+  if (volumeF.length)
+    q = q.overlaps("listing_requirements.sales_volumes", volumeF);
+  if (leadF.length)
+    q = q.overlaps("listing_requirements.lead_types", leadF);
+  if (techF.length)
+    q = q.overlaps("listing_requirements.technologies", techF);
+  if (educationF.length)
+    q = q.overlaps("listing_requirements.education", educationF);
+  if (industryF.length)
+    q = q.overlaps("listing_requirements.industries", industryF);
+  if (minExp && !Number.isNaN(Number(minExp))) {
+    q = q.lte("listing_requirements.years_of_experience_min", Number(minExp));
+  }
+
+  const { data: listingRows } = await q;
+
   const normalized = ((listingRows ?? []) as unknown as ListingRow[]).map(
     normalize,
   );
 
-  const availableRoles = Array.from(
-    new Set(normalized.map((n) => n.salesRole).filter(Boolean)),
-  );
+  // No explicit role filter → rank matches-first based on candidate specialty.
+  const filtered =
+    !roleParam && specialties.size > 0
+      ? [...normalized].sort((a, b) => {
+          const am = specialties.has(a.salesRole) ? 0 : 1;
+          const bm = specialties.has(b.salesRole) ? 0 : 1;
+          return am - bm;
+        })
+      : normalized;
 
-  // Rank: if candidate has specialties, prioritize listings matching them
-  // unless the user explicitly picked a role filter.
-  let filtered = normalized;
-  if (selectedRole && selectedRole !== "all") {
-    filtered = filtered.filter((n) => n.salesRole === selectedRole);
-  } else if (!selectedRole && specialties.size > 0) {
-    // Sort: matches first, then rest.
-    filtered = [...normalized].sort((a, b) => {
-      const am = specialties.has(a.salesRole) ? 0 : 1;
-      const bm = specialties.has(b.salesRole) ? 0 : 1;
-      return am - bm;
-    });
+  const viewParams = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (k === "view") continue;
+    if (Array.isArray(v)) v.forEach((val) => viewParams.append(k, val));
+    else if (v) viewParams.set(k, v);
   }
+  const listHref = `?view=list${viewParams.toString() ? `&${viewParams.toString()}` : ""}`;
+  const tileHref = `?view=tile${viewParams.toString() ? `&${viewParams.toString()}` : ""}`;
 
   return (
-    <main className="flex-1 p-6 max-w-5xl mx-auto w-full">
-      <div className="flex items-baseline justify-between mb-2 flex-wrap gap-2">
-        <div>
-          <h1 className="text-2xl font-semibold">Opportunities</h1>
-          <p className="text-sm text-light-grey mt-0.5">
-            Real open roles from companies on RemoteRep. Bookmark ones that fit.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-light-grey">View:</span>
-          <Link
-            href={`?view=list${selectedRole ? `&role=${encodeURIComponent(selectedRole)}` : ""}`}
-            className={`rounded px-2 py-1 ${view === "list" ? "bg-primary text-white" : "border border-zinc-300 dark:border-zinc-700"}`}
-          >
-            List
-          </Link>
-          <Link
-            href={`?view=tile${selectedRole ? `&role=${encodeURIComponent(selectedRole)}` : ""}`}
-            className={`rounded px-2 py-1 ${view === "tile" ? "bg-primary text-white" : "border border-zinc-300 dark:border-zinc-700"}`}
-          >
-            Tile
-          </Link>
-        </div>
-      </div>
+    <main className="flex-1 w-full">
+      <div className="max-w-[1400px] mx-auto p-6 lg:flex lg:gap-8">
+        <FilterPanel />
 
-      {specialties.size > 0 && availableRoles.length > 0 && (
-        <div className="flex items-center gap-2 mb-6 flex-wrap">
-          <span className="text-xs text-light-grey">Filter:</span>
-          <Link
-            href={`?view=${view}`}
-            className={`text-xs rounded px-2 py-1 ${!selectedRole ? "bg-zinc-200 dark:bg-zinc-800" : "border border-zinc-300 dark:border-zinc-700"}`}
-          >
-            My roles
-          </Link>
-          <Link
-            href={`?view=${view}&role=all`}
-            className={`text-xs rounded px-2 py-1 ${selectedRole === "all" ? "bg-zinc-200 dark:bg-zinc-800" : "border border-zinc-300 dark:border-zinc-700"}`}
-          >
-            All
-          </Link>
-          {availableRoles.map((r) => (
-            <Link
-              key={r}
-              href={`?view=${view}&role=${encodeURIComponent(r)}`}
-              className={`text-xs rounded px-2 py-1 ${selectedRole === r ? "bg-zinc-200 dark:bg-zinc-800" : "border border-zinc-300 dark:border-zinc-700"}`}
-            >
-              {r}
-            </Link>
-          ))}
-        </div>
-      )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline justify-between mb-4 flex-wrap gap-2">
+            <div>
+              <h1 className="text-2xl font-semibold">Opportunities</h1>
+              <p className="text-sm text-light-grey mt-0.5">
+                Real open roles from companies on RemoteRep.{" "}
+                {filtered.length === 1
+                  ? "1 match"
+                  : `${filtered.length} matches`}
+                .
+              </p>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-light-grey">View:</span>
+              <Link
+                href={listHref}
+                className={`rounded px-2 py-1 ${view === "list" ? "bg-primary text-white" : "border border-zinc-300 dark:border-zinc-700"}`}
+              >
+                List
+              </Link>
+              <Link
+                href={tileHref}
+                className={`rounded px-2 py-1 ${view === "tile" ? "bg-primary text-white" : "border border-zinc-300 dark:border-zinc-700"}`}
+              >
+                Tile
+              </Link>
+            </div>
+          </div>
 
-      {filtered.length === 0 ? (
-        <div className="p-10 text-center border border-dashed border-zinc-300 dark:border-zinc-700 rounded-xl">
-          <p className="text-sm text-light-grey mb-2">
-            {normalized.length === 0
-              ? "No live listings yet. Check back soon — companies are joining daily."
-              : "No matches for that filter."}
-          </p>
-          {normalized.length > 0 && (
-            <Link
-              href={`?view=${view}&role=all`}
-              className="text-sm text-primary hover:opacity-80"
-            >
-              See all roles →
-            </Link>
+          {filtered.length === 0 ? (
+            <div className="p-10 text-center border border-dashed border-zinc-300 dark:border-zinc-700 rounded-xl">
+              <p className="text-sm text-light-grey mb-2">
+                No listings match those filters.
+              </p>
+              <Link
+                href="?"
+                className="text-sm text-primary hover:opacity-80"
+              >
+                Clear filters →
+              </Link>
+            </div>
+          ) : view === "tile" ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              {filtered.map((o) => (
+                <OpportunityCard
+                  key={o.id}
+                  opp={o}
+                  isBookmarked={bookmarked.has(o.id)}
+                  view="tile"
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filtered.map((o) => (
+                <OpportunityCard
+                  key={o.id}
+                  opp={o}
+                  isBookmarked={bookmarked.has(o.id)}
+                  view="list"
+                />
+              ))}
+            </div>
           )}
         </div>
-      ) : view === "tile" ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((o) => (
-            <OpportunityCard
-              key={o.id}
-              opp={o}
-              isBookmarked={bookmarked.has(o.id)}
-              view="tile"
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {filtered.map((o) => (
-            <OpportunityCard
-              key={o.id}
-              opp={o}
-              isBookmarked={bookmarked.has(o.id)}
-              view="list"
-            />
-          ))}
-        </div>
-      )}
+      </div>
     </main>
   );
 }
@@ -301,7 +356,8 @@ function OpportunityCard({
     </form>
   );
 
-  const posted = opp.postedDaysAgo === 0 ? "Today" : `${opp.postedDaysAgo}d ago`;
+  const posted =
+    opp.postedDaysAgo === 0 ? "Today" : `${opp.postedDaysAgo}d ago`;
 
   if (view === "tile") {
     return (
@@ -342,7 +398,9 @@ function OpportunityCard({
           )}
         </div>
         {opp.compensationSummary && (
-          <p className="text-xs text-zinc-500 mt-2">{opp.compensationSummary}</p>
+          <p className="text-xs text-zinc-500 mt-2">
+            {opp.compensationSummary}
+          </p>
         )}
         <p className="text-xs text-light-grey mt-1">{posted}</p>
       </article>
@@ -387,7 +445,9 @@ function OpportunityCard({
           {opp.compensationSummary && (
             <>
               <span className="text-light-grey mx-1">•</span>
-              <span className="text-light-grey">{opp.compensationSummary}</span>
+              <span className="text-light-grey">
+                {opp.compensationSummary}
+              </span>
             </>
           )}
         </div>
