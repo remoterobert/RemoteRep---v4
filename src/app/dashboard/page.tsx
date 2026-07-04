@@ -5,6 +5,7 @@ import {
   BookmarkIcon,
   EnvelopeIcon,
   ChartBarIcon,
+  ClipboardDocumentListIcon,
 } from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -397,30 +398,39 @@ async function HiringDashboard({
 }) {
   const supabase = await createClient();
 
-  const [{ data: intents }, { data: clientProfile }, { data: allApps }] =
-    await Promise.all([
-      supabase
-        .from("tenant_hiring_intents")
-        .select("sales_role")
-        .eq("tenant_id", tenantId)
-        .eq("status", "active"),
-      supabase
-        .from("client_profiles")
-        .select(
-          "about, hiring_pitch, website_url, industry_slug, headcount, founded_year, visibility, logo_url",
-        )
-        .eq("tenant_id", tenantId)
-        .maybeSingle(),
-      supabase
-        .from("applications")
-        .select(
-          "id, candidate_user_id, applied_at, last_status_change_at, status, users!inner(first_name, last_name)",
-        )
-        .eq("tenant_id", tenantId)
-        .in("status", ["invited", "interviewing", "withdrawn"])
-        .order("last_status_change_at", { ascending: false })
-        .limit(20),
-    ]);
+  const [
+    { data: intents },
+    { data: clientProfile },
+    { data: allApps },
+    { count: liveListingCount },
+  ] = await Promise.all([
+    supabase
+      .from("tenant_hiring_intents")
+      .select("sales_role")
+      .eq("tenant_id", tenantId)
+      .eq("status", "active"),
+    supabase
+      .from("client_profiles")
+      .select(
+        "about, hiring_pitch, website_url, industry_slug, headcount, founded_year, visibility, logo_url",
+      )
+      .eq("tenant_id", tenantId)
+      .maybeSingle(),
+    supabase
+      .from("applications")
+      .select(
+        "id, candidate_user_id, applied_at, last_status_change_at, status, users!inner(first_name, last_name)",
+      )
+      .eq("tenant_id", tenantId)
+      .in("status", ["invited", "interviewing", "withdrawn"])
+      .order("last_status_change_at", { ascending: false })
+      .limit(20),
+    supabase
+      .from("listings")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenantId)
+      .eq("status", "published"),
+  ]);
 
   type InviteRow = {
     id: string;
@@ -443,13 +453,22 @@ async function HiringDashboard({
 
   return (
     <main className="flex-1 p-6 max-w-6xl mx-auto w-full">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold mb-1">
-          Welcome{firstName ? `, ${firstName}` : ""}.
-        </h1>
-        <p className="text-sm text-light-grey">
-          {tenantName} · here&apos;s how your hiring is going.
-        </p>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold mb-1">
+            Welcome{firstName ? `, ${firstName}` : ""}.
+          </h1>
+          <p className="text-sm text-light-grey">
+            {tenantName} · here&apos;s how your hiring is going.
+          </p>
+        </div>
+        <Link
+          href="/company/listings/new"
+          className="inline-flex items-center gap-1.5 rounded bg-primary text-white px-4 py-2 text-sm font-semibold hover:opacity-90 transition-opacity shrink-0"
+        >
+          <ClipboardDocumentListIcon className="h-4 w-4" />
+          New listing
+        </Link>
       </div>
 
       {justSaved && (
@@ -490,10 +509,15 @@ async function HiringDashboard({
           }
         />
         <MetricCard
-          icon={<ChartBarIcon className="h-4 w-4" />}
-          label="Match rank"
-          value="—"
-          comparison="Unlocks with 20+ profile views"
+          icon={<ClipboardDocumentListIcon className="h-4 w-4" />}
+          label="Live listings"
+          value={liveListingCount ?? 0}
+          comparison={
+            (liveListingCount ?? 0) > 0
+              ? "Manage listings →"
+              : "Post your first role →"
+          }
+          href="/company/listings"
         />
       </div>
 
@@ -679,20 +703,37 @@ function MetricCard({
   label,
   value,
   comparison,
+  href,
 }: {
   icon: React.ReactNode;
   label: string;
   value: number | string;
   comparison: string;
+  href?: string;
 }) {
-  return (
-    <div className="rounded border border-zinc-200 dark:border-zinc-800 p-3">
+  const inner = (
+    <>
       <div className="flex items-center gap-1.5 text-xs text-light-grey uppercase tracking-wider mb-1">
         {icon}
         {label}
       </div>
       <div className="text-2xl font-semibold">{value}</div>
-      <div className="text-xs text-light-grey mt-0.5">{comparison}</div>
-    </div>
+      <div className={`text-xs mt-0.5 ${href ? "text-primary" : "text-light-grey"}`}>
+        {comparison}
+      </div>
+    </>
   );
+  const cls =
+    "block rounded border border-zinc-200 dark:border-zinc-800 p-3 transition-colors";
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className={`${cls} hover:border-primary/40 hover:bg-primary/[0.03]`}
+      >
+        {inner}
+      </Link>
+    );
+  }
+  return <div className={cls}>{inner}</div>;
 }

@@ -2,7 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 import {
   HomeIcon,
-  BuildingOfficeIcon,
   UserGroupIcon,
   ChatBubbleLeftRightIcon,
   ShareIcon,
@@ -27,7 +26,7 @@ type NavItem = {
 // Client/hiring navigation — mirrors v3's clientNavigation
 const clientNavigation: NavItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: HomeIcon },
-  { name: "Hiring Center", href: "#", icon: BuildingOfficeIcon },
+  { name: "Job listings", href: "/company/listings", icon: ClipboardDocumentListIcon },
   { name: "Browse talent", href: "/candidates", icon: UserGroupIcon },
   { name: "Chats", href: "/chats", icon: ChatBubbleLeftRightIcon },
   { name: "Affiliates", href: "#", icon: ShareIcon },
