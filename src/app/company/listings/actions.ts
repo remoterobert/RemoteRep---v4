@@ -77,9 +77,10 @@ export async function createListing(formData: FormData) {
   }
 
   const sales_role = getStr(formData, "sales_role");
-  const commitment = getStr(formData, "commitment");
-  const compensation_type = getStr(formData, "compensation_type");
+  const commitment = getMulti(formData, "commitment");
+  const compensation_type = getMulti(formData, "compensation_type");
   const minimum_compensation = getNumOrNull(formData, "minimum_compensation");
+  const compensation_details = getStr(formData, "compensation_details");
   const benefits = getMulti(formData, "benefits");
 
   const education = getMulti(formData, "education");
@@ -125,10 +126,11 @@ export async function createListing(formData: FormData) {
   const { error: detailsErr } = await supabase.from("listing_details").insert({
     listing_id: listingId,
     sales_role: sales_role || "Other",
-    commitment: commitment || null,
+    commitment: commitment.length ? commitment : null,
     benefits: benefits.length ? benefits : null,
-    compensation_type: compensation_type || null,
+    compensation_type: compensation_type.length ? compensation_type : null,
     minimum_compensation,
+    compensation_details: compensation_details || null,
   });
 
   if (detailsErr) {

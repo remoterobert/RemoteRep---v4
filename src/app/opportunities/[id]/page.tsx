@@ -44,16 +44,18 @@ export default async function OpportunityDetailPage({
     listing_details:
       | {
           sales_role: string | null;
-          commitment: string | null;
-          compensation_type: string | null;
+          commitment: string[] | null;
+          compensation_type: string[] | null;
           minimum_compensation: number | null;
+          compensation_details: string | null;
           benefits: string[] | null;
         }
       | Array<{
           sales_role: string | null;
-          commitment: string | null;
-          compensation_type: string | null;
+          commitment: string[] | null;
+          compensation_type: string[] | null;
           minimum_compensation: number | null;
+          compensation_details: string | null;
           benefits: string[] | null;
         }>
       | null;
@@ -174,17 +176,25 @@ export default async function OpportunityDetailPage({
             {details.sales_role}
           </span>
         )}
-        {details?.commitment && (
-          <span className="bg-zinc-100 dark:bg-white/[0.06] rounded px-2 py-0.5">
-            {details.commitment}
+        {details?.commitment?.map((c) => (
+          <span
+            key={c}
+            className="bg-zinc-100 dark:bg-white/[0.06] rounded px-2 py-0.5"
+          >
+            {c}
           </span>
-        )}
-        {details?.compensation_type && (
+        ))}
+        {details?.compensation_type?.map((c) => (
+          <span
+            key={c}
+            className="bg-zinc-100 dark:bg-white/[0.06] rounded px-2 py-0.5"
+          >
+            {c}
+          </span>
+        ))}
+        {details?.minimum_compensation != null && (
           <span className="bg-zinc-100 dark:bg-white/[0.06] rounded px-2 py-0.5">
-            {details.compensation_type}
-            {details.minimum_compensation
-              ? ` · $${details.minimum_compensation.toLocaleString()}+`
-              : ""}
+            ${details.minimum_compensation.toLocaleString()}+
           </span>
         )}
       </div>
@@ -225,14 +235,31 @@ export default async function OpportunityDetailPage({
 
         <aside className="space-y-4">
           <Card title="Compensation & fit">
-            {details?.compensation_type && (
-              <Kv label="Type" value={details.compensation_type} />
+            {details?.commitment && details.commitment.length > 0 && (
+              <Chips label="Commitment" values={details.commitment} />
             )}
+            {details?.compensation_type &&
+              details.compensation_type.length > 0 && (
+                <Chips
+                  label="Structure"
+                  values={details.compensation_type}
+                />
+              )}
             {details?.minimum_compensation != null && (
               <Kv
                 label="Minimum"
                 value={`$${details.minimum_compensation.toLocaleString()}`}
               />
+            )}
+            {details?.compensation_details && (
+              <div>
+                <div className="text-[11px] uppercase tracking-wider text-light-grey mb-1">
+                  Comp details
+                </div>
+                <p className="text-xs whitespace-pre-wrap leading-relaxed">
+                  {details.compensation_details}
+                </p>
+              </div>
             )}
             {details?.benefits && details.benefits.length > 0 && (
               <Chips label="Benefits" values={details.benefits} />

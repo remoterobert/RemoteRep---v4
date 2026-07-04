@@ -19,15 +19,15 @@ type ListingRow = {
   listing_details:
     | {
         sales_role: string | null;
-        commitment: string | null;
-        compensation_type: string | null;
+        commitment: string[] | null;
+        compensation_type: string[] | null;
         minimum_compensation: number | null;
         benefits: string[] | null;
       }
     | Array<{
         sales_role: string | null;
-        commitment: string | null;
-        compensation_type: string | null;
+        commitment: string[] | null;
+        compensation_type: string[] | null;
         minimum_compensation: number | null;
         benefits: string[] | null;
       }>
@@ -83,7 +83,9 @@ function normalize(row: ListingRow): NormalizedListing {
 
   const compensationSummary = details
     ? [
-        details.compensation_type,
+        details.compensation_type?.length
+          ? details.compensation_type.join(" / ")
+          : null,
         details.minimum_compensation
           ? `$${details.minimum_compensation.toLocaleString()}+`
           : null,
@@ -107,7 +109,7 @@ function normalize(row: ListingRow): NormalizedListing {
     companyInitials,
     shortDescription,
     salesRole: details?.sales_role ?? "",
-    commitment: details?.commitment ?? "",
+    commitment: details?.commitment?.join(" / ") ?? "",
     dealRange,
     compensationSummary,
     postedDaysAgo,

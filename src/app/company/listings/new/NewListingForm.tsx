@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { SparklesIcon } from "@heroicons/react/24/outline";
+import { ChipMulti } from "@/components/forms/ChipMulti";
+import { SearchMulti } from "@/components/forms/SearchMulti";
 import {
   SALES_ROLES,
   COMMITMENTS,
@@ -357,99 +359,95 @@ export function NewListingForm({
       {/* ============================================================
           Section 3 — Role details
          ============================================================ */}
-      <section className="space-y-4">
+      <section className="space-y-5">
         <h2 className="text-sm font-semibold text-light-grey uppercase tracking-wider">
           Role details
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label
-              htmlFor="sales_role"
-              className="block text-sm font-medium mb-1"
-            >
-              Sales role <span className="text-danger">*</span>
-            </label>
-            <select
-              id="sales_role"
-              name="sales_role"
-              required
-              className={inputCls}
-            >
-              {SALES_ROLES.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label
-              htmlFor="commitment"
-              className="block text-sm font-medium mb-1"
-            >
-              Commitment
-            </label>
-            <select
-              id="commitment"
-              name="commitment"
-              className={inputCls}
-              defaultValue=""
-            >
-              <option value="">—</option>
-              {COMMITMENTS.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label
-              htmlFor="compensation_type"
-              className="block text-sm font-medium mb-1"
-            >
-              Compensation type
-            </label>
-            <select
-              id="compensation_type"
-              name="compensation_type"
-              className={inputCls}
-              defaultValue=""
-            >
-              <option value="">—</option>
-              {COMPENSATION_TYPES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label
-              htmlFor="minimum_compensation"
-              className="block text-sm font-medium mb-1"
-            >
-              Minimum compensation (USD, optional)
-            </label>
-            <input
-              id="minimum_compensation"
-              name="minimum_compensation"
-              type="number"
-              min={0}
-              max={1000000}
-              className={inputCls}
-            />
-          </div>
+        <div>
+          <label
+            htmlFor="sales_role"
+            className="block text-sm font-medium mb-1"
+          >
+            Sales role <span className="text-danger">*</span>
+          </label>
+          <select
+            id="sales_role"
+            name="sales_role"
+            required
+            className={inputCls}
+          >
+            {SALES_ROLES.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-light-grey mt-1">
+            Pick one — the primary role reps will be doing.
+          </p>
         </div>
 
-        <MultiCheck name="benefits" label="Benefits" options={BENEFITS} />
+        <ChipMulti
+          name="commitment"
+          label="Commitment (pick every mode you'd accept)"
+          options={COMMITMENTS}
+        />
+
+        <ChipMulti
+          name="compensation_type"
+          label="Compensation type (pick every structure you offer)"
+          options={COMPENSATION_TYPES}
+        />
+
+        <div>
+          <label
+            htmlFor="minimum_compensation"
+            className="block text-sm font-medium mb-1"
+          >
+            Minimum compensation (USD, optional)
+          </label>
+          <input
+            id="minimum_compensation"
+            name="minimum_compensation"
+            type="number"
+            min={0}
+            max={1000000}
+            className={inputCls}
+          />
+          <p className="text-xs text-light-grey mt-1">
+            The number reps use for filtering. Fill in extra detail below.
+          </p>
+        </div>
+
+        <div>
+          <label
+            htmlFor="compensation_details"
+            className="block text-sm font-medium mb-1"
+          >
+            Compensation details (optional)
+          </label>
+          <textarea
+            id="compensation_details"
+            name="compensation_details"
+            rows={3}
+            maxLength={2000}
+            placeholder="$75k base + uncapped, $150k OTE. 10% new-logo commission, 5% renewal. Quarterly SPIFFs on strategic accounts. $5k signing bonus."
+            className={inputCls}
+          />
+          <p className="text-xs text-light-grey mt-1">
+            Everything the structured fields can&apos;t capture — OTE, splits,
+            bonuses, SPIFFs.
+          </p>
+        </div>
+
+        <ChipMulti name="benefits" label="Benefits" options={BENEFITS} />
       </section>
 
       {/* ============================================================
           Section 4 — Requirements
          ============================================================ */}
-      <section className="space-y-4">
+      <section className="space-y-5">
         <h2 className="text-sm font-semibold text-light-grey uppercase tracking-wider">
           Requirements
         </h2>
@@ -476,45 +474,53 @@ export function NewListingForm({
           />
         </div>
 
-        <MultiCheck name="education" label="Education" options={EDUCATION_LEVELS} />
-        <MultiCheck name="sales_roles" label="Sales roles" options={SALES_ROLES} />
-        <MultiCheck name="sales_types" label="Sales types" options={SALES_TYPES} />
-        <MultiCheck
+        <ChipMulti
+          name="education"
+          label="Education (any acceptable level)"
+          options={EDUCATION_LEVELS}
+        />
+        <ChipMulti
+          name="sales_roles"
+          label="Sales roles the rep should have done before"
+          options={SALES_ROLES}
+        />
+        <ChipMulti name="sales_types" label="Sales types" options={SALES_TYPES} />
+        <ChipMulti
           name="decision_makers"
           label="Decision-makers you sell to"
           options={DECISION_MAKERS}
         />
-        <MultiCheck
+        <ChipMulti
           name="sales_environments"
           label="Sales environments"
           options={SALES_ENVIRONMENTS}
         />
-        <MultiCheck
+        <ChipMulti
           name="sales_cycles"
           label="Sales cycles"
           options={SALES_CYCLES}
         />
-        <MultiCheck
+        <ChipMulti
           name="deal_amounts"
           label="Deal amounts"
           options={DEAL_AMOUNTS}
         />
-        <MultiCheck
+        <ChipMulti
           name="sales_volumes"
           label="Annual sales volumes"
           options={SALES_VOLUMES}
         />
-        <MultiCheck name="lead_types" label="Lead types" options={LEAD_TYPES} />
-        <MultiCheck
+        <ChipMulti name="lead_types" label="Lead types" options={LEAD_TYPES} />
+        <ChipMulti
           name="technologies"
           label="Tools reps should know"
           options={TECHNOLOGIES}
         />
-        <MultiCheck
+        <SearchMulti
           name="industries"
-          label="Industries a rep should have sold in"
+          label="Industries the rep should have sold in"
           options={INDUSTRIES}
-          twoColumn
+          placeholder="Search 68 industries — e.g., SaaS, healthcare, real estate…"
         />
       </section>
 
@@ -546,40 +552,5 @@ export function NewListingForm({
         </a>
       </div>
     </form>
-  );
-}
-
-function MultiCheck({
-  name,
-  label,
-  options,
-  twoColumn,
-}: {
-  name: string;
-  label: string;
-  options: readonly string[];
-  twoColumn?: boolean;
-}) {
-  return (
-    <fieldset>
-      <legend className="block text-sm font-medium mb-2">{label}</legend>
-      <div
-        className={`grid gap-1.5 ${
-          twoColumn
-            ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-            : "grid-cols-2 sm:grid-cols-3"
-        }`}
-      >
-        {options.map((opt) => (
-          <label
-            key={opt}
-            className="flex items-center gap-2 text-sm cursor-pointer"
-          >
-            <input type="checkbox" name={name} value={opt} />
-            <span className="truncate">{opt}</span>
-          </label>
-        ))}
-      </div>
-    </fieldset>
   );
 }
