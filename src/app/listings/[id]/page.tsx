@@ -12,7 +12,7 @@ import { toggleOpportunityBookmark } from "@/app/opportunities/actions";
 import { respondToInvitation } from "@/app/dashboard/actions";
 import { MatchBadges } from "@/components/MatchBadges";
 import { ShareButton } from "@/components/ShareButton";
-import { AuthGate } from "@/components/AuthPromptModal";
+import { AuthPromptButton } from "@/components/AuthPromptModal";
 import {
   computeExperienceMatch,
   computeGoalsMatch,
@@ -391,13 +391,7 @@ export default async function PublicListingPage({
               {/* Primary CTAs */}
               <div className="space-y-2">
                 {applicationRow?.status === "invited" ? (
-                  <form
-                    action={async (fd) => {
-                      "use server";
-                      await respondToInvitation(fd);
-                    }}
-                    className="contents"
-                  >
+                  <form action={respondToInvitation} className="contents">
                     <input
                       type="hidden"
                       name="application_id"
@@ -411,46 +405,36 @@ export default async function PublicListingPage({
                       I&apos;m interested
                     </button>
                   </form>
+                ) : signedIn ? (
+                  applicationRow ? (
+                    <div className="w-full rounded-full bg-zinc-100 dark:bg-white/[0.06] text-light-grey py-2 text-sm font-semibold text-center">
+                      {applicationRow.status === "interviewing"
+                        ? "Interested ✓"
+                        : applicationRow.status === "hired"
+                          ? "Hired ✓"
+                          : applicationRow.status === "withdrawn"
+                            ? "Passed"
+                            : "Applied"}
+                    </div>
+                  ) : (
+                    <a
+                      href={l.calendar_link ?? "#"}
+                      target={l.calendar_link ? "_blank" : undefined}
+                      rel={l.calendar_link ? "noreferrer" : undefined}
+                      className="block w-full text-center rounded-full bg-primary text-white py-2 text-sm font-semibold hover:opacity-90 transition-opacity"
+                    >
+                      {l.calendar_link ? "Book intro call" : "Apply now"}
+                    </a>
+                  )
                 ) : (
-                  <AuthGate
-                    signedIn={signedIn}
+                  <AuthPromptButton
                     title={PROMPT_APPLY_TITLE}
                     body={PROMPT_APPLY_BODY}
                     loginRedirect={publicPath}
+                    className="w-full rounded-full bg-primary text-white py-2 text-sm font-semibold hover:opacity-90 transition-opacity"
                   >
-                    {({ onGatedClick }) =>
-                      signedIn ? (
-                        applicationRow ? (
-                          <div className="w-full rounded-full bg-zinc-100 dark:bg-white/[0.06] text-light-grey py-2 text-sm font-semibold text-center">
-                            {applicationRow.status === "interviewing"
-                              ? "Interested ✓"
-                              : applicationRow.status === "hired"
-                                ? "Hired ✓"
-                                : applicationRow.status === "withdrawn"
-                                  ? "Passed"
-                                  : "Applied"}
-                          </div>
-                        ) : (
-                          <a
-                            href={l.calendar_link ?? "#"}
-                            target={l.calendar_link ? "_blank" : undefined}
-                            rel={l.calendar_link ? "noreferrer" : undefined}
-                            className="block w-full text-center rounded-full bg-primary text-white py-2 text-sm font-semibold hover:opacity-90 transition-opacity"
-                          >
-                            {l.calendar_link ? "Book intro call" : "Apply now"}
-                          </a>
-                        )
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={onGatedClick}
-                          className="w-full rounded-full bg-primary text-white py-2 text-sm font-semibold hover:opacity-90 transition-opacity"
-                        >
-                          Apply now
-                        </button>
-                      )
-                    }
-                  </AuthGate>
+                    Apply now
+                  </AuthPromptButton>
                 )}
 
                 {companyRow?.website_url && (
@@ -464,52 +448,41 @@ export default async function PublicListingPage({
                   </a>
                 )}
 
-                <AuthGate
-                  signedIn={signedIn}
-                  title="Sign in to bookmark"
-                  body={PROMPT_BOOKMARK_BODY}
-                  loginRedirect={publicPath}
-                >
-                  {({ onGatedClick }) =>
-                    signedIn ? (
-                      <form
-                        action={toggleOpportunityBookmark}
-                        className="contents"
-                      >
-                        <input
-                          type="hidden"
-                          name="opportunity_id"
-                          value={l.id}
-                        />
-                        <button
-                          type="submit"
-                          className="w-full flex items-center justify-center gap-1.5 rounded-full border border-zinc-300 dark:border-zinc-700 py-2 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition-colors"
-                        >
-                          {isBookmarked ? (
-                            <>
-                              <BookmarkSolid className="h-4 w-4 text-primary" />
-                              Bookmarked
-                            </>
-                          ) : (
-                            <>
-                              <BookmarkOutline className="h-4 w-4" />
-                              Bookmark
-                            </>
-                          )}
-                        </button>
-                      </form>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={onGatedClick}
-                        className="w-full flex items-center justify-center gap-1.5 rounded-full border border-zinc-300 dark:border-zinc-700 py-2 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition-colors"
-                      >
-                        <BookmarkOutline className="h-4 w-4" />
-                        Bookmark
-                      </button>
-                    )
-                  }
-                </AuthGate>
+                {signedIn ? (
+                  <form action={toggleOpportunityBookmark} className="contents">
+                    <input
+                      type="hidden"
+                      name="opportunity_id"
+                      value={l.id}
+                    />
+                    <button
+                      type="submit"
+                      className="w-full flex items-center justify-center gap-1.5 rounded-full border border-zinc-300 dark:border-zinc-700 py-2 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition-colors"
+                    >
+                      {isBookmarked ? (
+                        <>
+                          <BookmarkSolid className="h-4 w-4 text-primary" />
+                          Bookmarked
+                        </>
+                      ) : (
+                        <>
+                          <BookmarkOutline className="h-4 w-4" />
+                          Bookmark
+                        </>
+                      )}
+                    </button>
+                  </form>
+                ) : (
+                  <AuthPromptButton
+                    title="Sign in to bookmark"
+                    body={PROMPT_BOOKMARK_BODY}
+                    loginRedirect={publicPath}
+                    className="w-full flex items-center justify-center gap-1.5 rounded-full border border-zinc-300 dark:border-zinc-700 py-2 text-sm font-medium hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition-colors"
+                  >
+                    <BookmarkOutline className="h-4 w-4" />
+                    Bookmark
+                  </AuthPromptButton>
+                )}
               </div>
             </div>
 

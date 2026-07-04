@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 import { inviteCandidate } from "@/app/candidates/actions";
 import { MatchBadges } from "@/components/MatchBadges";
 import { ShareButton } from "@/components/ShareButton";
-import { AuthGate } from "@/components/AuthPromptModal";
+import { AuthPromptButton } from "@/components/AuthPromptModal";
 import {
   computeExperienceMatch,
   computeGoalsMatch,
@@ -413,22 +413,14 @@ export default async function PublicProfilePage({
                           : applicationRow.status}
                   </div>
                 ) : !signedIn ? (
-                  <AuthGate
-                    signedIn={false}
+                  <AuthPromptButton
                     title={PROMPT_INVITE_TITLE}
                     body={PROMPT_INVITE_BODY}
                     loginRedirect={publicPath}
+                    className="w-full rounded-full bg-primary text-white py-2 text-sm font-semibold hover:opacity-90 transition-opacity"
                   >
-                    {({ onGatedClick }) => (
-                      <button
-                        type="button"
-                        onClick={onGatedClick}
-                        className="w-full rounded-full bg-primary text-white py-2 text-sm font-semibold hover:opacity-90 transition-opacity"
-                      >
-                        Invite to apply
-                      </button>
-                    )}
-                  </AuthGate>
+                    Invite to apply
+                  </AuthPromptButton>
                 ) : null}
               </div>
             </div>
@@ -445,8 +437,8 @@ export default async function PublicProfilePage({
                   Rapid Hire Resources
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {profile?.video_url && (
-                    signedIn ? (
+                  {profile?.video_url &&
+                    (signedIn ? (
                       <a
                         href={profile.video_url}
                         target="_blank"
@@ -457,27 +449,16 @@ export default async function PublicProfilePage({
                         <div className="text-sm font-medium">Intro video</div>
                       </a>
                     ) : (
-                      <AuthGate
-                        signedIn={false}
+                      <AuthPromptButton
                         title="Sign in to watch"
                         body={PROMPT_RESOURCE_BODY}
                         loginRedirect={publicPath}
+                        className="rounded-xl border border-zinc-200 dark:border-white/[0.06] p-6 text-center hover:border-primary/40 transition-colors w-full"
                       >
-                        {({ onGatedClick }) => (
-                          <button
-                            type="button"
-                            onClick={onGatedClick}
-                            className="rounded-xl border border-zinc-200 dark:border-white/[0.06] p-6 text-center hover:border-primary/40 transition-colors w-full"
-                          >
-                            <VideoCameraIcon className="h-8 w-8 text-primary mx-auto mb-1.5" />
-                            <div className="text-sm font-medium">
-                              Intro video
-                            </div>
-                          </button>
-                        )}
-                      </AuthGate>
-                    )
-                  )}
+                        <VideoCameraIcon className="h-8 w-8 text-primary mx-auto mb-1.5" />
+                        <div className="text-sm font-medium">Intro video</div>
+                      </AuthPromptButton>
+                    ))}
                   {resume &&
                     (signedIn && resumeUrl ? (
                       <a
@@ -490,23 +471,15 @@ export default async function PublicProfilePage({
                         <div className="text-sm font-medium">Résumé</div>
                       </a>
                     ) : (
-                      <AuthGate
-                        signedIn={false}
+                      <AuthPromptButton
                         title="Sign in to download"
                         body={PROMPT_RESOURCE_BODY}
                         loginRedirect={publicPath}
+                        className="rounded-xl border border-zinc-200 dark:border-white/[0.06] p-6 text-center hover:border-primary/40 transition-colors w-full"
                       >
-                        {({ onGatedClick }) => (
-                          <button
-                            type="button"
-                            onClick={onGatedClick}
-                            className="rounded-xl border border-zinc-200 dark:border-white/[0.06] p-6 text-center hover:border-primary/40 transition-colors w-full"
-                          >
-                            <DocumentTextIcon className="h-8 w-8 text-primary mx-auto mb-1.5" />
-                            <div className="text-sm font-medium">Résumé</div>
-                          </button>
-                        )}
-                      </AuthGate>
+                        <DocumentTextIcon className="h-8 w-8 text-primary mx-auto mb-1.5" />
+                        <div className="text-sm font-medium">Résumé</div>
+                      </AuthPromptButton>
                     ))}
                 </div>
               </section>
