@@ -25,10 +25,34 @@ export function UserMenu({
   isHiring: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  // Close on outside click
+  // Position the fixed dropdown relative to the button in viewport coords.
+  // Using `position: fixed` sidesteps every ancestor stacking context / overflow
+  // clip (topbar has backdrop-blur which creates a context that traps
+  // absolutely-positioned children).
+  useEffect(() => {
+    if (!open) return;
+    function updatePosition() {
+      if (!buttonRef.current) return;
+      const rect = buttonRef.current.getBoundingClientRect();
+      setPos({
+        top: rect.bottom + 8,
+        right: Math.max(8, window.innerWidth - rect.right),
+      });
+    }
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [open]);
+
+  // Close on outside click / Escape
   useEffect(() => {
     if (!open) return;
     function onClick(e: MouseEvent) {
@@ -57,7 +81,7 @@ export function UserMenu({
   const ProfileIcon = isHiring ? BuildingOffice2Icon : UserCircleIcon;
 
   return (
-    <div className="relative">
+    <>
       <button
         ref={buttonRef}
         type="button"
@@ -81,7 +105,12 @@ export function UserMenu({
         <div
           ref={menuRef}
           role="menu"
-          className="absolute right-0 top-full mt-2 w-64 rounded-xl border border-zinc-200 dark:border-white/[0.08] bg-white dark:bg-[#0b1220] shadow-xl shadow-black/10 py-2 z-50 origin-top-right"
+          style={
+            pos
+              ? { position: "fixed", top: pos.top, right: pos.right }
+              : { position: "fixed", visibility: "hidden" }
+          }
+          className="w-64 rounded-xl border border-zinc-200 dark:border-white/[0.08] bg-white dark:bg-[#0b1220] shadow-xl shadow-black/10 py-2 z-[100] origin-top-right"
         >
           {/* Header — identity */}
           <div className="px-3 pt-2 pb-3 border-b border-zinc-100 dark:border-white/[0.06]">
@@ -141,7 +170,7 @@ export function UserMenu({
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
