@@ -5,18 +5,35 @@ import { BookmarkIcon as BookmarkSolid } from "@heroicons/react/24/solid";
 import { createClient } from "@/lib/supabase/server";
 import { toggleOpportunityBookmark } from "./actions";
 import { FilterPanel } from "./FilterPanel";
+import { MatchBadges } from "@/components/MatchBadges";
+import {
+  computeExperienceMatch,
+  computeGoalsMatch,
+  type CandidateForMatch,
+  type CandidateGoals,
+  type ListingForMatch,
+} from "@/lib/matching";
 
 export const dynamic = "force-dynamic";
+
+const EXPERIENCE_TOOLTIP =
+  "How well your sales experience matches this role's requirements.";
+const GOALS_TOOLTIP =
+  "How well this role satisfies what you said you want next.";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 type ListingRow = {
   id: string;
+  tenant_id: string;
   title: string;
   description: string;
   published_at: string | null;
   created_at: string;
-  tenants: { name: string } | { name: string }[] | null;
+  tenants:
+    | { name: string; client_profiles?: { industry_slug: string | null; headcount: number | null; founded_year: number | null } | { industry_slug: string | null; headcount: number | null; founded_year: number | null }[] | null }
+    | { name: string; client_profiles?: { industry_slug: string | null; headcount: number | null; founded_year: number | null } | { industry_slug: string | null; headcount: number | null; founded_year: number | null }[] | null }[]
+    | null;
   listing_details:
     | {
         sales_role: string | null;
@@ -34,8 +51,8 @@ type ListingRow = {
       }>
     | null;
   listing_requirements:
-    | { deal_amounts: string[] | null }
-    | Array<{ deal_amounts: string[] | null }>
+    | Record<string, unknown>
+    | Array<Record<string, unknown>>
     | null;
 };
 
@@ -50,6 +67,8 @@ type NormalizedListing = {
   dealRange: string;
   compensationSummary: string;
   postedDaysAgo: number;
+  experienceMatch: number;
+  goalsMatch: number;
 };
 
 function unwrapOne<T>(v: T | T[] | null | undefined): T | null {
@@ -57,10 +76,24 @@ function unwrapOne<T>(v: T | T[] | null | undefined): T | null {
   return Array.isArray(v) ? (v[0] ?? null) : v;
 }
 
-function normalize(row: ListingRow): NormalizedListing {
+function normalize(
+  row: ListingRow,
+  candidate: CandidateForMatch,
+  goals: CandidateGoals | null,
+): NormalizedListing {
   const tenant = unwrapOne(row.tenants);
   const details = unwrapOne(row.listing_details);
-  const reqs = unwrapOne(row.listing_requirements);
+  const reqs = (unwrapOne(row.listing_requirements) ?? {}) as Record<
+    string,
+    unknown
+  >;
+  const clientProfile = unwrapOne(
+    (tenant as { client_profiles?: unknown } | null)?.client_profiles as
+      | { industry_slug: string | null; headcount: number | null; founded_year: number | null }
+      | { industry_slug: string | null; headcount: number | null; founded_year: number | null }[]
+      | null
+      | undefined,
+  );
 
   const companyName = tenant?.name ?? "Company";
   const companyInitials =
@@ -78,10 +111,8 @@ function normalize(row: ListingRow): NormalizedListing {
     .trim()
     .slice(0, 200);
 
-  const dealRange =
-    reqs?.deal_amounts && reqs.deal_amounts.length > 0
-      ? reqs.deal_amounts[0]
-      : "";
+  const dealAmounts = (reqs.deal_amounts as string[] | null) ?? [];
+  const dealRange = dealAmounts.length > 0 ? dealAmounts[0] : "";
 
   const compensationSummary = details
     ? [
@@ -104,6 +135,14 @@ function normalize(row: ListingRow): NormalizedListing {
     ),
   );
 
+  const listingForMatch: ListingForMatch = {
+    details,
+    requirements: reqs as ListingForMatch["requirements"],
+    tenant: clientProfile,
+  };
+  const experienceMatch = computeExperienceMatch(candidate, listingForMatch).score;
+  const goalsMatch = computeGoalsMatch(goals, listingForMatch).score;
+
   return {
     id: row.id,
     title: row.title,
@@ -115,6 +154,8 @@ function normalize(row: ListingRow): NormalizedListing {
     dealRange,
     compensationSummary,
     postedDaysAgo,
+    experienceMatch,
+    goalsMatch,
   };
 }
 
@@ -160,28 +201,55 @@ export default async function OpportunitiesPage({
   const educationF = toArray(params.education);
   const industryF = toArray(params.industry);
 
-  const { data: specialtiesData } = await supabase
-    .from("candidate_specialties")
-    .select("sales_role")
-    .eq("user_id", user.id);
+  const [
+    { data: specialtiesData },
+    { data: bookmarkRows },
+    { data: candidateProfile },
+    { data: candidateGoals },
+  ] = await Promise.all([
+    supabase
+      .from("candidate_specialties")
+      .select("sales_role")
+      .eq("user_id", user.id),
+    supabase
+      .from("bookmarks")
+      .select("target_id")
+      .eq("owner_user_id", user.id)
+      .eq("target_type", "listing"),
+    supabase
+      .from("candidate_profiles")
+      .select(
+        "years_of_experience, education, industry_slugs, sales_types, decision_makers, sales_environments, sales_cycles, deal_amounts, sales_volumes, lead_types, technologies",
+      )
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("candidate_goals")
+      .select(
+        "minimum_compensation, company_age_max, company_headcount_max, industries, sales_roles, commitment, benefits, compensation_types",
+      )
+      .eq("user_id", user.id)
+      .maybeSingle(),
+  ]);
+
   const specialties = new Set(
     (specialtiesData ?? []).map((s) => s.sales_role as string),
   );
-
-  const { data: bookmarkRows } = await supabase
-    .from("bookmarks")
-    .select("target_id")
-    .eq("owner_user_id", user.id)
-    .eq("target_type", "listing");
   const bookmarked = new Set(
     (bookmarkRows ?? []).map((b) => b.target_id as string),
   );
 
-  // Base query: every live, public listing.
+  const candidateForMatch: CandidateForMatch = {
+    ...(candidateProfile ?? {}),
+    specialties: [...specialties],
+  };
+
+  // Base query: every live, public listing + tenant client-profile for
+  // goals-match scoring (industry/headcount/founded_year).
   let q = supabase
     .from("listings")
     .select(
-      "id, title, description, published_at, created_at, tenants(name), listing_details!inner(sales_role, commitment, compensation_type, minimum_compensation, benefits), listing_requirements!inner(deal_amounts, sales_types, decision_makers, sales_environments, sales_cycles, sales_volumes, lead_types, technologies, education, industries, years_of_experience_min)",
+      "id, tenant_id, title, description, published_at, created_at, tenants(name, client_profiles(industry_slug, headcount, founded_year)), listing_details!inner(sales_role, commitment, compensation_type, minimum_compensation, benefits), listing_requirements!inner(deal_amounts, sales_types, decision_makers, sales_environments, sales_cycles, sales_volumes, lead_types, technologies, education, industries, years_of_experience_min)",
     )
     .eq("status", "published")
     .eq("visibility", "public")
@@ -232,7 +300,12 @@ export default async function OpportunitiesPage({
   const { data: listingRows } = await q;
 
   const normalized = ((listingRows ?? []) as unknown as ListingRow[]).map(
-    normalize,
+    (row) =>
+      normalize(
+        row,
+        candidateForMatch,
+        (candidateGoals ?? null) as CandidateGoals | null,
+      ),
   );
 
   // No explicit role filter → rank matches-first based on candidate specialty.
@@ -377,6 +450,17 @@ function OpportunityCard({
           </div>
           {BookmarkBtn}
         </div>
+        <div className="mb-2">
+          <MatchBadges
+            size="sm"
+            experience={opp.experienceMatch}
+            goals={opp.goalsMatch}
+            experienceLabel="Exp"
+            goalsLabel="Goals"
+            experienceTooltip={EXPERIENCE_TOOLTIP}
+            goalsTooltip={GOALS_TOOLTIP}
+          />
+        </div>
         <p className="text-xs text-zinc-600 dark:text-zinc-400 mb-3 line-clamp-3">
           {opp.shortDescription}
         </p>
@@ -422,6 +506,17 @@ function OpportunityCard({
           </Link>
           <span className="text-xs text-light-grey">{opp.companyName}</span>
           <span className="text-xs text-light-grey ml-auto">{posted}</span>
+        </div>
+        <div className="mb-2">
+          <MatchBadges
+            size="sm"
+            experience={opp.experienceMatch}
+            goals={opp.goalsMatch}
+            experienceLabel="Exp"
+            goalsLabel="Goals"
+            experienceTooltip={EXPERIENCE_TOOLTIP}
+            goalsTooltip={GOALS_TOOLTIP}
+          />
         </div>
         <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-2 line-clamp-2">
           {opp.shortDescription}
