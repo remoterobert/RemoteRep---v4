@@ -4,6 +4,9 @@ import {
   ChatBubbleLeftRightIcon,
   UserGroupIcon,
   ClipboardDocumentListIcon,
+  SparklesIcon,
+  EnvelopeIcon,
+  PaperAirplaneIcon,
 } from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/server";
 import { ChatSidebar } from "./ChatSidebar";
@@ -17,7 +20,6 @@ export default async function ChatsIndexPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Figure out user type so we can tailor the empty-state coaching
   const { data: memberships } = await supabase
     .from("tenant_members")
     .select("role, tenants!inner(type)")
@@ -31,51 +33,116 @@ export default async function ChatsIndexPage() {
   );
 
   return (
-    <div className="flex h-[calc(100vh-4.5rem)] max-w-6xl mx-auto w-full">
+    <div className="flex h-[calc(100vh-4.5rem)] max-w-6xl mx-auto w-full bg-zinc-50 dark:bg-dark-background">
       <ChatSidebar />
 
-      {/* Right pane: coaching empty state — hidden on mobile (the list is
-          the primary content there) */}
-      <main className="hidden lg:flex flex-1 flex-col items-center justify-center p-8 text-center bg-zinc-50 dark:bg-zinc-950/50">
-        <div className="max-w-sm">
-          <ChatBubbleLeftRightIcon className="h-14 w-14 mx-auto mb-4 text-light-grey" />
-          <h2 className="text-lg font-semibold mb-2">Select a conversation</h2>
-          <p className="text-sm text-light-grey mb-6">
-            Pick a chat from the left to jump in — or start a new one by
-            {" "}
-            {isHiring ? "inviting a candidate" : "responding to an invitation"}.
-          </p>
+      {/* Right pane: coaching empty state — desktop only */}
+      <main className="hidden lg:flex flex-1 flex-col items-center justify-center p-8">
+        <div className="max-w-md w-full">
+          {/* Hero card */}
+          <div className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-light-foreground p-8 text-center shadow-sm">
+            <div className="mx-auto h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+              <ChatBubbleLeftRightIcon className="h-7 w-7 text-primary" />
+            </div>
+            <h2 className="text-xl font-semibold mb-2">Select a conversation</h2>
+            <p className="text-sm text-light-grey mb-6 leading-relaxed">
+              Pick a chat from the left to jump in — or start a new one by{" "}
+              {isHiring
+                ? "inviting a candidate."
+                : "responding to an invitation from a company."}
+            </p>
 
-          {isHiring ? (
-            <div className="space-y-2">
+            {isHiring ? (
               <Link
                 href="/candidates"
-                className="inline-flex items-center gap-2 rounded bg-primary text-white px-4 py-2 text-sm font-medium hover:opacity-90"
+                className="inline-flex items-center gap-2 rounded bg-primary text-white px-5 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity"
               >
                 <UserGroupIcon className="h-4 w-4" />
                 Browse candidates
               </Link>
-              <p className="text-xs text-light-grey">
-                Every candidate you invite gets a chat when they respond.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-2">
+            ) : (
               <Link
                 href="/opportunities"
-                className="inline-flex items-center gap-2 rounded bg-primary text-white px-4 py-2 text-sm font-medium hover:opacity-90"
+                className="inline-flex items-center gap-2 rounded bg-primary text-white px-5 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity"
               >
                 <ClipboardDocumentListIcon className="h-4 w-4" />
                 Browse opportunities
               </Link>
-              <p className="text-xs text-light-grey">
-                Bookmark roles you like — companies see your interest and can
-                reach out.
-              </p>
+            )}
+          </div>
+
+          {/* How chats work */}
+          <div className="mt-6 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-light-foreground p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <SparklesIcon className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-light-grey">
+                How chats work
+              </h3>
             </div>
-          )}
+            <ol className="space-y-3 text-sm">
+              {isHiring ? (
+                <>
+                  <Step
+                    icon={<UserGroupIcon className="h-4 w-4" />}
+                    title="1. Invite a candidate"
+                    text="Browse talent → click Invite on a card that fits."
+                  />
+                  <Step
+                    icon={<EnvelopeIcon className="h-4 w-4" />}
+                    title="2. They see the invitation"
+                    text="It shows on their dashboard right away."
+                  />
+                  <Step
+                    icon={<PaperAirplaneIcon className="h-4 w-4" />}
+                    title="3. Chat opens when they respond"
+                    text={"Once they say “I'm interested,” a real conversation opens here."}
+                  />
+                </>
+              ) : (
+                <>
+                  <Step
+                    icon={<ClipboardDocumentListIcon className="h-4 w-4" />}
+                    title="1. Companies invite you"
+                    text="Public profiles get more views. Complete yours in the Dashboard."
+                  />
+                  <Step
+                    icon={<EnvelopeIcon className="h-4 w-4" />}
+                    title={"2. Say “I'm interested”"}
+                    text="Your reply immediately opens a chat with the company."
+                  />
+                  <Step
+                    icon={<PaperAirplaneIcon className="h-4 w-4" />}
+                    title="3. Line up the call"
+                    text="Use the chat to introduce yourself and schedule."
+                  />
+                </>
+              )}
+            </ol>
+          </div>
         </div>
       </main>
     </div>
+  );
+}
+
+function Step({
+  icon,
+  title,
+  text,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  text: string;
+}) {
+  return (
+    <li className="flex items-start gap-3">
+      <div className="h-7 w-7 rounded bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <div className="font-semibold text-sm">{title}</div>
+        <p className="text-xs text-light-grey mt-0.5">{text}</p>
+      </div>
+    </li>
   );
 }

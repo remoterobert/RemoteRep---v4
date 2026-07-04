@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PlusCircleIcon } from "@heroicons/react/24/outline";
+import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -86,20 +86,43 @@ export async function ChatSidebar({
   });
 
   return (
-    <aside className="w-full lg:w-80 shrink-0 lg:border-r border-zinc-200 dark:border-zinc-800 flex flex-col">
-      <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
-        <h1 className="font-semibold">Chats</h1>
-        <span className="text-xs text-light-grey">{sorted.length}</span>
-      </div>
+    <aside className="w-full lg:w-80 shrink-0 lg:border-r border-zinc-200 dark:border-zinc-800 flex flex-col bg-white dark:bg-light-foreground">
+      <header className="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-baseline justify-between">
+        <h1 className="text-lg font-semibold">Chats</h1>
+        {sorted.length > 0 && (
+          <span className="text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-light-grey rounded-full px-2 py-0.5">
+            {sorted.length}
+          </span>
+        )}
+      </header>
+
       {sorted.length === 0 ? (
-        <div className="p-4 text-center">
-          <PlusCircleIcon className="h-8 w-8 mx-auto text-light-grey mb-2" />
-          <p className="text-xs text-light-grey">
-            Chats open when a candidate says &quot;I&apos;m interested&quot;.
-          </p>
+        <div className="px-5 py-6">
+          <div className="rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 p-5 text-center">
+            <ChatBubbleLeftRightIcon className="h-8 w-8 mx-auto mb-3 text-light-grey" />
+            <p className="text-sm font-medium mb-1">No conversations yet</p>
+            <p className="text-xs text-light-grey leading-relaxed">
+              A chat opens as soon as a candidate says{" "}
+              <span className="font-semibold text-primary">
+                &ldquo;I&apos;m interested&rdquo;
+              </span>
+              {" "}on an invitation.
+            </p>
+          </div>
+          <div className="mt-5 text-center">
+            <p className="text-[11px] uppercase tracking-wider text-light-grey mb-2 font-semibold">
+              What to do first
+            </p>
+            <Link
+              href="/candidates"
+              className="text-xs text-primary hover:opacity-80 font-medium underline underline-offset-2"
+            >
+              Browse candidates and invite &rarr;
+            </Link>
+          </div>
         </div>
       ) : (
-        <ul className="overflow-y-auto flex-1 divide-y divide-zinc-200 dark:divide-zinc-800">
+        <ul className="overflow-y-auto flex-1 divide-y divide-zinc-100 dark:divide-zinc-800/60">
           {sorted.map((row) => {
             const otherList = otherByChat.get(row.chat_id) ?? [];
             const otherNames = otherList
@@ -110,6 +133,15 @@ export async function ChatSidebar({
                 return o.users.email;
               })
               .join(", ");
+            const initials = (() => {
+              const first = otherList[0];
+              if (!first) return "?";
+              const fn = first.users.first_name?.trim();
+              const ln = first.users.last_name?.trim();
+              const a = fn?.[0] ?? "";
+              const b = ln?.[0] ?? "";
+              return ((a + b) || first.users.email[0]).toUpperCase();
+            })();
             const preview = previewByChat.get(row.chat_id);
             const tenants = row.chats.tenants;
             const tenantName = Array.isArray(tenants)
@@ -127,38 +159,45 @@ export async function ChatSidebar({
               <li key={row.chat_id}>
                 <Link
                   href={`/chats/${row.chat_id}`}
-                  className={`block p-3 transition-colors ${
+                  className={`block px-4 py-3 transition-colors ${
                     isActive
-                      ? "bg-primary/10"
-                      : "hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                      ? "bg-primary/10 border-l-2 border-primary"
+                      : "hover:bg-zinc-50 dark:hover:bg-zinc-800/40 border-l-2 border-transparent"
                   }`}
                 >
-                  <div className="flex items-baseline justify-between mb-0.5 gap-2">
-                    <div className="font-semibold text-sm truncate">
-                      {otherNames || "Conversation"}
+                  <div className="flex items-start gap-3">
+                    <div className="h-9 w-9 rounded-full bg-primary/15 text-primary flex items-center justify-center text-xs font-semibold shrink-0">
+                      {initials}
                     </div>
-                    {preview && (
-                      <span className="text-[10px] text-light-grey shrink-0">
-                        {timeAgo(preview.created_at)}
-                      </span>
-                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <div className="font-semibold text-sm truncate">
+                          {otherNames || "Conversation"}
+                        </div>
+                        {preview && (
+                          <span className="text-[10px] text-light-grey shrink-0">
+                            {timeAgo(preview.created_at)}
+                          </span>
+                        )}
+                      </div>
+                      {tenantName && (
+                        <p className="text-[11px] text-light-grey truncate mt-0.5">
+                          {tenantName}
+                        </p>
+                      )}
+                      {preview ? (
+                        <p
+                          className={`text-xs mt-1 truncate ${unread ? "font-semibold" : "text-light-grey"}`}
+                        >
+                          {preview.body}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-light-grey italic mt-1">
+                          No messages yet
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  {tenantName && (
-                    <p className="text-[11px] text-light-grey truncate">
-                      {tenantName}
-                    </p>
-                  )}
-                  {preview ? (
-                    <p
-                      className={`text-xs mt-0.5 truncate ${unread ? "font-semibold" : "text-light-grey"}`}
-                    >
-                      {preview.body}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-light-grey italic mt-0.5">
-                      No messages yet
-                    </p>
-                  )}
                 </Link>
               </li>
             );

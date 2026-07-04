@@ -130,13 +130,13 @@ export default async function ChatDetailPage({ params }: { params: Params }) {
       ];
 
   return (
-    <div className="flex h-[calc(100vh-4.5rem)] max-w-6xl mx-auto w-full">
+    <div className="flex h-[calc(100vh-4.5rem)] max-w-6xl mx-auto w-full bg-zinc-50 dark:bg-dark-background">
       {/* Sidebar visible on desktop only */}
       <div className="hidden lg:flex">
         <ChatSidebar activeChatId={chatId} />
       </div>
 
-      <main className="flex-1 flex flex-col min-w-0">
+      <main className="flex-1 flex flex-col min-w-0 bg-white dark:bg-dark-foreground">
         {/* Header */}
         <header className="border-b border-zinc-200 dark:border-zinc-800 px-4 lg:px-6 py-3 flex items-center gap-3 shrink-0">
           <Link
