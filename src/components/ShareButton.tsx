@@ -22,14 +22,6 @@ export function ShareButton({
     try {
       const url =
         typeof window !== "undefined" ? window.location.href : "";
-      if (navigator.share) {
-        try {
-          await navigator.share({ url });
-          return;
-        } catch {
-          // fall through to clipboard copy
-        }
-      }
       await navigator.clipboard.writeText(url);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
