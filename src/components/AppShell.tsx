@@ -169,8 +169,8 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* === Top bar (desktop) === */}
       <header className="hidden lg:fixed lg:inset-x-0 lg:z-30 lg:flex lg:pl-[216px] h-[72px] lg:flex-col">
-        <div className="flex grow flex-col gap-x-5 overflow-x-auto bg-white dark:bg-dark-foreground px-4">
-          <div className="flex items-center justify-end gap-x-6 px-4 py-4 shadow-sm sm:px-6 h-full">
+        <div className="flex grow flex-col gap-x-5 overflow-x-auto bg-white/85 dark:bg-[#0b1220]/85 backdrop-blur-md border-b border-zinc-200 dark:border-white/[0.06] px-4">
+          <div className="flex items-center justify-end gap-x-6 px-4 py-4 sm:px-6 h-full">
             <button
               type="button"
               className="-m-1.5 flex items-center p-2.5"
