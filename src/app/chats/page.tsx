@@ -37,19 +37,24 @@ export default async function ChatsIndexPage() {
       <ChatSidebar />
 
       {/* Right pane: coaching empty state — desktop only */}
-      <main className="hidden lg:flex flex-1 flex-col items-center justify-center p-8 bg-white dark:bg-dark-foreground">
+      <main className="hidden lg:flex flex-1 flex-col items-center justify-center p-8 bg-white dark:bg-[#0d1526]">
         <div className="max-w-md w-full">
           {/* Hero card */}
-          <div className="rounded-xl border border-zinc-200 dark:border-zinc-700/60 bg-white dark:bg-[#182647] p-8 text-center shadow-sm">
-            <div className="mx-auto h-14 w-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-              <ChatBubbleLeftRightIcon className="h-7 w-7 text-primary" />
+          <div className="rounded-2xl border border-zinc-200 dark:border-white/[0.06] bg-white dark:bg-gradient-to-b dark:from-[#152146] dark:to-[#101a37] p-8 text-center shadow-lg shadow-primary/5">
+            <div className="relative mx-auto mb-5">
+              <div className="absolute inset-0 bg-primary/25 blur-2xl rounded-full" />
+              <div className="relative h-16 w-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center">
+                <ChatBubbleLeftRightIcon className="h-8 w-8 text-primary" />
+              </div>
             </div>
-            <h2 className="text-xl font-semibold mb-2">Select a conversation</h2>
+            <h2 className="text-xl font-bold tracking-tight mb-2">
+              Select a conversation
+            </h2>
             <p className="text-sm text-light-grey mb-6 leading-relaxed">
               Pick a chat from the left to jump in — or start a new one by{" "}
               {isHiring
                 ? "inviting a candidate."
-                : "responding to an invitation from a company."}
+                : "responding to an invitation."}
             </p>
 
             {isHiring ? (
@@ -72,7 +77,7 @@ export default async function ChatsIndexPage() {
           </div>
 
           {/* How chats work */}
-          <div className="mt-6 rounded-lg border border-zinc-200 dark:border-zinc-700/60 bg-white dark:bg-[#182647] p-5">
+          <div className="mt-6 rounded-2xl border border-zinc-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.02] p-5">
             <div className="flex items-center gap-2 mb-3">
               <SparklesIcon className="h-4 w-4 text-primary" />
               <h3 className="text-sm font-semibold uppercase tracking-wider text-light-grey">

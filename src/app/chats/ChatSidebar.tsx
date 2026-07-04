@@ -1,11 +1,15 @@
 import Link from "next/link";
-import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/outline";
+import {
+  ChatBubbleLeftRightIcon,
+  SparklesIcon,
+  ArrowRightIcon,
+} from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/server";
 
 /**
  * Server component: fetches the current user's chats and renders the
- * scrollable sidebar list. Used by both /chats and /chats/[id]. Highlights
- * the active chat when activeChatId is provided.
+ * scrollable sidebar list. Used by both /chats and /chats/[id].
+ * Highlights the active chat when activeChatId is provided.
  */
 export async function ChatSidebar({
   activeChatId,
@@ -86,43 +90,73 @@ export async function ChatSidebar({
   });
 
   return (
-    <aside className="w-full lg:w-80 shrink-0 lg:border-r border-zinc-200 dark:border-zinc-700/60 flex flex-col bg-white dark:bg-[#0e1830]">
-      <header className="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-baseline justify-between">
-        <h1 className="text-lg font-semibold">Chats</h1>
-        {sorted.length > 0 && (
-          <span className="text-xs font-medium bg-zinc-100 dark:bg-zinc-800 text-light-grey rounded-full px-2 py-0.5">
-            {sorted.length}
-          </span>
-        )}
+    <aside className="chat-sidebar w-full lg:w-[340px] shrink-0 flex flex-col lg:border-r border-zinc-200 dark:border-white/[0.06] bg-white dark:bg-[#0b1220]">
+      {/* Header */}
+      <header className="px-6 pt-6 pb-4">
+        <div className="flex items-baseline justify-between mb-1">
+          <h1 className="text-2xl font-bold tracking-tight text-dark-foreground dark:text-white">
+            Chats
+          </h1>
+          {sorted.length > 0 && (
+            <span className="text-xs font-semibold bg-primary/10 text-primary rounded-full px-2.5 py-0.5">
+              {sorted.length}
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-light-grey">
+          {sorted.length === 0
+            ? "Nothing here yet — that changes fast."
+            : sorted.length === 1
+              ? "1 active conversation"
+              : `${sorted.length} active conversations`}
+        </p>
       </header>
 
       {sorted.length === 0 ? (
-        <div className="px-5 py-6">
-          <div className="rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 p-5 text-center">
-            <ChatBubbleLeftRightIcon className="h-8 w-8 mx-auto mb-3 text-light-grey" />
-            <p className="text-sm font-medium mb-1">No conversations yet</p>
-            <p className="text-xs text-light-grey leading-relaxed">
-              A chat opens as soon as a candidate says{" "}
-              <span className="font-semibold text-primary">
-                &ldquo;I&apos;m interested&rdquo;
-              </span>
-              {" "}on an invitation.
-            </p>
+        <div className="flex-1 flex flex-col justify-center px-6 pb-8">
+          {/* Hero illustration */}
+          <div className="relative mx-auto mb-6">
+            <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full" />
+            <div className="relative h-20 w-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center">
+              <ChatBubbleLeftRightIcon className="h-9 w-9 text-primary" />
+            </div>
           </div>
-          <div className="mt-5 text-center">
-            <p className="text-[11px] uppercase tracking-wider text-light-grey mb-2 font-semibold">
-              What to do first
-            </p>
+
+          <h2 className="text-center text-base font-semibold mb-2">
+            No conversations yet
+          </h2>
+          <p className="text-center text-sm text-light-grey leading-relaxed mb-6 max-w-[260px] mx-auto">
+            When a candidate says{" "}
+            <span className="font-semibold text-primary">
+              &ldquo;I&apos;m interested&rdquo;
+            </span>{" "}
+            on your invitation, the conversation lands right here.
+          </p>
+
+          {/* Steps card */}
+          <div className="rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/[0.06] p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <SparklesIcon className="h-4 w-4 text-primary" />
+              <span className="text-[10px] uppercase tracking-wider font-bold text-light-grey">
+                Getting started
+              </span>
+            </div>
+            <ol className="space-y-2.5 text-xs">
+              <StepLine num={1} text="Browse candidates" />
+              <StepLine num={2} text="Click Invite on a good fit" />
+              <StepLine num={3} text="They accept — chat opens" />
+            </ol>
             <Link
               href="/candidates"
-              className="text-xs text-primary hover:opacity-80 font-medium underline underline-offset-2"
+              className="mt-4 flex items-center justify-center gap-1.5 rounded-lg bg-primary text-white px-3 py-2 text-xs font-semibold hover:opacity-90 transition-opacity"
             >
-              Browse candidates and invite &rarr;
+              Browse candidates
+              <ArrowRightIcon className="h-3.5 w-3.5" />
             </Link>
           </div>
         </div>
       ) : (
-        <ul className="overflow-y-auto flex-1 divide-y divide-zinc-100 dark:divide-zinc-800/60">
+        <ul className="overflow-y-auto flex-1 px-2 py-2 space-y-0.5">
           {sorted.map((row) => {
             const otherList = otherByChat.get(row.chat_id) ?? [];
             const otherNames = otherList
@@ -150,8 +184,8 @@ export async function ChatSidebar({
             const isActive = row.chat_id === activeChatId;
 
             const unread =
-              preview &&
-              row.last_read_at &&
+              !!preview &&
+              !!row.last_read_at &&
               new Date(preview.created_at).getTime() >
                 new Date(row.last_read_at).getTime();
 
@@ -159,41 +193,60 @@ export async function ChatSidebar({
               <li key={row.chat_id}>
                 <Link
                   href={`/chats/${row.chat_id}`}
-                  className={`block px-4 py-3 transition-colors ${
+                  className={`group block px-3 py-3 rounded-xl transition-all duration-150 ${
                     isActive
-                      ? "bg-primary/10 border-l-2 border-primary"
-                      : "hover:bg-zinc-50 dark:hover:bg-zinc-800/40 border-l-2 border-transparent"
+                      ? "bg-primary/12 dark:bg-primary/15"
+                      : "hover:bg-zinc-100 dark:hover:bg-white/[0.04]"
                   }`}
                 >
                   <div className="flex items-start gap-3">
-                    <div className="h-9 w-9 rounded-full bg-primary/15 text-primary flex items-center justify-center text-xs font-semibold shrink-0">
-                      {initials}
+                    <div className="relative shrink-0">
+                      <div
+                        className={`h-11 w-11 rounded-full flex items-center justify-center text-sm font-bold shadow-sm ${
+                          isActive
+                            ? "bg-gradient-to-br from-primary to-primary-blue text-white"
+                            : "bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-white/10 dark:to-white/[0.03] text-dark-foreground dark:text-white ring-1 ring-white/5"
+                        }`}
+                      >
+                        {initials}
+                      </div>
+                      {unread && (
+                        <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-primary ring-2 ring-white dark:ring-[#0b1220]" />
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-baseline justify-between gap-2">
-                        <div className="font-semibold text-sm truncate">
+                      <div className="flex items-baseline justify-between gap-2 mb-0.5">
+                        <div
+                          className={`text-sm truncate ${unread || isActive ? "font-bold" : "font-semibold"} text-dark-foreground dark:text-white`}
+                        >
                           {otherNames || "Conversation"}
                         </div>
                         {preview && (
-                          <span className="text-[10px] text-light-grey shrink-0">
+                          <span
+                            className={`text-[10px] shrink-0 tracking-wide font-medium ${unread ? "text-primary" : "text-light-grey"}`}
+                          >
                             {timeAgo(preview.created_at)}
                           </span>
                         )}
                       </div>
                       {tenantName && (
-                        <p className="text-[11px] text-light-grey truncate mt-0.5">
+                        <p className="text-[11px] text-light-grey truncate mb-1">
                           {tenantName}
                         </p>
                       )}
                       {preview ? (
                         <p
-                          className={`text-xs mt-1 truncate ${unread ? "font-semibold" : "text-light-grey"}`}
+                          className={`text-xs truncate leading-snug ${
+                            unread
+                              ? "text-dark-foreground dark:text-white font-medium"
+                              : "text-light-grey"
+                          }`}
                         >
                           {preview.body}
                         </p>
                       ) : (
-                        <p className="text-xs text-light-grey italic mt-1">
-                          No messages yet
+                        <p className="text-xs text-light-grey italic">
+                          No messages yet — say hi
                         </p>
                       )}
                     </div>
@@ -208,16 +261,32 @@ export async function ChatSidebar({
   );
 }
 
+function StepLine({ num, text }: { num: number; text: string }) {
+  return (
+    <li className="flex items-center gap-2.5">
+      <span className="h-5 w-5 rounded-full bg-primary/15 text-primary text-[10px] font-bold flex items-center justify-center shrink-0">
+        {num}
+      </span>
+      <span className="text-dark-foreground dark:text-white/85 leading-tight">
+        {text}
+      </span>
+    </li>
+  );
+}
+
 function timeAgo(iso: string): string {
   const then = new Date(iso).getTime();
   const now = Date.now();
   const s = Math.round((now - then) / 1000);
-  if (s < 60) return "just now";
+  if (s < 60) return "now";
   const m = Math.round(s / 60);
   if (m < 60) return `${m}m`;
   const h = Math.round(m / 60);
   if (h < 24) return `${h}h`;
   const d = Math.round(h / 24);
   if (d < 7) return `${d}d`;
-  return new Date(iso).toLocaleDateString();
+  return new Date(iso).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
 }
