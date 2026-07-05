@@ -5,7 +5,7 @@ import {
   Bars3Icon,
   BellIcon,
 } from "@heroicons/react/24/outline";
-import { Sidebar, type NavItem } from "@/components/Sidebar";
+import { Sidebar, buildHiringNav, buildTalentNav } from "@/components/Sidebar";
 
 const COLLAPSE_KEY = "remoterep.sidebar.collapsed";
 
@@ -16,7 +16,6 @@ const COLLAPSE_KEY = "remoterep.sidebar.collapsed";
  * bits) is passed in as plain props.
  */
 export function AppShellClient({
-  navigation,
   tenantName,
   isHiring,
   isPlatformAdmin,
@@ -26,7 +25,6 @@ export function AppShellClient({
   unreadChats,
   children,
 }: {
-  navigation: NavItem[];
   tenantName: string;
   isHiring: boolean;
   isPlatformAdmin: boolean;
@@ -36,6 +34,10 @@ export function AppShellClient({
   unreadChats: number;
   children: React.ReactNode;
 }) {
+  // Build the nav here (client-side) so icon component references never
+  // cross the server → client RSC boundary. React 19 can't serialize
+  // function-shaped props over that wire.
+  const navigation = isHiring ? buildHiringNav() : buildTalentNav();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);

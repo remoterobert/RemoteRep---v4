@@ -2,7 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { AppShellClient } from "@/components/AppShellClient";
-import { buildHiringNav, buildTalentNav } from "@/components/Sidebar";
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -37,7 +36,6 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
 
   const isHiring =
     m.tenants.type === "client_company" || m.tenants.type === "agency";
-  const navigation = isHiring ? buildHiringNav() : buildTalentNav();
 
   // Platform admin?
   const { data: adminMembership } = await supabase
@@ -99,7 +97,6 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <AppShellClient
-      navigation={navigation}
       tenantName={m.tenants.name}
       isHiring={isHiring}
       isPlatformAdmin={isPlatformAdmin}
