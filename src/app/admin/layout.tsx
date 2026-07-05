@@ -32,8 +32,8 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto w-full">
-      <div className="mb-6 pb-4 border-b border-zinc-200 dark:border-zinc-800">
+    <div className="p-6 w-full">
+      <div className="mb-6 pb-4 border-b border-border">
         <h1 className="text-xl font-semibold mb-1">Admin</h1>
         <p className="text-xs text-light-grey">
           Platform-wide view. You&apos;re seeing cross-tenant data via

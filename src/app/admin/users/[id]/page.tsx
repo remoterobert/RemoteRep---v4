@@ -170,7 +170,7 @@ export default async function AdminUserDetailPage({
       : userRow.email;
 
   return (
-    <main className="flex-1 p-6 max-w-6xl mx-auto w-full">
+    <main className="flex-1 w-full">
       <div className="mb-4">
         <Link
           href="/admin/users"
@@ -205,7 +205,7 @@ export default async function AdminUserDetailPage({
       <RangePicker />
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3 mb-6">
         <Kpi
           icon={<BookmarkIcon className="h-4 w-4" />}
           label="Bookmarks"

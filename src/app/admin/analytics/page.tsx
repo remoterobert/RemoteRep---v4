@@ -298,7 +298,7 @@ export default async function AdminAnalyticsPage({
   const hiresDelta = computeDelta(totalHires ?? 0, priorHires ?? 0);
 
   return (
-    <main className="flex-1 p-6 max-w-6xl mx-auto w-full">
+    <main className="flex-1 w-full">
       <div className="mb-4">
         <Link
           href="/admin"
@@ -316,7 +316,7 @@ export default async function AdminAnalyticsPage({
       <RangePicker />
 
       {/* KPI cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3 mb-8">
         <Kpi
           icon={<UsersIcon className="h-4 w-4" />}
           label="Total users"
@@ -500,7 +500,7 @@ function renderEmpty(
   priorSince: string,
 ) {
   return (
-    <main className="flex-1 p-6 max-w-6xl mx-auto w-full">
+    <main className="flex-1 w-full">
       <h1 className="text-2xl font-semibold mb-1">Platform analytics</h1>
       <p className="text-sm text-light-grey mb-6">
         No users match the selected user type ({userType}).
