@@ -37,10 +37,10 @@ export default async function ChatsIndexPage() {
       <ChatSidebar />
 
       {/* Right pane: coaching empty state — desktop only */}
-      <main className="hidden lg:flex flex-1 flex-col items-center justify-center p-8 bg-white dark:bg-[#0d1526]">
+      <main className="hidden lg:flex flex-1 flex-col items-center justify-center p-8 bg-surface">
         <div className="max-w-md w-full">
           {/* Hero card */}
-          <div className="rounded-2xl border border-zinc-200 dark:border-white/[0.06] bg-white dark:bg-gradient-to-b dark:from-[#152146] dark:to-[#101a37] p-8 text-center shadow-lg shadow-primary/5">
+          <div className="rounded-2xl border border-border bg-white dark:bg-gradient-to-b dark:from-[#152146] dark:to-[#101a37] p-8 text-center shadow-lg shadow-primary/5">
             <div className="relative mx-auto mb-5">
               <div className="absolute inset-0 bg-primary/25 blur-2xl rounded-full" />
               <div className="relative h-16 w-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center">
@@ -77,7 +77,7 @@ export default async function ChatsIndexPage() {
           </div>
 
           {/* How chats work */}
-          <div className="mt-6 rounded-2xl border border-zinc-200 dark:border-white/[0.06] bg-white dark:bg-white/[0.02] p-5">
+          <div className="mt-6 rounded-2xl border border-border bg-white dark:bg-white/[0.02] p-5">
             <div className="flex items-center gap-2 mb-3">
               <SparklesIcon className="h-4 w-4 text-primary" />
               <h3 className="text-sm font-semibold uppercase tracking-wider text-light-grey">

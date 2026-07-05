@@ -1,47 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
-import {
-  HomeIcon,
-  UserGroupIcon,
-  ChatBubbleLeftRightIcon,
-  ShareIcon,
-  LifebuoyIcon,
-  ClipboardDocumentListIcon,
-  BuildingOffice2Icon,
-  BellIcon,
-  ShieldCheckIcon,
-} from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/server";
-import { logout } from "@/app/(auth)/actions";
-import { UserMenu } from "@/components/UserMenu";
-
-type NavItem = {
-  name: string;
-  href: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  icon: any;
-  newTab?: boolean;
-};
-
-// Client/hiring navigation — mirrors v3's clientNavigation
-const clientNavigation: NavItem[] = [
-  { name: "Dashboard", href: "/dashboard", icon: HomeIcon },
-  { name: "Job listings", href: "/company/listings", icon: ClipboardDocumentListIcon },
-  { name: "Browse talent", href: "/candidates", icon: UserGroupIcon },
-  { name: "Chats", href: "/chats", icon: ChatBubbleLeftRightIcon },
-  { name: "Affiliates", href: "#", icon: ShareIcon },
-  { name: "Support", href: "#", icon: LifebuoyIcon, newTab: true },
-];
-
-// Talent/candidate navigation — mirrors v3's talentNavigation
-const talentNavigation: NavItem[] = [
-  { name: "Dashboard", href: "/dashboard", icon: HomeIcon },
-  { name: "Opportunities", href: "/opportunities", icon: ClipboardDocumentListIcon },
-  { name: "Browse clients", href: "#", icon: BuildingOffice2Icon },
-  { name: "Chats", href: "/chats", icon: ChatBubbleLeftRightIcon },
-  { name: "Affiliates", href: "#", icon: ShareIcon },
-  { name: "Support", href: "#", icon: LifebuoyIcon, newTab: true },
-];
+import { AppShellClient } from "@/components/AppShellClient";
+import { buildHiringNav, buildTalentNav } from "@/components/Sidebar";
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -76,9 +37,9 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
 
   const isHiring =
     m.tenants.type === "client_company" || m.tenants.type === "agency";
-  const navigation = isHiring ? clientNavigation : talentNavigation;
+  const navigation = isHiring ? buildHiringNav() : buildTalentNav();
 
-  // Check platform admin — controls the extra "Admin" sidebar entry.
+  // Platform admin?
   const { data: adminMembership } = await supabase
     .from("tenant_members")
     .select("id")
@@ -99,122 +60,56 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
     profile?.first_name && profile?.last_name
       ? `${profile.first_name} ${profile.last_name}`
       : (user.email ?? "");
+  const initials = (
+    profile?.first_name?.[0] ??
+    user.email?.[0] ??
+    "?"
+  ).toUpperCase();
+
+  // Unread chats — for the nav badge
+  const { data: parts } = await supabase
+    .from("chat_participants")
+    .select("chat_id, last_read_at")
+    .eq("user_id", user.id);
+  type PartRow = { chat_id: string; last_read_at: string | null };
+  const partRows = (parts ?? []) as PartRow[];
+  let unreadChats = 0;
+  if (partRows.length > 0) {
+    const chatIds = partRows.map((p) => p.chat_id);
+    const { data: latest } = await supabase
+      .from("messages")
+      .select("chat_id, created_at")
+      .in("chat_id", chatIds)
+      .order("created_at", { ascending: false })
+      .limit(200);
+    type MsgRow = { chat_id: string; created_at: string };
+    const latestByChat = new Map<string, string>();
+    for (const msg of (latest ?? []) as MsgRow[]) {
+      if (!latestByChat.has(msg.chat_id))
+        latestByChat.set(msg.chat_id, msg.created_at);
+    }
+    for (const p of partRows) {
+      const last = latestByChat.get(p.chat_id);
+      if (!last) continue;
+      if (!p.last_read_at || new Date(last) > new Date(p.last_read_at)) {
+        unreadChats += 1;
+      }
+    }
+  }
 
   return (
-    <div className="min-h-screen bg-background dark:bg-dark-background">
-      {/* === Left sidebar (desktop) === */}
-      <aside className="hidden lg:fixed lg:inset-y-0 lg:z-40 lg:flex lg:w-[216px] lg:flex-col lg:border-r lg:border-white/[0.06]">
-        <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-side-menu px-4">
-          <div className="flex h-16 shrink-0 items-center">
-            <Image
-              src="/v3-white-logo.svg"
-              alt="RemoteRep"
-              width={32}
-              height={32}
-              priority
-            />
-            <h5 className="text-white font-black text-lg pl-3">
-              RemoteRep.com
-            </h5>
-          </div>
-
-          <nav className="flex flex-1 flex-col">
-            <ul role="list" className="flex flex-1 flex-col gap-y-7">
-              <li>
-                <ul role="list" className="-mx-2 space-y-1">
-                  {navigation.map((item) => (
-                    <li key={item.name}>
-                      <Link
-                        href={item.href}
-                        target={item.newTab ? "_blank" : undefined}
-                        className="text-white hover:bg-primary-blue group flex gap-x-3 rounded-md p-3 text-sm leading-6 font-semibold transition-colors"
-                      >
-                        <item.icon
-                          className="h-6 w-6 shrink-0"
-                          aria-hidden="true"
-                        />
-                        {item.name}
-                      </Link>
-                    </li>
-                  ))}
-                  {isPlatformAdmin && (
-                    <li>
-                      <Link
-                        href="/admin"
-                        className="text-secondary hover:bg-primary-blue group flex gap-x-3 rounded-md p-3 text-sm leading-6 font-semibold transition-colors border-t border-white/10 mt-2 pt-4"
-                      >
-                        <ShieldCheckIcon
-                          className="h-6 w-6 shrink-0"
-                          aria-hidden="true"
-                        />
-                        Admin
-                      </Link>
-                    </li>
-                  )}
-                </ul>
-              </li>
-
-              {/* Bottom: tenant name (placeholder for "Dark Theme" toggle from v3) */}
-              <li className="mt-auto mb-6 text-white">
-                <p className="text-xs text-light-grey px-3">Tenant</p>
-                <p className="text-sm font-semibold px-3 truncate">
-                  {m.tenants.name}
-                </p>
-              </li>
-            </ul>
-          </nav>
-        </div>
-      </aside>
-
-      {/* === Top bar (desktop) === */}
-      <header className="hidden lg:fixed lg:inset-x-0 lg:z-50 lg:flex lg:pl-[216px] h-[72px] lg:flex-col">
-        <div className="flex grow flex-col gap-x-5 bg-white/85 dark:bg-[#0b1220]/85 backdrop-blur-md border-b border-zinc-200 dark:border-white/[0.06] px-4">
-          <div className="flex items-center justify-end gap-x-6 px-4 py-4 sm:px-6 h-full">
-            <button
-              type="button"
-              className="-m-1.5 flex items-center p-2.5"
-              aria-label="Notifications"
-            >
-              <BellIcon className="h-6 w-6 text-dark-foreground dark:text-white" />
-            </button>
-
-            <UserMenu
-              email={user.email ?? ""}
-              displayName={displayName}
-              initials={(profile?.first_name?.[0] ?? user.email?.[0] ?? "?").toUpperCase()}
-              isHiring={isHiring}
-            />
-          </div>
-        </div>
-      </header>
-
-      {/* === Mobile top bar === */}
-      <header className="lg:hidden sticky top-0 z-40 flex items-center justify-between gap-x-6 bg-side-menu px-4 py-4 shadow-sm sm:px-6">
-        <Link href="/" className="flex items-center gap-2">
-          <Image
-            src="/v3-white-logo.svg"
-            alt="RemoteRep"
-            width={28}
-            height={28}
-            priority
-          />
-          <span className="text-white font-semibold">RemoteRep</span>
-        </Link>
-
-        <form action={logout} className="contents">
-          <button
-            type="submit"
-            className="h-8 w-8 rounded-full bg-primary text-white text-xs font-semibold flex items-center justify-center"
-            aria-label="Sign out"
-          >
-            {(profile?.first_name?.[0] ?? user.email?.[0] ?? "?").toUpperCase()}
-          </button>
-        </form>
-      </header>
-
-      {/* === Main content === */}
-      <main className="lg:pl-[216px] lg:pt-[72px]">{children}</main>
-    </div>
+    <AppShellClient
+      navigation={navigation}
+      tenantName={m.tenants.name}
+      isHiring={isHiring}
+      isPlatformAdmin={isPlatformAdmin}
+      displayName={displayName}
+      email={user.email ?? ""}
+      initials={initials}
+      unreadChats={unreadChats}
+    >
+      {children}
+    </AppShellClient>
   );
 }
 
@@ -225,7 +120,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
 function GuestLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col">
-      <nav className="border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-dark-background">
+      <nav className="border-b border-border bg-surface">
         <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <Image
@@ -244,15 +139,13 @@ function GuestLayout({ children }: { children: React.ReactNode }) {
               className="hidden dark:block"
               priority
             />
-            <span className="font-semibold text-dark-foreground dark:text-white">
-              RemoteRep
-            </span>
+            <span className="font-semibold">RemoteRep</span>
           </Link>
 
           <div className="flex items-center gap-4 text-sm">
             <Link
               href="/login"
-              className="text-light-grey hover:text-primary dark:hover:text-white transition-colors"
+              className="text-light-grey hover:text-primary transition-colors"
             >
               Sign in
             </Link>

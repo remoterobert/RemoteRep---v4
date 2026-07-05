@@ -79,7 +79,7 @@ export function AuthPromptButton({
             aria-hidden="true"
           />
 
-          <div className="relative w-full max-w-md rounded-2xl bg-white dark:bg-[#0b1220] shadow-2xl border border-zinc-200 dark:border-white/[0.08] p-6">
+          <div className="relative w-full max-w-md rounded-2xl bg-surface-2 shadow-2xl border border-border p-6">
             <button
               type="button"
               onClick={close}

@@ -93,11 +93,11 @@ export function UserMenu({
         <div className="h-8 w-8 rounded-full bg-primary text-white text-xs font-semibold flex items-center justify-center shadow-sm">
           {initials}
         </div>
-        <span className="text-sm font-medium text-dark-foreground dark:text-white hidden sm:inline">
+        <span className="text-sm font-medium text-foreground hidden sm:inline">
           {displayName}
         </span>
         <ChevronDownIcon
-          className={`h-4 w-4 text-dark-foreground dark:text-white transition-transform ${open ? "rotate-180" : ""}`}
+          className={`h-4 w-4 text-foreground transition-transform ${open ? "rotate-180" : ""}`}
         />
       </button>
 
@@ -110,10 +110,10 @@ export function UserMenu({
               ? { position: "fixed", top: pos.top, right: pos.right }
               : { position: "fixed", visibility: "hidden" }
           }
-          className="w-64 rounded-xl border border-zinc-200 dark:border-white/[0.08] bg-white dark:bg-[#0b1220] shadow-xl shadow-black/10 py-2 z-[100] origin-top-right"
+          className="w-64 rounded-xl border border-border bg-surface-2 shadow-xl shadow-black/10 py-2 z-[100] origin-top-right"
         >
           {/* Header — identity */}
-          <div className="px-3 pt-2 pb-3 border-b border-zinc-100 dark:border-white/[0.06]">
+          <div className="px-3 pt-2 pb-3 border-b border-border">
             <div className="flex items-center gap-2.5">
               <div className="h-9 w-9 rounded-full bg-primary text-white text-xs font-semibold flex items-center justify-center shrink-0">
                 {initials}
@@ -156,7 +156,7 @@ export function UserMenu({
           </MenuGroup>
 
           {/* Sign out */}
-          <div className="pt-1 border-t border-zinc-100 dark:border-white/[0.06]">
+          <div className="pt-1 border-t border-border">
             <form action={logout} className="contents">
               <button
                 type="submit"
@@ -207,7 +207,7 @@ function MenuLink({
       href={href}
       role="menuitem"
       onClick={onClick}
-      className="flex items-center gap-2.5 px-3 py-2 text-sm text-dark-foreground dark:text-white hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition-colors"
+      className="flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition-colors"
     >
       <span className="text-light-grey">{icon}</span>
       {label}

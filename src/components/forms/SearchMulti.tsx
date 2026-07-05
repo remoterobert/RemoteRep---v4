@@ -114,7 +114,7 @@ export function SearchMulti({
 
       {/* Dropdown of remaining options */}
       {open && filtered.length > 0 && (
-        <div className="absolute z-20 mt-1 w-full max-h-72 overflow-y-auto rounded-lg border border-zinc-200 dark:border-white/[0.08] bg-white dark:bg-[#0b1220] shadow-xl">
+        <div className="absolute z-20 mt-1 w-full max-h-72 overflow-y-auto rounded-lg border border-border bg-surface-2 shadow-xl">
           <ul className="py-1">
             {filtered.map((opt) => (
               <li key={opt}>
@@ -131,7 +131,7 @@ export function SearchMulti({
         </div>
       )}
       {open && filtered.length === 0 && (
-        <div className="absolute z-20 mt-1 w-full rounded-lg border border-zinc-200 dark:border-white/[0.08] bg-white dark:bg-[#0b1220] shadow-xl px-3 py-2 text-xs text-light-grey">
+        <div className="absolute z-20 mt-1 w-full rounded-lg border border-border bg-surface-2 shadow-xl px-3 py-2 text-xs text-light-grey">
           {query
             ? `No matches for “${query}”.`
             : "All options selected."}
