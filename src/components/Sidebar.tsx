@@ -15,7 +15,7 @@ import {
   ShieldCheckIcon,
   BookOpenIcon,
   ChevronLeftIcon,
-  ChevronDoubleRightIcon,
+  ChevronRightIcon,
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
   UserCircleIcon,
@@ -202,8 +202,25 @@ export function Sidebar({
           ${isVisibleMobile}
         `}
       >
-        {/* Header — tenant identity + collapse toggle */}
-        <div className="h-16 shrink-0 px-3 flex items-center gap-2 border-b border-border">
+        {/* Floating collapse toggle — sits on the sidebar's right edge
+            so it never overflows the collapsed 68px width. */}
+        <button
+          type="button"
+          onClick={onToggleCollapsed}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="hidden lg:flex absolute top-[52px] -right-3 z-20 h-6 w-6 items-center justify-center rounded-full bg-surface-2 border border-border hover:bg-surface-3 text-light-grey shadow-sm transition-colors"
+        >
+          {collapsed ? (
+            <ChevronRightIcon className="h-3 w-3" />
+          ) : (
+            <ChevronLeftIcon className="h-3 w-3" />
+          )}
+        </button>
+
+        {/* Header — tenant identity (logo + name) */}
+        <div
+          className={`h-16 shrink-0 flex items-center gap-2 border-b border-border ${collapsed ? "px-0 justify-center" : "px-3"}`}
+        >
           <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 ring-1 ring-primary/20">
             <Image
               src="/v3-white-logo.svg"
@@ -232,18 +249,6 @@ export function Sidebar({
               </div>
             </div>
           )}
-          <button
-            type="button"
-            onClick={onToggleCollapsed}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            className="hidden lg:inline-flex items-center justify-center h-7 w-7 rounded hover:bg-surface-3 text-light-grey"
-          >
-            {collapsed ? (
-              <ChevronDoubleRightIcon className="h-4 w-4" />
-            ) : (
-              <ChevronLeftIcon className="h-4 w-4" />
-            )}
-          </button>
         </div>
 
         {/* Nav — Overview group */}
