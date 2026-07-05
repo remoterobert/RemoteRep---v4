@@ -2,6 +2,7 @@
 
 import { ChipMulti } from "@/components/forms/ChipMulti";
 import { SearchMulti } from "@/components/forms/SearchMulti";
+import { SearchSelect } from "@/components/forms/SearchSelect";
 import {
   SALES_ROLES,
   COMMITMENTS,
@@ -18,6 +19,7 @@ import {
   TECHNOLOGIES,
   INDUSTRIES,
 } from "@/lib/listings/options";
+import { COUNTRIES, STATES } from "@/lib/locations";
 
 const inputCls =
   "w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm";
@@ -28,6 +30,8 @@ export type ProfileDefaults = {
   photo_url: string;
   video_url: string;
   skills: string;
+  contact_email: string;
+  phone: string;
   city: string;
   state_region: string;
   country: string;
@@ -47,8 +51,8 @@ export type ProfileDefaults = {
 };
 
 export type GoalsDefaults = {
-  company_age_max: number | null;
-  company_headcount_max: number | null;
+  company_age_min: number | null;
+  company_headcount_min: number | null;
   industries: string[];
   sales_roles: string[];
   commitment: string[];
@@ -61,13 +65,15 @@ export function ProfileEditForm({
   action,
   profile,
   goals,
+  formId,
 }: {
   action: (fd: FormData) => void;
   profile: ProfileDefaults;
   goals: GoalsDefaults;
+  formId?: string;
 }) {
   return (
-    <form action={action} className="space-y-6">
+    <form id={formId} action={action} className="space-y-6">
       {/* ============================================================
           Section 1 — Profile (public-facing)
          ============================================================ */}
@@ -161,36 +167,61 @@ export function ProfileEditForm({
               className={inputCls}
             />
           </div>
+          <SearchSelect
+            name="state_region"
+            label="State / Region"
+            options={STATES}
+            defaultValue={profile.state_region}
+            placeholder="Select…"
+          />
+          <SearchSelect
+            name="country"
+            label="Country"
+            options={COUNTRIES}
+            defaultValue={profile.country}
+            placeholder="Select…"
+          />
+        </div>
+
+        {/* Contact block */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <label
-              htmlFor="state_region"
+              htmlFor="contact_email"
               className="block text-sm font-medium mb-1"
             >
-              State / Region
+              Contact email
             </label>
             <input
-              id="state_region"
-              name="state_region"
-              type="text"
-              maxLength={100}
-              defaultValue={profile.state_region}
-              placeholder="e.g. Texas"
+              id="contact_email"
+              name="contact_email"
+              type="email"
+              maxLength={200}
+              defaultValue={profile.contact_email}
+              placeholder="you@example.com"
               className={inputCls}
             />
+            <p className="text-xs text-light-grey mt-1">
+              Where hiring managers reach you. Only shared once you accept
+              an invitation.
+            </p>
           </div>
           <div>
-            <label htmlFor="country" className="block text-sm font-medium mb-1">
-              Country
+            <label htmlFor="phone" className="block text-sm font-medium mb-1">
+              Phone
             </label>
             <input
-              id="country"
-              name="country"
-              type="text"
-              maxLength={100}
-              defaultValue={profile.country}
-              placeholder="e.g. USA"
+              id="phone"
+              name="phone"
+              type="tel"
+              maxLength={50}
+              defaultValue={profile.phone}
+              placeholder="+1 (555) 555-0100"
               className={inputCls}
             />
+            <p className="text-xs text-light-grey mt-1">
+              Optional. Same visibility rules as email.
+            </p>
           </div>
         </div>
 
@@ -377,37 +408,37 @@ export function ProfileEditForm({
           </div>
           <div>
             <label
-              htmlFor="company_headcount_max"
+              htmlFor="company_headcount_min"
               className="block text-sm font-medium mb-1"
             >
-              Maximum company size (headcount)
+              Minimum company size (headcount)
             </label>
             <input
-              id="company_headcount_max"
-              name="company_headcount_max"
+              id="company_headcount_min"
+              name="company_headcount_min"
               type="number"
               min={0}
               max={100_000}
-              defaultValue={goals.company_headcount_max ?? ""}
-              placeholder="Leave blank for no limit"
+              defaultValue={goals.company_headcount_min ?? ""}
+              placeholder="Leave blank for no minimum"
               className={inputCls}
             />
           </div>
           <div>
             <label
-              htmlFor="company_age_max"
+              htmlFor="company_age_min"
               className="block text-sm font-medium mb-1"
             >
-              Maximum company age (years)
+              Minimum company age (years)
             </label>
             <input
-              id="company_age_max"
-              name="company_age_max"
+              id="company_age_min"
+              name="company_age_min"
               type="number"
               min={0}
               max={200}
-              defaultValue={goals.company_age_max ?? ""}
-              placeholder="Leave blank for no limit"
+              defaultValue={goals.company_age_min ?? ""}
+              placeholder="Leave blank for no minimum"
               className={inputCls}
             />
           </div>
@@ -446,22 +477,32 @@ export function ProfileEditForm({
         />
       </SectionCard>
 
-      {/* Submit — everything except resume */}
-      <div className="flex flex-wrap items-center gap-3 pt-2">
-        <button
-          type="submit"
-          className="rounded bg-primary text-white px-5 py-2 text-sm font-semibold hover:opacity-90 transition-opacity"
-        >
-          Save profile
-        </button>
-        <a
-          href="/dashboard"
-          className="text-sm text-light-grey hover:text-primary transition-colors"
-        >
-          Cancel
-        </a>
-      </div>
     </form>
+  );
+}
+
+/**
+ * Renders the Save + Cancel row for the profile form. Lives outside
+ * the <form> element (associated via HTML5's `form` attribute) so it
+ * can visually sit below the resume upload section.
+ */
+export function ProfileSaveBar({ formId }: { formId: string }) {
+  return (
+    <div className="flex flex-wrap items-center gap-3 pt-2">
+      <button
+        type="submit"
+        form={formId}
+        className="rounded bg-primary text-white px-5 py-2 text-sm font-semibold hover:opacity-90 transition-opacity"
+      >
+        Save profile
+      </button>
+      <a
+        href="/dashboard"
+        className="text-sm text-light-grey hover:text-primary transition-colors"
+      >
+        Cancel
+      </a>
+    </div>
   );
 }
 

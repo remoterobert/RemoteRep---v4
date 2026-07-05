@@ -229,7 +229,7 @@ export default async function CandidatesPage({
       ? await supabase
           .from("candidate_goals")
           .select(
-            "user_id, minimum_compensation, company_age_max, company_headcount_max, industries, sales_roles, commitment, benefits, compensation_types",
+            "user_id, minimum_compensation, company_age_min, company_headcount_min, industries, sales_roles, commitment, benefits, compensation_types",
           )
           .in("user_id", candidateIds)
       : { data: [] };
