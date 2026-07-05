@@ -316,7 +316,7 @@ export default async function AdminAnalyticsPage({
       <RangePicker />
 
       {/* KPI cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
         <Kpi
           icon={<UsersIcon className="h-4 w-4" />}
           label="Total users"

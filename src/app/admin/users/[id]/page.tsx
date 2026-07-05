@@ -205,7 +205,7 @@ export default async function AdminUserDetailPage({
       <RangePicker />
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <Kpi
           icon={<BookmarkIcon className="h-4 w-4" />}
           label="Bookmarks"
