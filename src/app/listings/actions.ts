@@ -20,12 +20,10 @@ export async function applyToListing(formData: FormData) {
     redirect(`/login?redirect=${encodeURIComponent(`/listings/${listingId}`)}`);
   }
 
-  const { data, error } = await supabase
-    .rpc("apply_to_listing", {
-      p_listing_id: listingId,
-      p_message: message,
-    })
-    .single();
+  const { data, error } = await supabase.rpc("apply_to_listing", {
+    p_listing_id: listingId,
+    p_message: message,
+  });
 
   if (error) {
     redirect(
@@ -33,9 +31,14 @@ export async function applyToListing(formData: FormData) {
     );
   }
 
-  const chatId = (data as { chat_id: string | null } | null)?.chat_id;
-  const applicationId = (data as { application_id: string | null } | null)
-    ?.application_id;
+  // RPCs that return `table(...)` come back as an array from PostgREST.
+  // Unwrap defensively so a shape change doesn't turn into a broken redirect.
+  type RpcRow = { application_id: string; chat_id: string | null };
+  const row: RpcRow | null = Array.isArray(data)
+    ? ((data[0] ?? null) as RpcRow | null)
+    : ((data as RpcRow | null) ?? null);
+  const chatId = row?.chat_id ?? null;
+  const applicationId = row?.application_id ?? null;
 
   // Fan out email to hiring tenant members. Uses service-role client
   // because we need to read tenant_members regardless of the caller.
@@ -95,5 +98,14 @@ export async function applyToListing(formData: FormData) {
     }
   }
 
-  redirect(chatId ? `/chats/${chatId}` : `/listings/${listingId}?applied=1`);
+  // Defensive: only redirect into the chat if we have a real chat id.
+  // Otherwise send them to their chats index — better than dead-ending
+  // on /chats/undefined and 404ing.
+  if (chatId) {
+    redirect(`/chats/${chatId}`);
+  }
+  if (applicationId) {
+    redirect("/chats?applied=1");
+  }
+  redirect(`/listings/${listingId}?applied=1`);
 }
