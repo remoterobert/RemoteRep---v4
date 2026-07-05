@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import {
   Bars3Icon,
@@ -28,6 +29,7 @@ export function AppShellClient({
   email,
   initials,
   unreadChats,
+  unreadNotifications,
   children,
 }: {
   tenantName: string;
@@ -37,6 +39,7 @@ export function AppShellClient({
   email: string;
   initials: string;
   unreadChats: number;
+  unreadNotifications: number;
   children: React.ReactNode;
 }) {
   // Build the nav here (client-side) so icon component references never
@@ -112,13 +115,22 @@ export function AppShellClient({
 
           <div className="flex-1" />
 
-          <button
-            type="button"
-            aria-label="Notifications"
-            className="hidden sm:inline-flex items-center justify-center h-9 w-9 rounded hover:bg-surface-3 text-foreground/80"
+          <Link
+            href="/notifications"
+            aria-label={
+              unreadNotifications > 0
+                ? `Notifications (${unreadNotifications} unread)`
+                : "Notifications"
+            }
+            className="relative hidden sm:inline-flex items-center justify-center h-9 w-9 rounded hover:bg-surface-3 text-foreground/80"
           >
             <BellIcon className="h-5 w-5" />
-          </button>
+            {unreadNotifications > 0 && (
+              <span className="absolute top-1 right-1 inline-flex items-center justify-center text-[10px] font-bold min-w-4 h-4 rounded-full bg-primary text-white px-1">
+                {unreadNotifications > 99 ? "99+" : unreadNotifications}
+              </span>
+            )}
+          </Link>
         </header>
 
         <main className="flex-1 flex flex-col w-full">{children}</main>
