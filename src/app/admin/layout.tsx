@@ -5,6 +5,8 @@ import {
   UsersIcon,
   BuildingOffice2Icon,
   ClipboardDocumentListIcon,
+  ChartBarIcon,
+  ShieldCheckIcon,
 } from "@heroicons/react/24/outline";
 import { isPlatformAdmin } from "@/lib/is-platform-admin";
 
@@ -12,9 +14,11 @@ export const dynamic = "force-dynamic";
 
 const adminNav = [
   { name: "Overview", href: "/admin", icon: HomeIcon },
+  { name: "Analytics", href: "/admin/analytics", icon: ChartBarIcon },
   { name: "Users", href: "/admin/users", icon: UsersIcon },
   { name: "Tenants", href: "/admin/tenants", icon: BuildingOffice2Icon },
   { name: "Events", href: "/admin/events", icon: ClipboardDocumentListIcon },
+  { name: "Audit log", href: "/admin/audit-log", icon: ShieldCheckIcon },
 ];
 
 export default async function AdminLayout({
