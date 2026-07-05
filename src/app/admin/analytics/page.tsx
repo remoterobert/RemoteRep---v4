@@ -1,7 +1,5 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { isPlatformAdmin } from "@/lib/is-platform-admin";
 import {
   UsersIcon,
   UserGroupIcon,
@@ -11,6 +9,7 @@ import {
   ChatBubbleLeftRightIcon,
   EnvelopeIcon,
   CheckBadgeIcon,
+  ArrowRightIcon,
 } from "@heroicons/react/24/outline";
 import {
   bucketCounts,
@@ -18,37 +17,25 @@ import {
   computeDelta,
   parseRangeFromSearchParams,
 } from "@/lib/analytics";
-import { RangePicker } from "./RangePicker";
 import { SignupsChart, StackedActivityChart, TopNBar } from "./Charts";
+import { GeoMap } from "./GeoMap";
 
 export const dynamic = "force-dynamic";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
-export default async function AdminAnalyticsPage({
+export default async function AnalyticsOverviewPage({
   searchParams,
 }: {
   searchParams: SearchParams;
 }) {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const admin = await isPlatformAdmin();
-  if (!admin) redirect("/dashboard");
-
   const params = await searchParams;
   const range = parseRangeFromSearchParams(params);
-  const userType =
-    typeof params.user_type === "string" ? params.user_type : "all";
 
   // ============================================================
   // KPIs (current + prior period)
   // ============================================================
-  const priorSince = shiftDate(range.since, range.until);
-
   const [
     { count: totalUsers },
     { count: totalCandidates },
@@ -98,72 +85,44 @@ export default async function AdminAnalyticsPage({
       .lte("last_status_change_at", range.since),
   ]);
 
-  // ============================================================
-  // Time series — signups per bucket
-  // ============================================================
-  let signupQuery = supabase
+  // Signups over time
+  const { data: signupRows } = await supabase
     .from("users")
     .select("id, created_at")
     .gte("created_at", `${range.since}T00:00:00Z`)
     .lte("created_at", `${range.until}T23:59:59Z`)
     .order("created_at", { ascending: true })
     .limit(50000);
-
-  let userIds: string[] | null = null;
-  if (userType === "candidate") {
-    const { data: cids } = await supabase
-      .from("candidate_profiles")
-      .select("user_id");
-    userIds = (cids ?? []).map((c) => c.user_id as string);
-    if (userIds.length > 0) signupQuery = signupQuery.in("id", userIds);
-    else return renderEmpty(range, userType, priorSince);
-  } else if (userType === "hiring") {
-    const { data: mems } = await supabase
-      .from("tenant_members")
-      .select("user_id, role")
-      .in("role", [
-        "client_admin",
-        "client_member",
-        "agency_admin",
-        "agency_member",
-      ]);
-    userIds = Array.from(
-      new Set((mems ?? []).map((m) => m.user_id as string)),
-    );
-    if (userIds.length > 0) signupQuery = signupQuery.in("id", userIds);
-    else return renderEmpty(range, userType, priorSince);
-  }
-
-  const { data: signupRows } = await signupQuery;
   const signupSeries = bucketCounts(
     (signupRows ?? []) as { created_at: string }[],
     range.bucket,
   );
 
-  // ============================================================
-  // Events by type over time (activity chart)
-  // ============================================================
+  // Events activity
   const { data: eventRows } = await supabase
     .from("events")
     .select("event_type, created_at")
     .gte("created_at", `${range.since}T00:00:00Z`)
     .lte("created_at", `${range.until}T23:59:59Z`)
     .limit(50000);
-
   const eventsPivot = bucketByCategory(
     (eventRows ?? []) as { event_type: string; created_at: string }[],
     range.bucket,
     "event_type",
   );
 
-  // ============================================================
-  // Top listings by combined score (views + bookmarks + applications)
-  // ============================================================
+  // Top listings + top profiles (fetched in parallel)
   const [
     { data: viewEvents },
     { data: listingBookmarks },
     { data: applicationRows },
     { data: allListings },
+    { data: profileViewEvents },
+    { data: profileBookmarks },
+    { data: profileInvites },
+    { data: publicProfiles },
+    { data: candidateCountries },
+    { data: companyCountries },
   ] = await Promise.all([
     supabase
       .from("events")
@@ -182,6 +141,32 @@ export default async function AdminAnalyticsPage({
       .select("id, title, tenants(name)")
       .eq("status", "published")
       .limit(500),
+    supabase
+      .from("events")
+      .select("entity_id")
+      .eq("event_type", "profile.viewed")
+      .not("entity_id", "is", null)
+      .limit(50000),
+    supabase
+      .from("bookmarks")
+      .select("target_id")
+      .eq("target_type", "candidate")
+      .limit(50000),
+    supabase
+      .from("applications")
+      .select("candidate_user_id")
+      .eq("status", "invited")
+      .limit(50000),
+    supabase
+      .from("candidate_profiles")
+      .select("user_id, headline, users!inner(first_name, last_name, email)")
+      .eq("visibility", "public")
+      .limit(500),
+    supabase.from("candidate_profiles").select("country").not("country", "is", null),
+    supabase
+      .from("client_profiles")
+      .select("country")
+      .not("country", "is", null),
   ]);
 
   type L = {
@@ -205,45 +190,10 @@ export default async function AdminAnalyticsPage({
         id: l.id,
         label: `${l.title} · ${tenant?.name ?? ""}`.slice(0, 40),
         value: v + b * 2 + a * 3,
-        v,
-        b,
-        a,
       };
     })
     .sort((x, y) => y.value - x.value)
     .slice(0, 10);
-
-  // ============================================================
-  // Top candidate profiles (by views + bookmarks + invitations)
-  // ============================================================
-  const [
-    { data: profileViewEvents },
-    { data: profileBookmarks },
-    { data: profileInvites },
-    { data: publicProfiles },
-  ] = await Promise.all([
-    supabase
-      .from("events")
-      .select("entity_id")
-      .eq("event_type", "profile.viewed")
-      .not("entity_id", "is", null)
-      .limit(50000),
-    supabase
-      .from("bookmarks")
-      .select("target_id")
-      .eq("target_type", "candidate")
-      .limit(50000),
-    supabase
-      .from("applications")
-      .select("candidate_user_id")
-      .eq("status", "invited")
-      .limit(50000),
-    supabase
-      .from("candidate_profiles")
-      .select("user_id, headline, users!inner(first_name, last_name, email)")
-      .eq("visibility", "public")
-      .limit(500),
-  ]);
 
   type P = {
     user_id: string;
@@ -279,17 +229,24 @@ export default async function AdminAnalyticsPage({
         id: p.user_id,
         label: name.slice(0, 32),
         value: v + b * 2 + i * 3,
-        v,
-        b,
-        i,
       };
     })
     .sort((x, y) => y.value - x.value)
     .slice(0, 10);
 
-  // ============================================================
-  // Render
-  // ============================================================
+  // Geography: combine candidate + company countries
+  const geoData: Record<string, number> = {};
+  for (const r of (candidateCountries ?? []) as { country: string }[]) {
+    const c = r.country?.trim();
+    if (!c) continue;
+    geoData[c] = (geoData[c] ?? 0) + 1;
+  }
+  for (const r of (companyCountries ?? []) as { country: string }[]) {
+    const c = r.country?.trim();
+    if (!c) continue;
+    geoData[c] = (geoData[c] ?? 0) + 1;
+  }
+
   const usersDelta = computeDelta(totalUsers ?? 0, priorUsers ?? 0);
   const appsDelta = computeDelta(
     totalApplications ?? 0,
@@ -298,25 +255,9 @@ export default async function AdminAnalyticsPage({
   const hiresDelta = computeDelta(totalHires ?? 0, priorHires ?? 0);
 
   return (
-    <main className="flex-1 w-full">
-      <div className="mb-4">
-        <Link
-          href="/admin"
-          className="text-xs text-light-grey hover:text-primary transition-colors inline-block"
-        >
-          ← Admin
-        </Link>
-        <h1 className="text-2xl font-semibold mt-1">Platform analytics</h1>
-        <p className="text-sm text-light-grey mt-0.5">
-          KPIs, activity trends, and top performers. Filter by date range,
-          bucket, and user type.
-        </p>
-      </div>
-
-      <RangePicker />
-
+    <>
       {/* KPI cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <Kpi
           icon={<UsersIcon className="h-4 w-4" />}
           label="Total users"
@@ -362,49 +303,79 @@ export default async function AdminAnalyticsPage({
         />
       </div>
 
-      {/* Signups over time */}
-      <section className="rounded-2xl border border-border bg-surface-2 p-5 mb-6">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-light-grey mb-3">
-          Signups over time
-        </h2>
-        {signupSeries.length === 0 ? (
-          <p className="text-sm text-light-grey">
-            No signups in the selected range.
-          </p>
-        ) : (
-          <SignupsChart data={signupSeries} label="New signups" />
-        )}
-      </section>
+      {/* Signups + Activity in a 2-col grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+        <section className="rounded-2xl border border-border bg-surface-2 p-5">
+          <div className="flex items-baseline justify-between mb-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-light-grey">
+              Signups over time
+            </h2>
+            <Link
+              href="/admin/analytics/growth"
+              className="text-xs text-primary inline-flex items-center gap-0.5 hover:opacity-80"
+            >
+              Growth <ArrowRightIcon className="h-3 w-3" />
+            </Link>
+          </div>
+          {signupSeries.length === 0 ? (
+            <p className="text-sm text-light-grey">
+              No signups in the selected range.
+            </p>
+          ) : (
+            <SignupsChart data={signupSeries} label="New signups" />
+          )}
+        </section>
 
-      {/* Activity chart */}
-      <section className="rounded-2xl border border-border bg-surface-2 p-5 mb-6">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-light-grey mb-3">
-          Activity by event type
-        </h2>
-        {eventsPivot.categories.length === 0 ? (
-          <p className="text-sm text-light-grey">
-            No events logged in the selected range.
-          </p>
-        ) : (
-          <StackedActivityChart
-            data={eventsPivot.data}
-            categories={eventsPivot.categories}
-          />
-        )}
-      </section>
+        <section className="rounded-2xl border border-border bg-surface-2 p-5">
+          <div className="flex items-baseline justify-between mb-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-light-grey">
+              Activity by event type
+            </h2>
+            <Link
+              href="/admin/analytics/engagement"
+              className="text-xs text-primary inline-flex items-center gap-0.5 hover:opacity-80"
+            >
+              Engagement <ArrowRightIcon className="h-3 w-3" />
+            </Link>
+          </div>
+          {eventsPivot.categories.length === 0 ? (
+            <p className="text-sm text-light-grey">
+              No events logged in the selected range.
+            </p>
+          ) : (
+            <StackedActivityChart
+              data={eventsPivot.data}
+              categories={eventsPivot.categories}
+            />
+          )}
+        </section>
+      </div>
+
+      {/* Geographic map */}
+      <div className="mb-6">
+        <GeoMap data={geoData} title="User geography" />
+      </div>
 
       {/* Top lists */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         <section className="rounded-2xl border border-border bg-surface-2 p-5">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-light-grey mb-3">
-            Top listings
-          </h2>
+          <div className="flex items-baseline justify-between mb-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-light-grey">
+              Top listings
+            </h2>
+            <Link
+              href="/admin/analytics/marketplace"
+              className="text-xs text-primary inline-flex items-center gap-0.5 hover:opacity-80"
+            >
+              Marketplace <ArrowRightIcon className="h-3 w-3" />
+            </Link>
+          </div>
           {topListings.length === 0 ? (
             <p className="text-sm text-light-grey">No listings yet.</p>
           ) : (
             <TopNBar data={topListings} />
           )}
-          <p className="text-xs text-light-grey mt-2">
+          <p className="text-[11px] text-light-grey mt-2">
             Score = views + 2× bookmarks + 3× applications.
           </p>
         </section>
@@ -420,12 +391,12 @@ export default async function AdminAnalyticsPage({
           ) : (
             <TopNBar data={topProfiles} />
           )}
-          <p className="text-xs text-light-grey mt-2">
+          <p className="text-[11px] text-light-grey mt-2">
             Score = views + 2× bookmarks + 3× invitations.
           </p>
         </section>
       </div>
-    </main>
+    </>
   );
 }
 
@@ -469,18 +440,6 @@ function Kpi({
   );
 }
 
-function shiftDate(since: string, until: string): string {
-  const s = new Date(since);
-  const u = new Date(until);
-  const days = Math.max(
-    1,
-    Math.round((u.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)),
-  );
-  const priorSince = new Date(s);
-  priorSince.setDate(priorSince.getDate() - days);
-  return priorSince.toISOString().slice(0, 10);
-}
-
 function countBy<T>(
   rows: T[],
   key: (row: T) => string | null | undefined,
@@ -492,21 +451,4 @@ function countBy<T>(
     map.set(k, (map.get(k) ?? 0) + 1);
   }
   return map;
-}
-
-function renderEmpty(
-  range: { since: string; until: string; bucket: string },
-  userType: string,
-  priorSince: string,
-) {
-  return (
-    <main className="flex-1 w-full">
-      <h1 className="text-2xl font-semibold mb-1">Platform analytics</h1>
-      <p className="text-sm text-light-grey mb-6">
-        No users match the selected user type ({userType}).
-      </p>
-      <RangePicker />
-      <input type="hidden" value={JSON.stringify({ range, priorSince })} />
-    </main>
-  );
 }

@@ -13,7 +13,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isPlatformAdmin } from "@/lib/is-platform-admin";
 import { bucketCounts, parseRangeFromSearchParams } from "@/lib/analytics";
 import { SignupsChart } from "../../analytics/Charts";
-import { RangePicker } from "../../analytics/RangePicker";
+import { CompactFilters } from "../../analytics/CompactFilters";
 
 export const dynamic = "force-dynamic";
 
@@ -202,7 +202,7 @@ export default async function AdminUserDetailPage({
         </div>
       </div>
 
-      <RangePicker />
+      <CompactFilters />
 
       {/* KPI row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">

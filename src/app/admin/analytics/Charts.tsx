@@ -13,6 +13,12 @@ import {
   ResponsiveContainer,
   AreaChart,
   Area,
+  PieChart,
+  Pie,
+  Cell,
+  FunnelChart,
+  Funnel,
+  LabelList,
 } from "recharts";
 
 const PALETTE = [
@@ -128,6 +134,176 @@ export function StackedActivityChart({
             />
           ))}
         </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+/**
+ * Filled area chart — cumulative counts (running total).
+ */
+export function CumulativeChart({
+  data,
+  label = "Total",
+}: {
+  data: Array<{ date: string; count: number }>;
+  label?: string;
+}) {
+  return (
+    <div className="h-72 w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart
+          data={data}
+          margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
+        >
+          <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
+          <XAxis
+            dataKey="date"
+            tick={{ fill: "var(--foreground)", fontSize: 11 }}
+            stroke="var(--border)"
+          />
+          <YAxis
+            tick={{ fill: "var(--foreground)", fontSize: 11 }}
+            stroke="var(--border)"
+            allowDecimals={false}
+          />
+          <Tooltip
+            contentStyle={{
+              background: "var(--surface-2)",
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+              fontSize: 12,
+            }}
+          />
+          <Area
+            type="monotone"
+            dataKey="count"
+            name={label}
+            stroke={PALETTE[0]}
+            fill={PALETTE[0]}
+            fillOpacity={0.2}
+            strokeWidth={2}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+/**
+ * Donut/Pie chart for category breakdowns.
+ */
+export function DonutChart({
+  data,
+}: {
+  data: Array<{ name: string; value: number }>;
+}) {
+  return (
+    <div className="h-72 w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={data}
+            dataKey="value"
+            nameKey="name"
+            innerRadius={60}
+            outerRadius={100}
+            paddingAngle={2}
+          >
+            {data.map((_, i) => (
+              <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
+            ))}
+          </Pie>
+          <Tooltip
+            contentStyle={{
+              background: "var(--surface-2)",
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+              fontSize: 12,
+            }}
+          />
+          <Legend wrapperStyle={{ fontSize: 11 }} />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+/**
+ * Funnel chart — for conversion visualization.
+ */
+export function ConversionFunnel({
+  data,
+}: {
+  data: Array<{ name: string; value: number }>;
+}) {
+  return (
+    <div className="h-72 w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <FunnelChart>
+          <Tooltip
+            contentStyle={{
+              background: "var(--surface-2)",
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+              fontSize: 12,
+            }}
+          />
+          <Funnel dataKey="value" data={data} isAnimationActive>
+            <LabelList
+              position="right"
+              fill="var(--foreground)"
+              stroke="none"
+              dataKey="name"
+              fontSize={12}
+            />
+            {data.map((_, i) => (
+              <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
+            ))}
+          </Funnel>
+        </FunnelChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+/**
+ * Vertical bar chart — for histograms / distribution.
+ */
+export function DistributionBar({
+  data,
+  labelKey = "label",
+  valueKey = "value",
+}: {
+  data: Array<Record<string, string | number>>;
+  labelKey?: string;
+  valueKey?: string;
+}) {
+  return (
+    <div className="h-72 w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+          <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
+          <XAxis
+            dataKey={labelKey}
+            tick={{ fill: "var(--foreground)", fontSize: 11 }}
+            stroke="var(--border)"
+          />
+          <YAxis
+            tick={{ fill: "var(--foreground)", fontSize: 11 }}
+            stroke="var(--border)"
+            allowDecimals={false}
+          />
+          <Tooltip
+            contentStyle={{
+              background: "var(--surface-2)",
+              border: "1px solid var(--border)",
+              borderRadius: 8,
+              fontSize: 12,
+            }}
+          />
+          <Bar dataKey={valueKey} fill={PALETTE[0]} radius={[4, 4, 0, 0]} />
+        </BarChart>
       </ResponsiveContainer>
     </div>
   );
