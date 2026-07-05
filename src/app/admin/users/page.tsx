@@ -1,67 +1,119 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { isPlatformAdmin } from "@/lib/is-platform-admin";
+import { UserRowActions } from "./UserRowActions";
+import { impersonateUser, sendPasswordReset } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminUsersPage() {
+type SearchParams = Promise<{ error?: string; ok?: string }>;
+
+export default async function AdminUsersPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  const admin = await isPlatformAdmin();
+  if (!admin) redirect("/dashboard");
+
+  const params = await searchParams;
 
   const { data: users, error } = await supabase
     .from("users")
     .select(
-      "id, email, first_name, last_name, status, created_at, last_seen_at, tenant_members!user_id(role, tenants(name, type))",
+      "id, email, first_name, last_name, status, created_at, last_seen_at, tenant_members!user_id(role, tenants(name, type)), candidate_profiles(user_id, visibility)",
     )
     .order("created_at", { ascending: false });
 
   if (error) {
     return (
-      <div>
+      <div className="p-6">
         <h2 className="text-lg font-semibold mb-4">Users</h2>
-        <div className="rounded border border-red-300 bg-red-50 dark:bg-red-950 dark:border-red-900 p-3 text-sm text-red-800 dark:text-red-200">
+        <div className="rounded border border-danger/40 bg-danger/5 p-3 text-sm text-danger">
           Error loading users: {error.message}
         </div>
       </div>
     );
   }
 
+  type MembershipRow = { role: string; tenants: { name: string; type: string } };
+  type UserRow = {
+    id: string;
+    email: string;
+    first_name: string | null;
+    last_name: string | null;
+    status: string;
+    created_at: string;
+    last_seen_at: string | null;
+    tenant_members: MembershipRow[];
+    candidate_profiles: unknown[] | { user_id: string; visibility: string } | null;
+  };
+  const rows = (users ?? []) as unknown as UserRow[];
+
   return (
-    <div>
+    <div className="p-6">
       <div className="flex items-baseline justify-between mb-4">
         <h2 className="text-lg font-semibold">Users</h2>
         <span className="text-xs text-light-grey">
-          {users?.length ?? 0} total
+          {rows.length} total
         </span>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm border border-zinc-200 dark:border-zinc-800 rounded">
-          <thead className="bg-zinc-50 dark:bg-zinc-900 text-left text-xs uppercase text-light-grey">
+      {params.error && (
+        <div className="mb-4 rounded border border-danger/40 bg-danger/5 p-3 text-sm text-danger">
+          {params.error}
+        </div>
+      )}
+      {params.ok === "reset-sent" && (
+        <div className="mb-4 rounded border border-success/40 bg-success/5 p-3 text-sm text-success">
+          Password-reset email sent.
+        </div>
+      )}
+
+      <div className="overflow-x-auto rounded-xl border border-border">
+        <table className="w-full text-sm">
+          <thead className="bg-surface-3 text-left text-xs uppercase text-light-grey">
             <tr>
               <th className="p-3">Name</th>
               <th className="p-3">Email</th>
               <th className="p-3">Status</th>
               <th className="p-3">Tenants / Roles</th>
               <th className="p-3">Signed up</th>
+              <th className="p-3 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-            {users?.map((u) => {
-              type MembershipRow = {
-                role: string;
-                tenants: { name: string; type: string };
-              };
-              const memberships = (u.tenant_members ?? []) as unknown as MembershipRow[];
+          <tbody className="divide-y divide-border">
+            {rows.map((u) => {
+              const memberships = u.tenant_members ?? [];
+              const isPlatformAdminUser = memberships.some(
+                (m) => m.role === "platform_admin",
+              );
+              const hasProfile = Array.isArray(u.candidate_profiles)
+                ? u.candidate_profiles.length > 0
+                : !!u.candidate_profiles;
+
               return (
-                <tr key={u.id}>
+                <tr key={u.id} className="hover:bg-surface-3/40">
                   <td className="p-3">
                     {u.first_name || u.last_name ? (
                       `${u.first_name ?? ""} ${u.last_name ?? ""}`.trim()
                     ) : (
                       <span className="text-light-grey italic">(no name)</span>
                     )}
+                    {isPlatformAdminUser && (
+                      <span className="ml-1 text-[10px] rounded-full bg-secondary/20 text-secondary px-1.5 py-0.5 font-semibold uppercase">
+                        Admin
+                      </span>
+                    )}
                   </td>
                   <td className="p-3 font-mono text-xs">{u.email}</td>
                   <td className="p-3">
-                    <span className="text-xs font-mono bg-zinc-100 dark:bg-zinc-800 rounded px-1.5 py-0.5">
+                    <span className="text-xs font-mono bg-surface-3 rounded px-1.5 py-0.5">
                       {u.status}
                     </span>
                   </td>
@@ -89,13 +141,23 @@ export default async function AdminUsersPage() {
                   <td className="p-3 text-xs text-light-grey">
                     {new Date(u.created_at).toLocaleDateString()}
                   </td>
+                  <td className="p-3 text-right">
+                    <UserRowActions
+                      userId={u.id}
+                      targetHasProfile={hasProfile}
+                      impersonateAction={impersonateUser}
+                      passwordResetAction={sendPasswordReset}
+                      disableImpersonate={isPlatformAdminUser}
+                    />
+                  </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
-      {(!users || users.length === 0) && (
+
+      {rows.length === 0 && (
         <p className="text-sm text-light-grey mt-4">No users yet.</p>
       )}
     </div>
