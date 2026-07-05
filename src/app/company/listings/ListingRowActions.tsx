@@ -5,6 +5,7 @@ import { useState } from "react";
 import {
   EllipsisHorizontalIcon,
   EyeIcon,
+  PencilSquareIcon,
   PauseIcon,
   PlayIcon,
   ArchiveBoxIcon,
@@ -65,6 +66,15 @@ export function ListingRowActions({
             >
               <EyeIcon className="h-4 w-4 text-light-grey" />
               View + applicants
+            </Link>
+            <Link
+              href={`/company/listings/${listingId}/edit`}
+              className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-white/[0.06]"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+            >
+              <PencilSquareIcon className="h-4 w-4 text-light-grey" />
+              Edit listing
             </Link>
 
             <div className="my-1 border-t border-border" />

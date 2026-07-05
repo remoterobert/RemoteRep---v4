@@ -5,6 +5,7 @@ import {
   BookmarkIcon,
   EyeIcon,
   ChatBubbleLeftRightIcon,
+  PencilSquareIcon,
 } from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/server";
 
@@ -236,6 +237,13 @@ export default async function CompanyListingDetailPage({
               )}`}
           </p>
         </div>
+        <Link
+          href={`/company/listings/${l.id}/edit`}
+          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-2 px-3 py-1.5 text-sm font-medium hover:bg-surface-3 transition-colors"
+        >
+          <PencilSquareIcon className="h-4 w-4" />
+          Edit
+        </Link>
       </div>
 
       {/* Metrics */}
