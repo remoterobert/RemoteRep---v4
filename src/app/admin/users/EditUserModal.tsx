@@ -12,6 +12,7 @@ export type EditableUser = {
   accessLevel: string;
   referenceSource: string;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
 };
 
 /**
@@ -140,19 +141,31 @@ export function EditUserModal({
                 />
               </div>
 
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  name="make_admin"
-                  value="1"
-                  checked={makeAdmin}
-                  onChange={(e) => setMakeAdmin(e.target.checked)}
-                />
-                <span>Platform admin</span>
-                <span className="text-[11px] text-light-grey ml-auto">
-                  Full access to /admin/*
-                </span>
-              </label>
+              {user.isSuperAdmin ? (
+                <div className="rounded-lg border border-danger/30 bg-danger/5 p-2.5 text-xs">
+                  <div className="font-semibold text-danger mb-0.5">
+                    Super Admin — role locked
+                  </div>
+                  <div className="text-light-grey leading-snug">
+                    This account is the business owner. Role changes and
+                    deletion are locked from the UI. Change via SQL only.
+                  </div>
+                </div>
+              ) : (
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    name="make_admin"
+                    value="1"
+                    checked={makeAdmin}
+                    onChange={(e) => setMakeAdmin(e.target.checked)}
+                  />
+                  <span>Platform admin</span>
+                  <span className="text-[11px] text-light-grey ml-auto">
+                    Full access to /admin/*
+                  </span>
+                </label>
+              )}
 
               <div className="flex justify-end gap-2 pt-2 border-t border-border">
                 <button

@@ -230,6 +230,14 @@ export async function updateUserFields(formData: FormData) {
 
     const adminClient = createAdminClient();
 
+    // Check if the target is a super admin — role changes locked for them.
+    const { data: targetMeta } = await adminClient
+      .from("users")
+      .select("is_super_admin")
+      .eq("id", targetUserId)
+      .maybeSingle();
+    const targetIsSuper = !!targetMeta?.is_super_admin;
+
     const { error: updErr } = await adminClient
       .from("users")
       .update({
@@ -253,7 +261,9 @@ export async function updateUserFields(formData: FormData) {
       .limit(1)
       .maybeSingle();
 
-    if (firstMembership) {
+    // Super admins have their role permanently locked to platform_admin.
+    // Skip the entire role-toggle block for them.
+    if (firstMembership && !targetIsSuper) {
       const desiredRole = makeAdmin ? "platform_admin" : firstMembership.role;
       if (
         makeAdmin &&
@@ -412,9 +422,18 @@ export async function deleteUserPermanently(formData: FormData) {
     // Snapshot for audit before deletion.
     const { data: target } = await adminClient
       .from("users")
-      .select("id, email, first_name, last_name")
+      .select("id, email, first_name, last_name, is_super_admin")
       .eq("id", targetUserId)
       .maybeSingle();
+
+    // Super Admin is a business-owner tier. It can only be created or
+    // removed via direct SQL — the admin UI must never nuke it, even
+    // if the caller is itself a super admin. Manual DB access required.
+    if (target?.is_super_admin) {
+      redirect(
+        `/admin/users?error=${encodeURIComponent("Cannot delete a Super Admin from the UI. This is intentional — remove via direct SQL if needed.")}`,
+      );
+    }
 
     // Delete from Supabase Auth — this cascades to public.users via
     // the ON DELETE CASCADE FK on public.users.id → auth.users.id.

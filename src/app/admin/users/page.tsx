@@ -61,7 +61,7 @@ export default async function AdminUsersPage({
   let query = supabase
     .from("users")
     .select(
-      "id, email, first_name, last_name, status, created_at, last_seen_at, tags, notes, access_level, archived_at, reference_source, tenant_members!user_id(role, tenants(name, type)), candidate_profiles(user_id, visibility)",
+      "id, email, first_name, last_name, status, created_at, last_seen_at, tags, notes, access_level, archived_at, reference_source, is_super_admin, tenant_members!user_id(role, tenants(name, type)), candidate_profiles(user_id, visibility)",
     );
 
   if (q) {
@@ -104,6 +104,7 @@ export default async function AdminUsersPage({
     access_level: string | null;
     archived_at: string | null;
     reference_source: string | null;
+    is_super_admin: boolean | null;
     tenant_members: MembershipRow[];
     candidate_profiles: unknown[] | { user_id: string; visibility: string } | null;
   };
@@ -192,9 +193,10 @@ export default async function AdminUsersPage({
             )}
             {rows.map((u) => {
               const memberships = u.tenant_members ?? [];
-              const isAdmin = memberships.some(
-                (m) => m.role === "platform_admin",
-              );
+              const isSuperAdmin = !!u.is_super_admin;
+              const isAdmin =
+                memberships.some((m) => m.role === "platform_admin") ||
+                isSuperAdmin;
               const isHiring = memberships.some(
                 (m) =>
                   m.tenants.type === "client_company" ||
@@ -245,7 +247,12 @@ export default async function AdminUsersPage({
                   {/* Type badges */}
                   <td className="p-3">
                     <div className="flex flex-wrap gap-1">
-                      {isAdmin && (
+                      {isSuperAdmin && (
+                        <span className="text-[10px] rounded-full bg-danger/15 text-danger ring-1 ring-danger/30 px-2 py-0.5 font-bold uppercase">
+                          Super Admin
+                        </span>
+                      )}
+                      {isAdmin && !isSuperAdmin && (
                         <span className="text-[10px] rounded-full bg-secondary/20 text-dark-foreground dark:text-secondary px-2 py-0.5 font-semibold uppercase">
                           Admin
                         </span>
@@ -334,6 +341,7 @@ export default async function AdminUsersPage({
                         accessLevel: access,
                         referenceSource: u.reference_source ?? "",
                         isAdmin,
+                        isSuperAdmin,
                       }}
                       editAction={updateUserFields}
                       impersonateAction={impersonateUser}
@@ -342,7 +350,7 @@ export default async function AdminUsersPage({
                       toggleArchiveAction={toggleArchive}
                       deleteAction={deleteUserPermanently}
                       disableImpersonate={isAdmin}
-                      disableDelete={u.id === user.id}
+                      disableDelete={u.id === user.id || isSuperAdmin}
                       isArchived={isArchived}
                       isComp={isComp}
                     />
