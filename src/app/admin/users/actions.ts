@@ -181,7 +181,8 @@ export async function stopImpersonation() {
   if (verifyErr) {
     redirect("/login");
   }
-  redirect("/admin/users");
+  // Land on the admin overview so it's obvious the return worked.
+  redirect("/admin");
 }
 
 /**

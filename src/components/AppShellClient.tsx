@@ -5,7 +5,12 @@ import {
   Bars3Icon,
   BellIcon,
 } from "@heroicons/react/24/outline";
-import { Sidebar, buildHiringNav, buildTalentNav } from "@/components/Sidebar";
+import {
+  Sidebar,
+  buildHiringNav,
+  buildTalentNav,
+  buildAdminNav,
+} from "@/components/Sidebar";
 
 const COLLAPSE_KEY = "remoterep.sidebar.collapsed";
 
@@ -37,7 +42,13 @@ export function AppShellClient({
   // Build the nav here (client-side) so icon component references never
   // cross the server → client RSC boundary. React 19 can't serialize
   // function-shaped props over that wire.
-  const navigation = isHiring ? buildHiringNav() : buildTalentNav();
+  // Platform admins get admin-only nav — no reason to clutter the
+  // sidebar with a hiring/candidate view they never use as themselves.
+  const navigation = isPlatformAdmin
+    ? buildAdminNav()
+    : isHiring
+      ? buildHiringNav()
+      : buildTalentNav();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);

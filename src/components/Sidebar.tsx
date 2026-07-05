@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 import {
   HomeIcon,
+  UsersIcon,
   UserGroupIcon,
   ChatBubbleLeftRightIcon,
   ShareIcon,
@@ -20,6 +21,7 @@ import {
   ArrowRightOnRectangleIcon,
   UserCircleIcon,
   BuildingOffice2Icon as BuildingIcon,
+  ChartBarIcon,
 } from "@heroicons/react/24/outline";
 import { logout } from "@/app/(auth)/actions";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -84,6 +86,33 @@ export function buildHiringNav(): NavItem[] {
       name: "Support",
       href: "#",
       icon: HIRING_ICON_MAP.Support,
+      newTab: true,
+    },
+  ];
+}
+
+/**
+ * Platform admins get admin-only navigation instead of the hiring/
+ * talent-side entries — the admin doesn't need a normal user profile,
+ * so we don't clutter the sidebar with one. Impersonation reverts the
+ * signed-in identity so the target's normal nav appears again.
+ */
+export function buildAdminNav(): NavItem[] {
+  return [
+    { name: "Overview", href: "/admin", icon: HomeIcon },
+    { name: "Analytics", href: "/admin/analytics", icon: ChartBarIcon },
+    { name: "Users", href: "/admin/users", icon: UsersIcon },
+    { name: "Tenants", href: "/admin/tenants", icon: BuildingOffice2Icon },
+    {
+      name: "Events",
+      href: "/admin/events",
+      icon: ClipboardDocumentListIcon,
+    },
+    { name: "Audit log", href: "/admin/audit-log", icon: ShieldCheckIcon },
+    {
+      name: "Support",
+      href: "#",
+      icon: LifebuoyIcon,
       newTab: true,
     },
   ];
@@ -255,36 +284,26 @@ export function Sidebar({
                 collapsed={collapsed}
               />
             ))}
-            {isPlatformAdmin && (
-              <NavRow
-                item={{
-                  name: "Admin",
-                  href: "/admin",
-                  icon: ShieldCheckIcon,
-                }}
-                active={pathname.startsWith("/admin")}
-                collapsed={collapsed}
-                emphasis="admin"
-              />
-            )}
           </NavGroup>
         </nav>
 
         {/* Account group */}
         <div className="px-2 pb-2 space-y-0.5 border-t border-border pt-3">
           <NavGroup label="Account" collapsed={collapsed}>
-            <NavRow
-              item={{
-                name: isHiring ? "Company profile" : "Your profile",
-                href: profileHref,
-                icon: isHiring ? BuildingIcon : UserCircleIcon,
-              }}
-              active={
-                pathname.startsWith(profileHref) ||
-                pathname === (isHiring ? "/company/edit" : "/profile/edit")
-              }
-              collapsed={collapsed}
-            />
+            {!isPlatformAdmin && (
+              <NavRow
+                item={{
+                  name: isHiring ? "Company profile" : "Your profile",
+                  href: profileHref,
+                  icon: isHiring ? BuildingIcon : UserCircleIcon,
+                }}
+                active={
+                  pathname.startsWith(profileHref) ||
+                  pathname === (isHiring ? "/company/edit" : "/profile/edit")
+                }
+                collapsed={collapsed}
+              />
+            )}
             <NavRow
               item={{
                 name: "Settings",
