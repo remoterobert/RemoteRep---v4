@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { AppShellClient } from "@/components/AppShellClient";
 import { ImpersonationBanner } from "@/components/ImpersonationBanner";
 import { readImpersonationMarker } from "@/lib/impersonation";
+import { unreadNotificationCount } from "@/lib/notifications";
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -100,6 +101,8 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
   // Impersonation banner (if the admin flipped session via /admin/users)
   const marker = await readImpersonationMarker();
 
+  const unreadNotifications = await unreadNotificationCount();
+
   return (
     <AppShellClient
       tenantName={m.tenants.name}
@@ -109,6 +112,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
       email={user.email ?? ""}
       initials={initials}
       unreadChats={unreadChats}
+      unreadNotifications={unreadNotifications}
     >
       {marker && (
         <ImpersonationBanner
