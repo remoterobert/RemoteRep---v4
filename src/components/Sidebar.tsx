@@ -98,11 +98,6 @@ export function buildTalentNav(): NavItem[] {
       href: "/opportunities",
       icon: TALENT_ICON_MAP.Opportunities,
     },
-    {
-      name: "Browse clients",
-      href: "#",
-      icon: TALENT_ICON_MAP["Browse clients"],
-    },
     { name: "Chats", href: "/chats", icon: TALENT_ICON_MAP.Chats },
     {
       name: "Resources",
