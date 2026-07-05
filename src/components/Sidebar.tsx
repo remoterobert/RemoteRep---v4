@@ -80,7 +80,6 @@ export function buildHiringNav(): NavItem[] {
       icon: HIRING_ICON_MAP.Resources,
       newTab: true,
     },
-    { name: "Affiliates", href: "#", icon: HIRING_ICON_MAP.Affiliates },
     {
       name: "Support",
       href: "#",
@@ -105,7 +104,6 @@ export function buildTalentNav(): NavItem[] {
       icon: TALENT_ICON_MAP.Resources,
       newTab: true,
     },
-    { name: "Affiliates", href: "#", icon: TALENT_ICON_MAP.Affiliates },
     { name: "Support", href: "#", icon: TALENT_ICON_MAP.Support, newTab: true },
   ];
 }
