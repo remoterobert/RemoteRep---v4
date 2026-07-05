@@ -10,9 +10,11 @@ import { BookmarkIcon as BookmarkSolid } from "@heroicons/react/24/solid";
 import { createClient } from "@/lib/supabase/server";
 import { toggleOpportunityBookmark } from "@/app/opportunities/actions";
 import { respondToInvitation } from "@/app/dashboard/actions";
+import { applyToListing } from "@/app/listings/actions";
 import { MatchBadges } from "@/components/MatchBadges";
 import { ShareButton } from "@/components/ShareButton";
 import { AuthPromptButton } from "@/components/AuthPromptModal";
+import { ApplyButton } from "@/components/ApplyButton";
 import {
   computeExperienceMatch,
   computeGoalsMatch,
@@ -161,6 +163,7 @@ export default async function PublicListingPage({
   let applicationRow: {
     status: string;
     id: string;
+    chat_id: string | null;
   } | null = null;
 
   if (user) {
@@ -193,7 +196,7 @@ export default async function PublicListingPage({
           .maybeSingle(),
         supabase
           .from("applications")
-          .select("id, status")
+          .select("id, status, chats(id)")
           .eq("listing_id", l.id)
           .eq("candidate_user_id", user.id)
           .maybeSingle(),
@@ -208,7 +211,20 @@ export default async function PublicListingPage({
       candidateGoals = (goalsRes.data ?? null) as CandidateGoals | null;
     }
     isBookmarked = !!bookmarkRes.data;
-    applicationRow = appRes.data ?? null;
+    if (appRes.data) {
+      type AppShape = {
+        id: string;
+        status: string;
+        chats: { id: string } | { id: string }[] | null;
+      };
+      const a = appRes.data as unknown as AppShape;
+      const chat = Array.isArray(a.chats) ? a.chats[0] : a.chats;
+      applicationRow = {
+        id: a.id,
+        status: a.status,
+        chat_id: chat?.id ?? null,
+      };
+    }
 
     // Log a listing.viewed event (skip for owning tenant members)
     if (!isOwnerSide) {
@@ -412,24 +428,38 @@ export default async function PublicListingPage({
                   </form>
                 ) : signedIn ? (
                   applicationRow ? (
-                    <div className="w-full rounded-full bg-zinc-100 dark:bg-white/[0.06] text-light-grey py-2 text-sm font-semibold text-center">
-                      {applicationRow.status === "interviewing"
-                        ? "Interested ✓"
-                        : applicationRow.status === "hired"
-                          ? "Hired ✓"
+                    applicationRow.chat_id ? (
+                      <Link
+                        href={`/chats/${applicationRow.chat_id}`}
+                        className="block w-full text-center rounded-full bg-primary/10 text-primary py-2 text-sm font-semibold hover:bg-primary/15 transition-colors"
+                      >
+                        {applicationRow.status === "hired"
+                          ? "Hired ✓ — open chat"
                           : applicationRow.status === "withdrawn"
-                            ? "Passed"
-                            : "Applied"}
-                    </div>
+                            ? "Passed — open chat"
+                            : applicationRow.status === "interviewing"
+                              ? "Interested ✓ — open chat"
+                              : "Applied ✓ — open chat"}
+                      </Link>
+                    ) : (
+                      <div className="w-full rounded-full bg-zinc-100 dark:bg-white/[0.06] text-light-grey py-2 text-sm font-semibold text-center">
+                        {applicationRow.status === "interviewing"
+                          ? "Interested ✓"
+                          : applicationRow.status === "hired"
+                            ? "Hired ✓"
+                            : applicationRow.status === "withdrawn"
+                              ? "Passed"
+                              : "Applied"}
+                      </div>
+                    )
                   ) : (
-                    <a
-                      href={l.calendar_link ?? "#"}
-                      target={l.calendar_link ? "_blank" : undefined}
-                      rel={l.calendar_link ? "noreferrer" : undefined}
+                    <ApplyButton
+                      listingId={l.id}
+                      action={applyToListing}
+                      companyName={tenant.name}
+                      listingTitle={l.title}
                       className="block w-full text-center rounded-full bg-primary text-white py-2 text-sm font-semibold hover:opacity-90 transition-opacity"
-                    >
-                      {l.calendar_link ? "Book intro call" : "Apply now"}
-                    </a>
+                    />
                   )
                 ) : (
                   <AuthPromptButton
