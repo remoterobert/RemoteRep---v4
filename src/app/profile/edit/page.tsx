@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { saveProfile, uploadResume, deleteResume } from "./actions";
 import {
   ProfileEditForm,
+  ProfileSaveBar,
   type ProfileDefaults,
   type GoalsDefaults,
 } from "./ProfileEditForm";
@@ -51,14 +52,14 @@ export default async function EditProfilePage({
     supabase
       .from("candidate_profiles")
       .select(
-        "headline, about, photo_url, video_url, skills, city, state_region, country, visibility, years_of_experience, education, industry_slugs, sales_types, decision_makers, sales_environments, sales_cycles, deal_amounts, sales_volumes, lead_types, technologies",
+        "headline, about, photo_url, video_url, skills, contact_email, phone, city, state_region, country, visibility, years_of_experience, education, industry_slugs, sales_types, decision_makers, sales_environments, sales_cycles, deal_amounts, sales_volumes, lead_types, technologies",
       )
       .eq("user_id", user.id)
       .maybeSingle(),
     supabase
       .from("candidate_goals")
       .select(
-        "company_age_max, company_headcount_max, industries, sales_roles, commitment, benefits, compensation_types, minimum_compensation",
+        "company_age_min, company_headcount_min, industries, sales_roles, commitment, benefits, compensation_types, minimum_compensation",
       )
       .eq("user_id", user.id)
       .maybeSingle(),
@@ -82,6 +83,8 @@ export default async function EditProfilePage({
     photo_url: profileRow?.photo_url ?? "",
     video_url: profileRow?.video_url ?? "",
     skills: profileRow?.skills ?? "",
+    contact_email: profileRow?.contact_email ?? "",
+    phone: profileRow?.phone ?? "",
     city: profileRow?.city ?? "",
     state_region: profileRow?.state_region ?? "",
     country: profileRow?.country ?? "",
@@ -102,8 +105,8 @@ export default async function EditProfilePage({
   };
 
   const goalsDefaults: GoalsDefaults = {
-    company_age_max: goalsRow?.company_age_max ?? null,
-    company_headcount_max: goalsRow?.company_headcount_max ?? null,
+    company_age_min: goalsRow?.company_age_min ?? null,
+    company_headcount_min: goalsRow?.company_headcount_min ?? null,
     industries: goalsRow?.industries ?? [],
     sales_roles: goalsRow?.sales_roles ?? [],
     commitment: goalsRow?.commitment ?? [],
@@ -136,6 +139,7 @@ export default async function EditProfilePage({
 
       <div className="space-y-6">
         <ProfileEditForm
+          formId="profile-form"
           action={saveProfile}
           profile={profileDefaults}
           goals={goalsDefaults}
@@ -148,6 +152,8 @@ export default async function EditProfilePage({
           uploadAction={uploadResume}
           deleteAction={deleteResume}
         />
+
+        <ProfileSaveBar formId="profile-form" />
       </div>
     </main>
   );

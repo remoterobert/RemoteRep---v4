@@ -53,23 +53,23 @@ BEGIN
     ('d0000001-0000-4000-8000-000000000001',
      'Northstar helps mid-market SaaS teams cut their sales-tool spend by 30% with an all-in-one revenue platform.',
      'Series B, growing 40% YoY, profitable. Warm inbound leads, no politics. Nobody has churned off our sales team in 18 months.',
-     'Software as a Service (SaaS) companies', 120, 2019, 'public'),
+     'SaaS', 120, 2019, 'public'),
     ('d0000002-0000-4000-8000-000000000002',
      'Verto Health connects patients with primary care doctors over video, covered by most insurance plans.',
      'Sell a product people genuinely need. Founder was an ER doctor. Series C, 300+ patient signups per day.',
-     'Remote healthcare and telemedicine services', 340, 2018, 'public'),
+     'Healthcare', 340, 2018, 'public'),
     ('d0000003-0000-4000-8000-000000000003',
      'Blackrock Security ships zero-trust access control for regulated industries — finance, healthcare, government.',
      'Enterprise deals with 6-figure ACVs. Selling to CIOs at $500M+ orgs. Long cycle but generous accelerators.',
-     'Cybersecurity software providers', 85, 2020, 'public'),
+     'Cybersecurity', 85, 2020, 'public'),
     ('d0000004-0000-4000-8000-000000000004',
      'Threadline is the ops backbone for Shopify brands: inventory, orders, and returns in one dashboard.',
      'Mid-market ecomm brands love us — under 5% churn. Sell a product with 4.8 stars on G2.',
-     'E-commerce platforms', 55, 2021, 'public'),
+     'E-commerce', 55, 2021, 'public'),
     ('d0000005-0000-4000-8000-000000000005',
      'Meadow is the remote-first agency helping investors buy and sell luxury properties without leaving home.',
      'Uncapped commission on real closings. Sell to high-net-worth individuals who are ready to transact.',
-     'Remote real estate services', 22, 2022, 'public')
+     'Real estate', 22, 2022, 'public')
   ON CONFLICT (tenant_id) DO NOTHING;
 
   -- =====================================================================
@@ -239,7 +239,7 @@ BEGIN
     -- Northstar Senior AE
     ('a0000001-0000-4000-8000-000000000001',
       ARRAY['Bachelor''s degree']::public.education_level[], 3,
-      ARRAY['Software as a Service (SaaS) companies','Customer relationship management (CRM) software vendors'],
+      ARRAY['SaaS','SaaS'],
       ARRAY['Account executive','Closer']::public.sales_role[],
       ARRAY['B2B']::public.sales_type[],
       ARRAY['C-suite']::public.decision_maker[],
@@ -253,7 +253,7 @@ BEGIN
     -- Northstar SDR
     ('a0000001-0000-4000-8000-000000000002',
       NULL, 1,
-      ARRAY['Software as a Service (SaaS) companies'],
+      ARRAY['SaaS'],
       ARRAY['SDR','BDR']::public.sales_role[],
       ARRAY['B2B']::public.sales_type[],
       ARRAY['C-suite']::public.decision_maker[],
@@ -266,7 +266,7 @@ BEGIN
     -- Northstar Manager (draft)
     ('a0000001-0000-4000-8000-000000000003',
       ARRAY['Bachelor''s degree']::public.education_level[], 5,
-      ARRAY['Software as a Service (SaaS) companies'],
+      ARRAY['SaaS'],
       ARRAY['Sales management']::public.sales_role[],
       ARRAY['B2B']::public.sales_type[],
       ARRAY['C-suite']::public.decision_maker[],
@@ -277,7 +277,7 @@ BEGIN
     -- Verto AE
     ('a0000002-0000-4000-8000-000000000001',
       ARRAY['Bachelor''s degree']::public.education_level[], 2,
-      ARRAY['Remote healthcare and telemedicine services','Online insurance providers'],
+      ARRAY['Healthcare','Insurance'],
       ARRAY['Account executive']::public.sales_role[],
       ARRAY['B2B']::public.sales_type[],
       ARRAY['C-suite','Other']::public.decision_maker[],
@@ -291,7 +291,7 @@ BEGIN
     -- Verto BDR
     ('a0000002-0000-4000-8000-000000000002',
       NULL, 0,
-      ARRAY['Remote healthcare and telemedicine services'],
+      ARRAY['Healthcare'],
       ARRAY['BDR','SDR']::public.sales_role[],
       ARRAY['B2B']::public.sales_type[],
       ARRAY['Small business','Other']::public.decision_maker[],
@@ -304,7 +304,7 @@ BEGIN
     -- Blackrock Closer
     ('a0000003-0000-4000-8000-000000000001',
       ARRAY['Bachelor''s degree']::public.education_level[], 5,
-      ARRAY['Cybersecurity software providers','Remote financial services and banking platforms','Remote legal and consultation services'],
+      ARRAY['Cybersecurity','Financial services','Legal services'],
       ARRAY['Closer','Account executive']::public.sales_role[],
       ARRAY['B2B','B2G']::public.sales_type[],
       ARRAY['C-suite']::public.decision_maker[],
@@ -318,7 +318,7 @@ BEGIN
     -- Blackrock SDR
     ('a0000003-0000-4000-8000-000000000002',
       NULL, 1,
-      ARRAY['Cybersecurity software providers','Software as a Service (SaaS) companies'],
+      ARRAY['Cybersecurity','SaaS'],
       ARRAY['SDR','BDR']::public.sales_role[],
       ARRAY['B2B']::public.sales_type[],
       ARRAY['C-suite']::public.decision_maker[],
@@ -331,7 +331,7 @@ BEGIN
     -- Blackrock Gov (paused)
     ('a0000003-0000-4000-8000-000000000003',
       ARRAY['Bachelor''s degree']::public.education_level[], 7,
-      ARRAY['Cybersecurity software providers'],
+      ARRAY['Cybersecurity'],
       ARRAY['Executive','Closer']::public.sales_role[],
       ARRAY['B2G']::public.sales_type[],
       ARRAY['Other']::public.decision_maker[],
@@ -344,7 +344,7 @@ BEGIN
     -- Threadline Appt-setter
     ('a0000004-0000-4000-8000-000000000001',
       NULL, 0,
-      ARRAY['E-commerce platforms','Subscription box services','Online beauty and skincare products'],
+      ARRAY['E-commerce','E-commerce','Beauty'],
       ARRAY['Appointment-setter','SDR']::public.sales_role[],
       ARRAY['B2B']::public.sales_type[],
       ARRAY['Small business']::public.decision_maker[],
@@ -357,7 +357,7 @@ BEGIN
     -- Meadow Closer
     ('a0000005-0000-4000-8000-000000000001',
       NULL, 3,
-      ARRAY['Remote real estate services'],
+      ARRAY['Real estate'],
       ARRAY['Closer','Account executive']::public.sales_role[],
       ARRAY['B2C']::public.sales_type[],
       ARRAY['Consumer']::public.decision_maker[],

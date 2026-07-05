@@ -144,7 +144,7 @@ export default async function PublicProfilePage({
         supabase
           .from("candidate_goals")
           .select(
-            "minimum_compensation, company_age_max, company_headcount_max, industries, sales_roles, commitment, benefits, compensation_types",
+            "minimum_compensation, company_age_min, company_headcount_min, industries, sales_roles, commitment, benefits, compensation_types",
           )
           .eq("user_id", candidateUserId)
           .maybeSingle(),
@@ -198,7 +198,7 @@ export default async function PublicProfilePage({
     const { data: goals } = await supabase
       .from("candidate_goals")
       .select(
-        "minimum_compensation, company_age_max, company_headcount_max, industries, sales_roles, commitment, benefits, compensation_types",
+        "minimum_compensation, company_age_min, company_headcount_min, industries, sales_roles, commitment, benefits, compensation_types",
       )
       .eq("user_id", user.id)
       .maybeSingle();
@@ -208,7 +208,7 @@ export default async function PublicProfilePage({
     const { data: goals } = await supabase
       .from("candidate_goals")
       .select(
-        "minimum_compensation, company_age_max, company_headcount_max, industries, sales_roles, commitment, benefits, compensation_types",
+        "minimum_compensation, company_age_min, company_headcount_min, industries, sales_roles, commitment, benefits, compensation_types",
       )
       .eq("user_id", candidateUserId)
       .maybeSingle();

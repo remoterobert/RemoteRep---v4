@@ -51,8 +51,8 @@ export type CandidateForMatch = {
 
 export type CandidateGoals = {
   minimum_compensation?: number | null;
-  company_age_max?: number | null;
-  company_headcount_max?: number | null;
+  company_age_min?: number | null;
+  company_headcount_min?: number | null;
   industries?: string[] | null;
   sales_roles?: string[] | null;
   commitment?: string[] | null;
@@ -175,8 +175,8 @@ const WEIGHTS: Record<string, number> = {
   benefits: 1,
   goal_industries: 1,
   goal_sales_roles: 1.5,
-  company_headcount_max: 1,
-  company_age_max: 1,
+  company_headcount_min: 1,
+  company_age_min: 1,
 };
 
 function statusValue(status: MatchStatus): number {
@@ -466,43 +466,43 @@ export function computeGoalsMatch(
     });
   }
 
-  // Company size cap: tenant.headcount ≤ candidate's max.
-  if (g.company_headcount_max != null && g.company_headcount_max > 0) {
+  // Company size floor: tenant.headcount ≥ candidate's min.
+  if (g.company_headcount_min != null && g.company_headcount_min > 0) {
     if (tenant.headcount == null) {
       criteria.push({
-        key: "company_headcount_max",
+        key: "company_headcount_min",
         label: "Company size",
         status: "partial",
         detail: "not listed",
       });
-    } else if (tenant.headcount <= g.company_headcount_max) {
+    } else if (tenant.headcount >= g.company_headcount_min) {
       criteria.push({
-        key: "company_headcount_max",
+        key: "company_headcount_min",
         label: "Company size",
         status: "match",
-        detail: `${tenant.headcount} ≤ ${g.company_headcount_max}`,
+        detail: `${tenant.headcount} ≥ ${g.company_headcount_min}`,
       });
     } else {
       criteria.push({
-        key: "company_headcount_max",
+        key: "company_headcount_min",
         label: "Company size",
         status: "miss",
-        detail: `${tenant.headcount} > your ${g.company_headcount_max}`,
+        detail: `${tenant.headcount} < your ${g.company_headcount_min}`,
       });
     }
   } else {
     criteria.push({
-      key: "company_headcount_max",
+      key: "company_headcount_min",
       label: "Company size",
       status: "not_required",
     });
   }
 
-  // Company age cap: (thisYear - founded_year) ≤ candidate's max.
-  if (g.company_age_max != null && g.company_age_max > 0) {
+  // Company age floor: (thisYear - founded_year) ≥ candidate's min.
+  if (g.company_age_min != null && g.company_age_min > 0) {
     if (tenant.founded_year == null) {
       criteria.push({
-        key: "company_age_max",
+        key: "company_age_min",
         label: "Company age",
         status: "partial",
         detail: "not listed",
@@ -510,17 +510,17 @@ export function computeGoalsMatch(
     } else {
       const age = new Date().getFullYear() - tenant.founded_year;
       const status: MatchStatus =
-        age <= g.company_age_max ? "match" : "miss";
+        age >= g.company_age_min ? "match" : "miss";
       criteria.push({
-        key: "company_age_max",
+        key: "company_age_min",
         label: "Company age",
         status,
-        detail: `${age} yrs old (max ${g.company_age_max})`,
+        detail: `${age} yrs old (min ${g.company_age_min})`,
       });
     }
   } else {
     criteria.push({
-      key: "company_age_max",
+      key: "company_age_min",
       label: "Company age",
       status: "not_required",
     });

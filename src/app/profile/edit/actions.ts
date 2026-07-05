@@ -39,6 +39,8 @@ export async function saveProfile(formData: FormData) {
   const photo_url = getStr(formData, "photo_url");
   const video_url = getStr(formData, "video_url");
   const skills = getStr(formData, "skills");
+  const contact_email = getStr(formData, "contact_email");
+  const phone = getStr(formData, "phone");
   const city = getStr(formData, "city");
   const state_region = getStr(formData, "state_region");
   const country = getStr(formData, "country");
@@ -59,8 +61,8 @@ export async function saveProfile(formData: FormData) {
   const technologies = getMulti(formData, "technologies");
 
   // --- Section 3: goals ---
-  const company_age_max = getNumOrNull(formData, "company_age_max", 0, 200);
-  const company_headcount_max = getNumOrNull(formData, "company_headcount_max", 0, 100_000);
+  const company_age_min = getNumOrNull(formData, "company_age_min", 0, 200);
+  const company_headcount_min = getNumOrNull(formData, "company_headcount_min", 0, 100_000);
   const goal_industries = getMulti(formData, "goal_industries");
   const goal_sales_roles = getMulti(formData, "goal_sales_roles");
   const goal_commitment = getMulti(formData, "goal_commitment");
@@ -77,6 +79,8 @@ export async function saveProfile(formData: FormData) {
       photo_url: photo_url || null,
       video_url: video_url || null,
       skills: skills || null,
+      contact_email: contact_email || null,
+      phone: phone || null,
       city: city || null,
       state_region: state_region || null,
       country: country || null,
@@ -117,8 +121,8 @@ export async function saveProfile(formData: FormData) {
   const { error: goalsError } = await supabase.from("candidate_goals").upsert(
     {
       user_id: user.id,
-      company_age_max,
-      company_headcount_max,
+      company_age_min,
+      company_headcount_min,
       industries: goal_industries.length ? goal_industries : null,
       sales_roles: goal_sales_roles.length ? goal_sales_roles : null,
       commitment: goal_commitment.length ? goal_commitment : null,
