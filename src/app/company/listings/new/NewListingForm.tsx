@@ -41,14 +41,47 @@ const STYLE_LABELS: Record<ListingStyle, { label: string; hint: string }> = {
 const inputCls =
   "w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm";
 
+export type ListingDefaults = {
+  title?: string;
+  description?: string;
+  instructions?: string;
+  calendar_link?: string;
+  sales_role?: string;
+  commitment?: string[];
+  compensation_type?: string[];
+  minimum_compensation?: number | null;
+  compensation_details?: string;
+  benefits?: string[];
+  years_of_experience_min?: number | null;
+  education?: string[];
+  sales_roles?: string[];
+  sales_types?: string[];
+  decision_makers?: string[];
+  sales_environments?: string[];
+  sales_cycles?: string[];
+  deal_amounts?: string[];
+  sales_volumes?: string[];
+  lead_types?: string[];
+  technologies?: string[];
+  industries?: string[];
+};
+
 export function NewListingForm({
   action,
   companyName,
+  defaults,
+  listingId,
+  submitLabel = "Publish listing",
 }: {
   action: (fd: FormData) => void;
   companyName: string;
+  defaults?: ListingDefaults;
+  listingId?: string;
+  submitLabel?: string;
 }) {
-  const [description, setDescription] = useState("");
+  const [description, setDescription] = useState(
+    defaults?.description ?? "",
+  );
 
   // AI panel state
   const [aiOpen, setAiOpen] = useState(false);
@@ -97,6 +130,9 @@ export function NewListingForm({
 
   return (
     <form action={action} className="space-y-6">
+      {listingId && (
+        <input type="hidden" name="listing_id" value={listingId} />
+      )}
       {/* ============================================================
           Section 1 — Basics + AI writer
          ============================================================ */}
@@ -117,6 +153,7 @@ export function NewListingForm({
             minLength={10}
             maxLength={80}
             required
+            defaultValue={defaults?.title ?? ""}
             placeholder="Senior Account Executive — SaaS mid-market"
             className={inputCls}
           />
@@ -332,6 +369,7 @@ export function NewListingForm({
             rows={4}
             minLength={100}
             maxLength={5000}
+            defaultValue={defaults?.instructions ?? ""}
             placeholder="How should candidates apply? Anything they should include? If blank, they just say 'I'm interested.'"
             className={inputCls}
           />
@@ -352,6 +390,7 @@ export function NewListingForm({
             name="calendar_link"
             type="url"
             maxLength={500}
+            defaultValue={defaults?.calendar_link ?? ""}
             placeholder="https://calendly.com/your-team/intro"
             className={inputCls}
           />
@@ -378,6 +417,7 @@ export function NewListingForm({
             id="sales_role"
             name="sales_role"
             required
+            defaultValue={defaults?.sales_role ?? SALES_ROLES[0]}
             className={inputCls}
           >
             {SALES_ROLES.map((r) => (
@@ -395,12 +435,14 @@ export function NewListingForm({
           name="commitment"
           label="Commitment (pick every mode you'd accept)"
           options={COMMITMENTS}
+          defaultSelected={defaults?.commitment ?? []}
         />
 
         <ChipMulti
           name="compensation_type"
           label="Compensation type (pick every structure you offer)"
           options={COMPENSATION_TYPES}
+          defaultSelected={defaults?.compensation_type ?? []}
         />
 
         <div>
@@ -416,6 +458,7 @@ export function NewListingForm({
             type="number"
             min={0}
             max={1000000}
+            defaultValue={defaults?.minimum_compensation ?? ""}
             className={inputCls}
           />
           <p className="text-xs text-light-grey mt-1">
@@ -435,6 +478,7 @@ export function NewListingForm({
             name="compensation_details"
             rows={3}
             maxLength={2000}
+            defaultValue={defaults?.compensation_details ?? ""}
             placeholder="$75k base + uncapped, $150k OTE. 10% new-logo commission, 5% renewal. Quarterly SPIFFs on strategic accounts. $5k signing bonus."
             className={inputCls}
           />
@@ -444,7 +488,12 @@ export function NewListingForm({
           </p>
         </div>
 
-        <ChipMulti name="benefits" label="Benefits" options={BENEFITS} />
+        <ChipMulti
+          name="benefits"
+          label="Benefits"
+          options={BENEFITS}
+          defaultSelected={defaults?.benefits ?? []}
+        />
       </SectionCard>
 
       {/* ============================================================
@@ -469,7 +518,7 @@ export function NewListingForm({
             type="number"
             min={0}
             max={100}
-            defaultValue={0}
+            defaultValue={defaults?.years_of_experience_min ?? 0}
             className={inputCls}
           />
         </div>
@@ -478,48 +527,67 @@ export function NewListingForm({
           name="education"
           label="Education (any acceptable level)"
           options={EDUCATION_LEVELS}
+          defaultSelected={defaults?.education ?? []}
         />
         <ChipMulti
           name="sales_roles"
           label="Sales roles the rep should have done before"
           options={SALES_ROLES}
+          defaultSelected={defaults?.sales_roles ?? []}
         />
-        <ChipMulti name="sales_types" label="Sales types" options={SALES_TYPES} />
+        <ChipMulti
+          name="sales_types"
+          label="Sales types"
+          options={SALES_TYPES}
+          defaultSelected={defaults?.sales_types ?? []}
+        />
         <ChipMulti
           name="decision_makers"
           label="Decision-makers you sell to"
           options={DECISION_MAKERS}
+          defaultSelected={defaults?.decision_makers ?? []}
         />
         <ChipMulti
           name="sales_environments"
           label="Sales environments"
           options={SALES_ENVIRONMENTS}
+          defaultSelected={defaults?.sales_environments ?? []}
         />
         <ChipMulti
           name="sales_cycles"
           label="Sales cycles"
           options={SALES_CYCLES}
+          defaultSelected={defaults?.sales_cycles ?? []}
         />
         <ChipMulti
           name="deal_amounts"
           label="Deal amounts"
           options={DEAL_AMOUNTS}
+          defaultSelected={defaults?.deal_amounts ?? []}
         />
         <ChipMulti
           name="sales_volumes"
           label="Annual sales volumes"
           options={SALES_VOLUMES}
+          defaultSelected={defaults?.sales_volumes ?? []}
         />
-        <ChipMulti name="lead_types" label="Lead types" options={LEAD_TYPES} />
+        <ChipMulti
+          name="lead_types"
+          label="Lead types"
+          options={LEAD_TYPES}
+          defaultSelected={defaults?.lead_types ?? []}
+        />
         <ChipMulti
           name="technologies"
           label="Tools reps should know"
           options={TECHNOLOGIES}
+          defaultSelected={defaults?.technologies ?? []}
         />
         <SearchMulti
           name="industries"
           label="Industries the rep should have sold in"
           options={INDUSTRIES}
+          defaultSelected={defaults?.industries ?? []}
           placeholder="Search 68 industries — e.g., SaaS, healthcare, real estate…"
         />
       </SectionCard>
@@ -534,7 +602,7 @@ export function NewListingForm({
           value="1"
           className="rounded bg-primary text-white px-5 py-2 text-sm font-semibold hover:opacity-90 transition-opacity"
         >
-          Publish listing
+          {submitLabel}
         </button>
         <button
           type="submit"

@@ -342,7 +342,12 @@ export default async function PublicListingPage({
                 )}
               </div>
               <h2 className="text-lg font-bold text-center mb-1 leading-tight">
-                {tenant.name}
+                <Link
+                  href={`/companies/${l.tenant_id}`}
+                  className="hover:text-primary transition-colors"
+                >
+                  {tenant.name}
+                </Link>
               </h2>
               {locationLine && (
                 <p className="text-xs text-light-grey text-center flex items-center justify-center gap-1 mb-3">
