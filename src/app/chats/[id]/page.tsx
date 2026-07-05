@@ -136,7 +136,7 @@ export default async function ChatDetailPage({ params }: { params: Params }) {
         <ChatSidebar activeChatId={chatId} />
       </div>
 
-      <main className="flex-1 flex flex-col min-w-0 bg-white dark:bg-[#0d1526]">
+      <main className="flex-1 flex flex-col min-w-0 bg-surface">
         {/* Header */}
         <header className="border-b border-zinc-200 dark:border-zinc-800 px-4 lg:px-6 py-3 flex items-center gap-3 shrink-0">
           <Link

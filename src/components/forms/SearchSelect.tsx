@@ -108,8 +108,8 @@ export function SearchSelect({
       </button>
 
       {open && (
-        <div className="absolute z-40 mt-1 w-full max-h-72 overflow-y-auto rounded-lg border border-zinc-200 dark:border-white/[0.08] bg-white dark:bg-[#0b1220] shadow-xl">
-          <div className="relative border-b border-zinc-100 dark:border-white/[0.06] p-2">
+        <div className="absolute z-40 mt-1 w-full max-h-72 overflow-y-auto rounded-lg border border-border bg-surface-2 shadow-xl">
+          <div className="relative border-b border-border p-2">
             <MagnifyingGlassIcon className="absolute left-4 top-4 h-3.5 w-3.5 text-light-grey pointer-events-none" />
             <input
               type="search"

@@ -90,11 +90,11 @@ export async function ChatSidebar({
   });
 
   return (
-    <aside className="chat-sidebar w-full lg:w-[340px] shrink-0 flex flex-col lg:border-r border-zinc-200 dark:border-white/[0.06] bg-white dark:bg-[#0b1220]">
+    <aside className="chat-sidebar w-full lg:w-[340px] shrink-0 flex flex-col lg:border-r border-border bg-surface-2">
       {/* Header */}
       <header className="px-6 pt-6 pb-4">
         <div className="flex items-baseline justify-between mb-1">
-          <h1 className="text-2xl font-bold tracking-tight text-dark-foreground dark:text-white">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
             Chats
           </h1>
           {sorted.length > 0 && (
@@ -134,7 +134,7 @@ export async function ChatSidebar({
           </p>
 
           {/* Steps card */}
-          <div className="rounded-xl bg-zinc-50 dark:bg-white/[0.03] border border-zinc-200 dark:border-white/[0.06] p-4">
+          <div className="rounded-xl bg-surface-2 border border-border p-4">
             <div className="flex items-center gap-2 mb-3">
               <SparklesIcon className="h-4 w-4 text-primary" />
               <span className="text-[10px] uppercase tracking-wider font-bold text-light-grey">
@@ -205,7 +205,7 @@ export async function ChatSidebar({
                         className={`h-11 w-11 rounded-full flex items-center justify-center text-sm font-bold shadow-sm ${
                           isActive
                             ? "bg-gradient-to-br from-primary to-primary-blue text-white"
-                            : "bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-white/10 dark:to-white/[0.03] text-dark-foreground dark:text-white ring-1 ring-white/5"
+                            : "bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-white/10 dark:to-white/[0.03] text-foreground ring-1 ring-white/5"
                         }`}
                       >
                         {initials}
@@ -217,7 +217,7 @@ export async function ChatSidebar({
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline justify-between gap-2 mb-0.5">
                         <div
-                          className={`text-sm truncate ${unread || isActive ? "font-bold" : "font-semibold"} text-dark-foreground dark:text-white`}
+                          className={`text-sm truncate ${unread || isActive ? "font-bold" : "font-semibold"} text-foreground`}
                         >
                           {otherNames || "Conversation"}
                         </div>
@@ -238,7 +238,7 @@ export async function ChatSidebar({
                         <p
                           className={`text-xs truncate leading-snug ${
                             unread
-                              ? "text-dark-foreground dark:text-white font-medium"
+                              ? "text-foreground font-medium"
                               : "text-light-grey"
                           }`}
                         >
@@ -267,7 +267,7 @@ function StepLine({ num, text }: { num: number; text: string }) {
       <span className="h-5 w-5 rounded-full bg-primary/15 text-primary text-[10px] font-bold flex items-center justify-center shrink-0">
         {num}
       </span>
-      <span className="text-dark-foreground dark:text-white/85 leading-tight">
+      <span className="text-foreground/85 leading-tight">
         {text}
       </span>
     </li>

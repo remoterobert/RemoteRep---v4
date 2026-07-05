@@ -29,9 +29,29 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <head>
+        {/* Set the theme class before paint so users don't see a flash
+            of the wrong theme. Reads localStorage, falls back to the
+            system preference. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var stored = localStorage.getItem('remoterep.theme');
+                  var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                  var isDark = stored === 'dark' || (!stored && systemDark);
+                  if (isDark) document.documentElement.classList.add('dark');
+                } catch (e) { /* localStorage blocked; default fine */ }
+              })();
+            `,
+          }}
+        />
+      </head>
+      <body className="min-h-full flex flex-col bg-background text-foreground">
         <AppShell>{children}</AppShell>
       </body>
     </html>

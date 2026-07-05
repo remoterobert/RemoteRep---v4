@@ -55,7 +55,7 @@ export function ListingRowActions({
           />
           <div
             role="menu"
-            className="absolute right-0 mt-1 w-56 rounded-lg border border-zinc-200 dark:border-white/[0.08] bg-white dark:bg-[#0b1220] shadow-xl z-50 py-1 text-left"
+            className="absolute right-0 mt-1 w-56 rounded-lg border border-border bg-surface-2 shadow-xl z-50 py-1 text-left"
           >
             <Link
               href={`/company/listings/${listingId}`}
@@ -67,7 +67,7 @@ export function ListingRowActions({
               View + applicants
             </Link>
 
-            <div className="my-1 border-t border-zinc-100 dark:border-white/[0.06]" />
+            <div className="my-1 border-t border-border" />
 
             {canPublish && (
               <form action={setStatusAction} className="contents">
@@ -114,7 +114,7 @@ export function ListingRowActions({
               </form>
             )}
 
-            <div className="my-1 border-t border-zinc-100 dark:border-white/[0.06]" />
+            <div className="my-1 border-t border-border" />
 
             {!confirming ? (
               <button

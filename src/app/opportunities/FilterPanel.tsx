@@ -271,7 +271,7 @@ function FacetPill({ facet }: { facet: Facet }) {
       </button>
 
       {open && (
-        <div className="absolute z-50 mt-1 min-w-[240px] max-w-sm rounded-lg border border-zinc-200 dark:border-white/[0.08] bg-white dark:bg-[#0b1220] shadow-xl p-3">
+        <div className="absolute z-50 mt-1 min-w-[240px] max-w-sm rounded-lg border border-border bg-surface-2 shadow-xl p-3">
           {facet.kind === "numeric" ? (
             <NumericInput
               placeholder={facet.placeholder}
