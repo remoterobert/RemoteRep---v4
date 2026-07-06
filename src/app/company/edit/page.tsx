@@ -38,7 +38,7 @@ export default async function EditCompanyPage({
   const { data: profile } = await supabase
     .from("client_profiles")
     .select(
-      "about, hiring_pitch, website_url, industry_slug, city, state_region, country, headcount, founded_year, visibility, logo_url",
+      "about, hiring_pitch, website_url, industry_slug, city, state_region, country, headcount, founded_year, visibility, logo_url, contact_email, contact_phone",
     )
     .eq("tenant_id", m.tenant_id)
     .maybeSingle();
@@ -148,6 +148,52 @@ export default async function EditCompanyPage({
             />
           </div>
 
+          {/* Contact info — used for notifications and platform outreach.
+              Phone is stored so we can send SMS when that channel is enabled. */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label
+                htmlFor="contact_email"
+                className="block text-sm font-medium mb-1"
+              >
+                Contact email
+              </label>
+              <input
+                id="contact_email"
+                name="contact_email"
+                type="email"
+                maxLength={200}
+                defaultValue={profile?.contact_email ?? ""}
+                placeholder="hiring@your-company.com"
+                className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
+              />
+              <p className="text-xs text-light-grey mt-1">
+                Where we send platform notifications and interested candidates
+                can reach out.
+              </p>
+            </div>
+            <div>
+              <label
+                htmlFor="contact_phone"
+                className="block text-sm font-medium mb-1"
+              >
+                Contact phone
+              </label>
+              <input
+                id="contact_phone"
+                name="contact_phone"
+                type="tel"
+                maxLength={50}
+                defaultValue={profile?.contact_phone ?? ""}
+                placeholder="+1 (555) 555-0100"
+                className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
+              />
+              <p className="text-xs text-light-grey mt-1">
+                Optional. Used for SMS notifications when you enable that
+                channel.
+              </p>
+            </div>
+          </div>
 
           <fieldset>
             <legend className="block text-sm font-medium mb-2">
