@@ -36,7 +36,6 @@ export async function saveProfile(formData: FormData) {
   // --- Section 1: profile personal info ---
   const headline = getStr(formData, "headline");
   const about = getStr(formData, "about");
-  const photo_url = getStr(formData, "photo_url");
   const video_url = getStr(formData, "video_url");
   const skills = getStr(formData, "skills");
   const contact_email = getStr(formData, "contact_email");
@@ -76,7 +75,6 @@ export async function saveProfile(formData: FormData) {
       user_id: user.id,
       headline: headline || null,
       about: about || null,
-      photo_url: photo_url || null,
       video_url: video_url || null,
       skills: skills || null,
       contact_email: contact_email || null,
@@ -245,5 +243,128 @@ export async function deleteResume() {
   }
 
   revalidatePath("/profile/edit");
+  redirect("/profile/edit?saved=1");
+}
+
+// ---------------------------------------------------------------------
+// Profile photo
+// ---------------------------------------------------------------------
+
+const ALLOWED_PHOTO_MIME = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "image/svg+xml",
+]);
+const PHOTO_MIME_TO_EXT: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/gif": "gif",
+  "image/webp": "webp",
+  "image/svg+xml": "svg",
+};
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+
+/**
+ * Upload a profile photo to Supabase Storage and write the public URL
+ * back to candidate_profiles.photo_url. Public bucket `photos` under
+ * `{user_id}/photo-{timestamp}.{ext}`. Clears any prior photo so the
+ * candidate has exactly one on file.
+ */
+export async function uploadPhoto(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const file = formData.get("photo");
+  if (!(file instanceof File) || file.size === 0) {
+    redirect(
+      `/profile/edit?error=${encodeURIComponent("Pick a file to upload.")}`,
+    );
+  }
+  const f = file as File;
+  if (!ALLOWED_PHOTO_MIME.has(f.type)) {
+    redirect(
+      `/profile/edit?error=${encodeURIComponent("Photo must be JPG, PNG, GIF, WebP, or SVG.")}`,
+    );
+  }
+  if (f.size > MAX_PHOTO_BYTES) {
+    redirect(
+      `/profile/edit?error=${encodeURIComponent("Photo must be under 5 MB.")}`,
+    );
+  }
+
+  // Wipe any prior photo — one-photo-per-candidate to keep the bucket tidy.
+  const { data: existing } = await supabase.storage
+    .from("photos")
+    .list(user.id, { limit: 100 });
+  if (existing && existing.length > 0) {
+    const keys = existing.map((o) => `${user.id}/${o.name}`);
+    await supabase.storage.from("photos").remove(keys);
+  }
+
+  const ext = PHOTO_MIME_TO_EXT[f.type] ?? "bin";
+  const storagePath = `${user.id}/photo-${Date.now()}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("photos")
+    .upload(storagePath, f, {
+      contentType: f.type,
+      upsert: true,
+    });
+  if (uploadError) {
+    redirect(
+      `/profile/edit?error=${encodeURIComponent("Upload failed: " + uploadError.message)}`,
+    );
+  }
+
+  const { data: pub } = supabase.storage
+    .from("photos")
+    .getPublicUrl(storagePath);
+  const publicUrl = pub?.publicUrl ?? null;
+
+  const { error: updateError } = await supabase
+    .from("candidate_profiles")
+    .upsert(
+      { user_id: user.id, photo_url: publicUrl },
+      { onConflict: "user_id" },
+    );
+  if (updateError) {
+    await supabase.storage.from("photos").remove([storagePath]);
+    redirect(`/profile/edit?error=${encodeURIComponent(updateError.message)}`);
+  }
+
+  revalidatePath("/profile/edit");
+  revalidatePath("/dashboard");
+  redirect("/profile/edit?saved=1");
+}
+
+export async function deletePhoto() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: existing } = await supabase.storage
+    .from("photos")
+    .list(user.id, { limit: 100 });
+  if (existing && existing.length > 0) {
+    const keys = existing.map((o) => `${user.id}/${o.name}`);
+    await supabase.storage.from("photos").remove(keys);
+  }
+
+  await supabase
+    .from("candidate_profiles")
+    .upsert(
+      { user_id: user.id, photo_url: null },
+      { onConflict: "user_id" },
+    );
+
+  revalidatePath("/profile/edit");
+  revalidatePath("/dashboard");
   redirect("/profile/edit?saved=1");
 }

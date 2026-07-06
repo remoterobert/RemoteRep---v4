@@ -1,6 +1,12 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { saveProfile, uploadResume, deleteResume } from "./actions";
+import {
+  saveProfile,
+  uploadResume,
+  deleteResume,
+  uploadPhoto,
+  deletePhoto,
+} from "./actions";
 import {
   ProfileEditForm,
   ProfileSaveBar,
@@ -8,6 +14,7 @@ import {
   type GoalsDefaults,
 } from "./ProfileEditForm";
 import { ResumeSection } from "./ResumeSection";
+import { PhotoSection } from "./PhotoSection";
 
 export const dynamic = "force-dynamic";
 
@@ -80,7 +87,6 @@ export default async function EditProfilePage({
   const profileDefaults: ProfileDefaults = {
     headline: profileRow?.headline ?? "",
     about: profileRow?.about ?? "",
-    photo_url: profileRow?.photo_url ?? "",
     video_url: profileRow?.video_url ?? "",
     skills: profileRow?.skills ?? "",
     contact_email: profileRow?.contact_email ?? "",
@@ -138,6 +144,14 @@ export default async function EditProfilePage({
       )}
 
       <div className="space-y-6">
+        {/* Photo lives outside ProfileEditForm because it has its own
+            upload + delete forms — HTML forbids nested forms. */}
+        <PhotoSection
+          currentUrl={profileRow?.photo_url ?? null}
+          uploadAction={uploadPhoto}
+          deleteAction={deletePhoto}
+        />
+
         <ProfileEditForm
           formId="profile-form"
           action={saveProfile}
