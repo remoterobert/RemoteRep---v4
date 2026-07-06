@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { CheckIcon } from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/server";
 import { inviteCandidate } from "./actions";
+import { MatchListingSelect } from "./MatchListingSelect";
 import { MatchBadges } from "@/components/MatchBadges";
 import {
   computeExperienceMatch,
@@ -362,25 +363,10 @@ export default async function CandidatesPage({
           <span className="text-xs uppercase tracking-wider font-semibold text-light-grey">
             Match against
           </span>
-          <form method="get" className="contents">
-            {/* Preserve other query params on submit */}
-            {selectedRole && (
-              <input type="hidden" name="role" value={selectedRole} />
-            )}
-            <input type="hidden" name="view" value={view} />
-            <select
-              name="listing"
-              defaultValue={selectedListingId ?? ""}
-              onChange={(e) => e.currentTarget.form?.submit()}
-              className="rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2 py-1 text-sm"
-            >
-              {listings.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.title}
-                </option>
-              ))}
-            </select>
-          </form>
+          <MatchListingSelect
+            listings={listings.map((l) => ({ id: l.id, title: l.title }))}
+            selectedId={selectedListingId}
+          />
           <span className="text-xs text-light-grey">
             Candidates ranked by combined score.
           </span>

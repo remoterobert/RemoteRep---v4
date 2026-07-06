@@ -11,6 +11,7 @@ import { inviteCandidate } from "@/app/candidates/actions";
 import { MatchBadges } from "@/components/MatchBadges";
 import { ShareButton } from "@/components/ShareButton";
 import { AuthPromptButton } from "@/components/AuthPromptModal";
+import { ProfileMatchListingSelect } from "./ProfileMatchListingSelect";
 import {
   computeExperienceMatch,
   computeGoalsMatch,
@@ -367,23 +368,18 @@ export default async function PublicProfilePage({
 
               {/* Listing selector for hiring viewer */}
               {isHiringSide && tenantListings.length > 0 && (
-                <form method="get" className="mb-4">
+                <div className="mb-4">
                   <label className="text-[11px] uppercase tracking-wider font-semibold text-light-grey mb-1 block">
                     Match against
                   </label>
-                  <select
-                    name="listing"
-                    defaultValue={selectedListingId ?? ""}
-                    onChange={(e) => e.currentTarget.form?.submit()}
-                    className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2 py-1 text-xs"
-                  >
-                    {tenantListings.map((l) => (
-                      <option key={l.id} value={l.id}>
-                        {l.title}
-                      </option>
-                    ))}
-                  </select>
-                </form>
+                  <ProfileMatchListingSelect
+                    listings={tenantListings.map((l) => ({
+                      id: l.id,
+                      title: l.title,
+                    }))}
+                    selectedId={selectedListingId}
+                  />
+                </div>
               )}
 
               {/* CTAs */}
