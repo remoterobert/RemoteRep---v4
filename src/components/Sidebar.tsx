@@ -84,9 +84,8 @@ export function buildHiringNav(): NavItem[] {
     },
     {
       name: "Support",
-      href: "#",
+      href: "/support",
       icon: HIRING_ICON_MAP.Support,
-      newTab: true,
     },
   ];
 }
@@ -111,9 +110,8 @@ export function buildAdminNav(): NavItem[] {
     { name: "Audit log", href: "/admin/audit-log", icon: ShieldCheckIcon },
     {
       name: "Support",
-      href: "#",
+      href: "/support",
       icon: LifebuoyIcon,
-      newTab: true,
     },
   ];
 }
@@ -133,7 +131,7 @@ export function buildTalentNav(): NavItem[] {
       icon: TALENT_ICON_MAP.Resources,
       newTab: true,
     },
-    { name: "Support", href: "#", icon: TALENT_ICON_MAP.Support, newTab: true },
+    { name: "Support", href: "/support", icon: TALENT_ICON_MAP.Support },
   ];
 }
 
