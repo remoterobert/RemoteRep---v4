@@ -10,6 +10,7 @@ import { computeCompanyCompletion } from "@/lib/company-completion";
 import { Kanban, type KanbanCardData, type ColumnId } from "./Kanban";
 import { ClosedToggle } from "./ClosedToggle";
 import { ListingFilter } from "./ListingFilter";
+import { QuickStartCard, type QuickStartStep } from "./QuickStartCard";
 
 const KANBAN_STAGES: ColumnId[] = [
   "invited",
@@ -226,6 +227,37 @@ export async function HiringDashboard({
     ? `Filtered to "${selected.title}"`
     : "Across all listings";
 
+  // --------- Quick start steps ---------
+  const quickStartSteps: QuickStartStep[] = [
+    {
+      key: "company_profile",
+      done: completion.percent >= 60,
+      title: "Complete your company profile",
+      description:
+        "Reps skip companies with no context. Two minutes gets you a real About + logo.",
+      ctaLabel: "Edit company",
+      ctaHref: "/company/edit",
+    },
+    {
+      key: "first_listing",
+      done: listings.length > 0,
+      title: "Post your first listing",
+      description:
+        "Draft one in about 60 seconds with the AI writer. Attracts the right reps.",
+      ctaLabel: "New listing",
+      ctaHref: "/company/listings/new",
+    },
+    {
+      key: "candidates",
+      done: apps.length > 0,
+      title: "Browse candidates",
+      description:
+        "Invite anyone who fits — they get an email and an in-app notification.",
+      ctaLabel: "Browse talent",
+      ctaHref: "/candidates",
+    },
+  ];
+
   return (
     <main className="flex-1 p-4 md:p-6 max-w-[1400px] mx-auto w-full">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
@@ -248,6 +280,11 @@ export async function HiringDashboard({
           </Link>
         </div>
       </div>
+
+      <QuickStartCard
+        steps={quickStartSteps}
+        headline={`Welcome to RemoteRep${firstName ? `, ${firstName}` : ""}`}
+      />
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">

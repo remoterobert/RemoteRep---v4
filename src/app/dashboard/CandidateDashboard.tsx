@@ -12,6 +12,7 @@ import {
 } from "@/lib/profile-completion";
 import { Kanban, type KanbanCardData, type ColumnId } from "./Kanban";
 import { ClosedToggle } from "./ClosedToggle";
+import { QuickStartCard, type QuickStartStep } from "./QuickStartCard";
 
 const KANBAN_STAGES: ColumnId[] = [
   "invited",
@@ -160,6 +161,55 @@ export async function CandidateDashboard({
     specialties,
   });
 
+  // ---- Quick start signals ----
+  // Goals row exists AND has any non-null field beyond the defaults.
+  const { data: goalsRow } = await supabase
+    .from("candidate_goals")
+    .select(
+      "minimum_compensation, industries, sales_roles, commitment, benefits, compensation_types",
+    )
+    .eq("user_id", userId)
+    .maybeSingle();
+  const goalsSet = !!(
+    goalsRow &&
+    (goalsRow.minimum_compensation != null ||
+      (goalsRow.industries?.length ?? 0) > 0 ||
+      (goalsRow.sales_roles?.length ?? 0) > 0 ||
+      (goalsRow.commitment?.length ?? 0) > 0 ||
+      (goalsRow.benefits?.length ?? 0) > 0 ||
+      (goalsRow.compensation_types?.length ?? 0) > 0)
+  );
+
+  const quickStartSteps: QuickStartStep[] = [
+    {
+      key: "profile",
+      done: completion.percent >= 60,
+      title: "Complete your profile",
+      description:
+        "Companies browse candidates all day. A finished profile gets clicked on.",
+      ctaLabel: "Edit profile",
+      ctaHref: "/profile/edit",
+    },
+    {
+      key: "goals",
+      done: goalsSet,
+      title: "Set what you're looking for",
+      description:
+        "Tell us your comp floor + what you want next. Better goals = better matches.",
+      ctaLabel: "Set goals",
+      ctaHref: "/profile/edit",
+    },
+    {
+      key: "apply",
+      done: apps.length > 0,
+      title: "Apply to your first role",
+      description:
+        "One click on a listing gets you in front of a real hiring team, chat included.",
+      ctaLabel: "Browse opportunities",
+      ctaHref: "/opportunities",
+    },
+  ];
+
   return (
     <main className="flex-1 p-4 md:p-6 max-w-[1400px] mx-auto w-full">
       <div className="mb-6">
@@ -171,6 +221,11 @@ export async function CandidateDashboard({
           stands.
         </p>
       </div>
+
+      <QuickStartCard
+        steps={quickStartSteps}
+        headline={`Welcome to RemoteRep${firstName ? `, ${firstName}` : ""}`}
+      />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <Metric
