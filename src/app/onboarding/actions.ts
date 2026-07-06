@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isSalesRole, type SalesRole } from "@/lib/sales-roles";
@@ -33,7 +34,12 @@ export async function completeHiringOnboarding(formData: FormData) {
     );
   }
 
-  redirect("/candidates");
+  // Force the whole app shell (sidebar + membership lookup) to re-render
+  // with the freshly-created tenant_members row before we redirect. Fixes
+  // the "you got dumped on a signed-out-looking page" bug where the layout
+  // read its data faster than the RPC's row had propagated to the request.
+  revalidatePath("/", "layout");
+  redirect("/dashboard");
 }
 
 export async function completeCandidateOnboarding(formData: FormData) {
@@ -63,5 +69,8 @@ export async function completeCandidateOnboarding(formData: FormData) {
     );
   }
 
-  redirect("/opportunities");
+  // See comment in completeHiringOnboarding — force layout revalidation
+  // so AppShell's tenant_members query re-runs and the sidebar appears.
+  revalidatePath("/", "layout");
+  redirect("/dashboard");
 }

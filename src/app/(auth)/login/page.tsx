@@ -1,5 +1,9 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import { login } from "../actions";
+
+export const dynamic = "force-dynamic";
 
 type SearchParams = Promise<{ error?: string }>;
 
@@ -8,6 +12,15 @@ export default async function LoginPage({
 }: {
   searchParams: SearchParams;
 }) {
+  // Already signed in? Skip the sign-in form entirely. Fixes the
+  // "am I signed in or not?" confusion where the sidebar showed the
+  // user's account while the main content still asked them to sign in.
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) redirect("/dashboard");
+
   const params = await searchParams;
   const error = params.error;
 
