@@ -54,6 +54,41 @@ export default async function SecurityPage({
   const isArchived = !!userRow?.archived_at;
   const isSuperAdmin = !!userRow?.is_super_admin;
 
+  // Did this user actually get value? Two shapes:
+  //   - Candidate: were they hired at any point (application.status = 'hired')
+  //   - Hiring:    did their tenant hire anyone (same signal, tenant side)
+  // Used to nudge them toward Pause instead of Delete on the way out.
+  const { data: myMemberships } = await admin
+    .from("tenant_members")
+    .select("tenant_id, tenants!inner(type)")
+    .eq("user_id", user.id)
+    .eq("status", "active");
+  type MembershipRow = { tenant_id: string; tenants: { type: string } };
+  const myMembershipsTyped =
+    (myMemberships as unknown as MembershipRow[]) ?? [];
+  const myTenantIds = myMembershipsTyped.map((r) => r.tenant_id);
+  const isHiringSide = myMembershipsTyped.some(
+    (r) => r.tenants.type === "client_company" || r.tenants.type === "agency",
+  );
+
+  let hasHireHistory = false;
+  {
+    const { count } = await admin
+      .from("applications")
+      .select("id", { count: "exact", head: true })
+      .eq("candidate_user_id", user.id)
+      .eq("status", "hired");
+    if ((count ?? 0) > 0) hasHireHistory = true;
+  }
+  if (!hasHireHistory && myTenantIds.length > 0) {
+    const { count } = await admin
+      .from("applications")
+      .select("id", { count: "exact", head: true })
+      .in("tenant_id", myTenantIds)
+      .eq("status", "hired");
+    if ((count ?? 0) > 0) hasHireHistory = true;
+  }
+
   return (
     <main className="flex-1 p-4 md:p-6 max-w-2xl mx-auto w-full">
       <Link
@@ -194,7 +229,14 @@ export default async function SecurityPage({
           Permanently delete your account and everything associated with it.
           This is not reversible.
         </p>
-        <DeleteAccountForm action={deleteAccount} disabled={isSuperAdmin} />
+        <DeleteAccountForm
+          action={deleteAccount}
+          pauseAction={deactivateAccount}
+          disabled={isSuperAdmin}
+          hasHireHistory={hasHireHistory}
+          isHiringSide={isHiringSide}
+          isAlreadyPaused={isArchived}
+        />
       </div>
     </main>
   );
