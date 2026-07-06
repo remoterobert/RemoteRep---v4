@@ -27,7 +27,6 @@ const inputCls =
 export type ProfileDefaults = {
   headline: string;
   about: string;
-  photo_url: string;
   video_url: string;
   skills: string;
   contact_email: string;
@@ -82,24 +81,6 @@ export function ProfileEditForm({
         title="Profile"
         subtitle="What hiring companies see first."
       >
-        <div>
-          <label htmlFor="photo_url" className="block text-sm font-medium mb-1">
-            Photo URL (optional)
-          </label>
-          <input
-            id="photo_url"
-            name="photo_url"
-            type="url"
-            maxLength={500}
-            defaultValue={profile.photo_url}
-            placeholder="https://…"
-            className={inputCls}
-          />
-          <p className="text-xs text-light-grey mt-1">
-            Paste a hosted image URL. Upload built into a future release.
-          </p>
-        </div>
-
         <div>
           <label htmlFor="headline" className="block text-sm font-medium mb-1">
             Headline
