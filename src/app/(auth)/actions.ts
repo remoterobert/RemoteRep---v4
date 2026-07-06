@@ -20,10 +20,21 @@ async function getSiteOrigin(): Promise<string> {
 export async function signup(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
+  const confirmPassword = String(formData.get("confirm_password") ?? "");
 
   if (!email || !password) {
     redirect(
       `/signup?error=${encodeURIComponent("Email and password are required.")}`,
+    );
+  }
+  if (password.length < 8) {
+    redirect(
+      `/signup?error=${encodeURIComponent("Password must be at least 8 characters.")}`,
+    );
+  }
+  if (password !== confirmPassword) {
+    redirect(
+      `/signup?error=${encodeURIComponent("Passwords don't match — check for a typo.")}`,
     );
   }
 
