@@ -40,32 +40,79 @@ export function ChatThread({
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const seenIds = useRef<Set<string>>(new Set(initialMessages.map((m) => m.id)));
+  const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null);
+  if (!supabaseRef.current) {
+    supabaseRef.current = createClient();
+  }
 
   useEffect(() => {
-    const supabase = createClient();
-    const channel = supabase
-      .channel(`chat:${chatId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-          filter: `chat_id=eq.${chatId}`,
-        },
-        (payload) => {
-          const m = payload.new as Message;
-          if (seenIds.current.has(m.id)) return;
-          seenIds.current.add(m.id);
-          setMessages((prev) => [...prev, m]);
-        },
-      )
-      .subscribe();
+    const supabase = supabaseRef.current!;
+    let cancelled = false;
 
+    async function subscribe() {
+      // Realtime needs the user's JWT to evaluate RLS. With @supabase/ssr's
+      // browser client the WebSocket doesn't inherit the session cookie
+      // automatically — without setAuth, our postgres_changes subscription
+      // runs as anon and RLS silently drops every event.
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (cancelled) return;
+      if (session?.access_token) {
+        await supabase.realtime.setAuth(session.access_token);
+      }
+
+      const channel = supabase
+        .channel(`chat:${chatId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "messages",
+            filter: `chat_id=eq.${chatId}`,
+          },
+          (payload) => {
+            const m = payload.new as Message;
+            if (seenIds.current.has(m.id)) return;
+            seenIds.current.add(m.id);
+            setMessages((prev) => [...prev, m]);
+          },
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+
+    const cleanupPromise = subscribe();
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      cleanupPromise.then((fn) => fn?.());
     };
   }, [chatId]);
+
+  // Optimistic re-fetch after a send. Realtime should surface our own
+  // message via the subscription above, but this ensures the UI stays
+  // responsive even if the WebSocket drops. Dedup via seenIds.
+  async function refetchLatest() {
+    const supabase = supabaseRef.current!;
+    const { data } = await supabase
+      .from("messages")
+      .select(
+        "id, chat_id, author_user_id, body, created_at, edited_at, deleted_at",
+      )
+      .eq("chat_id", chatId)
+      .order("created_at", { ascending: true });
+    if (!data) return;
+    const fresh = data as unknown as Message[];
+    const newOnes = fresh.filter((m) => !seenIds.current.has(m.id));
+    for (const m of newOnes) seenIds.current.add(m.id);
+    if (newOnes.length > 0) {
+      setMessages((prev) => [...prev, ...newOnes]);
+    }
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -185,6 +232,7 @@ export function ChatThread({
         draft={draft}
         setDraft={setDraft}
         textareaRef={textareaRef}
+        onSent={refetchLatest}
       />
     </>
   );
@@ -195,11 +243,13 @@ function SendBox({
   draft,
   setDraft,
   textareaRef,
+  onSent,
 }: {
   chatId: string;
   draft: string;
   setDraft: (v: string) => void;
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+  onSent: () => Promise<void>;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const [pending, setPending] = useState(false);
@@ -212,6 +262,7 @@ function SendBox({
         try {
           await sendMessage(fd);
           setDraft("");
+          await onSent();
         } finally {
           setPending(false);
         }
