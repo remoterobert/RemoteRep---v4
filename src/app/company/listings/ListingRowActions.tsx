@@ -4,22 +4,34 @@ import Link from "next/link";
 import { useState } from "react";
 import {
   EllipsisHorizontalIcon,
-  EyeIcon,
   PencilSquareIcon,
-  PauseIcon,
-  PlayIcon,
-  ArchiveBoxIcon,
+  BoltIcon,
+  PauseCircleIcon,
+  PlayCircleIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
 
+/**
+ * Actions available for one listing row. Streamlined per the owner's
+ * ask down to the four essentials:
+ *   - Edit           → /company/listings/{id}/edit
+ *   - Boost          → /company/listings/{id}?offer=featured (pops the
+ *                     FeatureListingModal if not already boosted)
+ *   - Mark Inactive  → toggles publish/unpublish via setStatusAction
+ *                     (label flips to "Mark Active" when currently
+ *                     inactive)
+ *   - Delete         → typed-DELETE confirmation, existing action
+ */
 export function ListingRowActions({
   listingId,
   status,
+  isFeatured,
   setStatusAction,
   deleteAction,
 }: {
   listingId: string;
   status: string;
+  isFeatured: boolean;
   setStatusAction: (fd: FormData) => void;
   deleteAction: (fd: FormData) => void;
 }) {
@@ -27,9 +39,9 @@ export function ListingRowActions({
   const [confirming, setConfirming] = useState(false);
   const [confirmText, setConfirmText] = useState("");
 
-  const canPublish = status !== "published";
-  const canPause = status === "published";
-  const canArchive = status !== "archived";
+  const isPublished = status === "published";
+  const inactiveLabel = isPublished ? "Mark inactive" : "Mark active";
+  const inactiveAction = isPublished ? "unpublish" : "publish";
 
   return (
     <div className="relative inline-block text-left">
@@ -45,7 +57,6 @@ export function ListingRowActions({
 
       {open && (
         <>
-          {/* Click-away catcher */}
           <div
             className="fixed inset-0 z-40"
             onClick={() => {
@@ -58,15 +69,7 @@ export function ListingRowActions({
             role="menu"
             className="absolute right-0 mt-1 w-56 rounded-lg border border-border bg-surface-2 shadow-xl z-50 py-1 text-left"
           >
-            <Link
-              href={`/company/listings/${listingId}`}
-              className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-white/[0.06]"
-              role="menuitem"
-              onClick={() => setOpen(false)}
-            >
-              <EyeIcon className="h-4 w-4 text-light-grey" />
-              View + applicants
-            </Link>
+            {/* Edit */}
             <Link
               href={`/company/listings/${listingId}/edit`}
               className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-white/[0.06]"
@@ -74,58 +77,47 @@ export function ListingRowActions({
               onClick={() => setOpen(false)}
             >
               <PencilSquareIcon className="h-4 w-4 text-light-grey" />
-              Edit listing
+              Edit
             </Link>
 
-            <div className="my-1 border-t border-border" />
+            {/* Boost — opens the FeatureListingModal via ?offer=featured
+                on the detail page. If already boosted, sends them to the
+                same page but the modal is a no-op. */}
+            <Link
+              href={`/company/listings/${listingId}?offer=featured`}
+              className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-white/[0.06]"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+            >
+              <BoltIcon className="h-4 w-4 text-warning" />
+              {isFeatured ? "Boost — already featured" : "Boost"}
+            </Link>
 
-            {canPublish && (
-              <form action={setStatusAction} className="contents">
-                <input type="hidden" name="listing_id" value={listingId} />
-                <input type="hidden" name="action" value="publish" />
-                <button
-                  type="submit"
-                  role="menuitem"
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-white/[0.06]"
-                >
-                  <PlayIcon className="h-4 w-4 text-success" />
-                  {status === "paused" || status === "archived"
-                    ? "Re-publish (make live)"
-                    : "Publish (make live)"}
-                </button>
-              </form>
-            )}
-            {canPause && (
-              <form action={setStatusAction} className="contents">
-                <input type="hidden" name="listing_id" value={listingId} />
-                <input type="hidden" name="action" value="unpublish" />
-                <button
-                  type="submit"
-                  role="menuitem"
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-white/[0.06]"
-                >
-                  <PauseIcon className="h-4 w-4 text-warning" />
-                  Pause (hide from reps)
-                </button>
-              </form>
-            )}
-            {canArchive && (
-              <form action={setStatusAction} className="contents">
-                <input type="hidden" name="listing_id" value={listingId} />
-                <input type="hidden" name="action" value="archive" />
-                <button
-                  type="submit"
-                  role="menuitem"
-                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-white/[0.06]"
-                >
-                  <ArchiveBoxIcon className="h-4 w-4 text-light-grey" />
-                  Archive
-                </button>
-              </form>
-            )}
+            {/* Mark inactive / active — flips publish state */}
+            <form action={setStatusAction} className="contents">
+              <input type="hidden" name="listing_id" value={listingId} />
+              <input
+                type="hidden"
+                name="action"
+                value={inactiveAction}
+              />
+              <button
+                type="submit"
+                role="menuitem"
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-white/[0.06]"
+              >
+                {isPublished ? (
+                  <PauseCircleIcon className="h-4 w-4 text-warning" />
+                ) : (
+                  <PlayCircleIcon className="h-4 w-4 text-success" />
+                )}
+                {inactiveLabel}
+              </button>
+            </form>
 
             <div className="my-1 border-t border-border" />
 
+            {/* Delete — typed-DELETE confirm */}
             {!confirming ? (
               <button
                 type="button"
@@ -134,14 +126,14 @@ export function ListingRowActions({
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm text-danger hover:bg-danger/5"
               >
                 <TrashIcon className="h-4 w-4" />
-                Delete permanently
+                Delete
               </button>
             ) : (
               <form action={deleteAction} className="px-3 py-2 space-y-2">
                 <input type="hidden" name="listing_id" value={listingId} />
                 <div className="text-xs text-light-grey">
-                  Type <b>DELETE</b> to confirm. This cannot be undone —
-                  applicants and their messages will be removed with the listing.
+                  Type <b>DELETE</b> to confirm. Applicants and messages
+                  will be removed with the listing.
                 </div>
                 <input
                   type="text"
