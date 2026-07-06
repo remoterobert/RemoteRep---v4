@@ -74,6 +74,8 @@ export async function saveCompanyProfile(formData: FormData) {
   const about = String(formData.get("about") ?? "").trim();
   const hiring_pitch = String(formData.get("hiring_pitch") ?? "").trim();
   const website_url = String(formData.get("website_url") ?? "").trim();
+  const contact_email = String(formData.get("contact_email") ?? "").trim();
+  const contact_phone = String(formData.get("contact_phone") ?? "").trim();
   const industry_slug = String(formData.get("industry_slug") ?? "").trim();
   const city = String(formData.get("city") ?? "").trim();
   const state_region = String(formData.get("state_region") ?? "").trim();
@@ -98,6 +100,8 @@ export async function saveCompanyProfile(formData: FormData) {
       about: about || null,
       hiring_pitch: hiring_pitch || null,
       website_url: website_url || null,
+      contact_email: contact_email || null,
+      contact_phone: contact_phone || null,
       industry_slug: industry_slug || null,
       city: city || null,
       state_region: state_region || null,

@@ -183,8 +183,8 @@ export function ProfileEditForm({
               className={inputCls}
             />
             <p className="text-xs text-light-grey mt-1">
-              Where hiring managers reach you. Only shared once you accept
-              an invitation.
+              Where we send platform notifications. Also shared with hiring
+              managers once you accept an invitation.
             </p>
           </div>
           <div>
@@ -201,7 +201,8 @@ export function ProfileEditForm({
               className={inputCls}
             />
             <p className="text-xs text-light-grey mt-1">
-              Optional. Same visibility rules as email.
+              Optional. Used for SMS notifications when you enable that
+              channel. Same visibility rules as email.
             </p>
           </div>
         </div>
