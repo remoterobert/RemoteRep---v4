@@ -3,10 +3,13 @@ import Link from "next/link";
 import {
   PlusIcon,
   ClipboardDocumentListIcon,
+  BoltIcon,
 } from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/server";
 import { ListingRowActions } from "./ListingRowActions";
 import { setListingStatus, deleteListing } from "./actions";
+import { UpgradeButton } from "@/components/UpgradeButton";
+import { getTenantSubscription, isFeaturedListing } from "@/lib/subscriptions";
 
 export const dynamic = "force-dynamic";
 
@@ -71,7 +74,9 @@ export default async function CompanyListingsPage({
 
   const { data: listings } = await supabase
     .from("listings")
-    .select("id, title, status, visibility, published_at, created_at")
+    .select(
+      "id, title, status, visibility, published_at, created_at, featured_until",
+    )
     .eq("tenant_id", m.tenant_id)
     .order("created_at", { ascending: false });
 
@@ -82,8 +87,11 @@ export default async function CompanyListingsPage({
     visibility: string;
     published_at: string | null;
     created_at: string;
+    featured_until: string | null;
   };
   const rows = (listings ?? []) as Row[];
+
+  const { tier: currentTier } = await getTenantSubscription(m.tenant_id);
 
   // Bulk-fetch applicant + bookmark counts per listing.
   const ids = rows.map((r) => r.id);
@@ -134,13 +142,16 @@ export default async function CompanyListingsPage({
             Publish, pause, and manage every role your team is hiring for.
           </p>
         </div>
-        <Link
-          href="/company/listings/new"
-          className="inline-flex items-center gap-1.5 rounded bg-primary text-white px-4 py-2 text-sm font-semibold hover:opacity-90 transition-opacity"
-        >
-          <PlusIcon className="h-4 w-4" />
-          New listing
-        </Link>
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          <UpgradeButton currentTier={currentTier} />
+          <Link
+            href="/company/listings/new"
+            className="inline-flex items-center gap-1.5 rounded bg-primary text-white px-4 py-2 text-sm font-semibold hover:opacity-90 transition-opacity"
+          >
+            <PlusIcon className="h-4 w-4" />
+            New listing
+          </Link>
+        </div>
       </div>
 
       {params.error && (
@@ -241,6 +252,7 @@ export default async function CompanyListingsPage({
                       <ListingRowActions
                         listingId={row.id}
                         status={row.status}
+                        isFeatured={isFeaturedListing(row)}
                         setStatusAction={setListingStatus}
                         deleteAction={deleteListing}
                       />

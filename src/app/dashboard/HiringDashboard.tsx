@@ -11,6 +11,8 @@ import { Kanban, type KanbanCardData, type ColumnId } from "./Kanban";
 import { ClosedToggle } from "./ClosedToggle";
 import { ListingFilter } from "./ListingFilter";
 import { QuickStartCard, type QuickStartStep } from "./QuickStartCard";
+import { UpgradeButton } from "@/components/UpgradeButton";
+import { getTenantSubscription } from "@/lib/subscriptions";
 
 const KANBAN_STAGES: ColumnId[] = [
   "invited",
@@ -204,6 +206,8 @@ export async function HiringDashboard({
   ).length;
   const hiredCount = apps.filter((a) => a.status === "hired").length;
 
+  const { tier: currentTier } = await getTenantSubscription(tenantId);
+
   // --------- Company profile completion ---------
   const { data: clientProfile } = await supabase
     .from("client_profiles")
@@ -269,7 +273,8 @@ export async function HiringDashboard({
             {tenantName} · {kpiSubtitle}
           </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap">
+          <UpgradeButton currentTier={currentTier} />
           <ListingFilter listings={listings} selectedId={selectedListingId} />
           <Link
             href="/company/listings/new"

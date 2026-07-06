@@ -31,7 +31,7 @@ export function ListingFilter({
     <select
       value={selectedId ?? "all"}
       onChange={(e) => onChange(e.target.value)}
-      className="rounded border border-border bg-surface-2 px-3 py-2 text-sm hover:bg-surface-3 transition-colors"
+      className="rounded border border-border bg-surface-2 pl-3 pr-8 py-2 text-sm hover:bg-surface-3 transition-colors"
       aria-label="Filter by listing"
     >
       <option value="all">All listings</option>
