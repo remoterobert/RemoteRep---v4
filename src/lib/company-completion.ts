@@ -7,6 +7,7 @@ export type ClientProfileForCompletion = {
   website_url?: string | null;
   industry_slug?: string | null;
   headcount?: number | null;
+  founded_year?: number | null;
   hiring_pitch?: string | null;
   visibility?: string | null;
 };
@@ -119,7 +120,7 @@ const FIELDS = [
     weight: 5,
     suggestion:
       "Add your founded year. Signals maturity to candidates evaluating startup risk.",
-    isDone: (p: Input) => false, // handled separately if we add the field to Input
+    isDone: (p: Input) => p.founded_year != null && p.founded_year > 0,
   },
 ];
 
