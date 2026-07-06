@@ -73,6 +73,27 @@ export default async function SignupPage({
             <p className="text-xs text-zinc-500 mt-1">At least 8 characters.</p>
           </div>
 
+          <div>
+            <label
+              htmlFor="confirm_password"
+              className="block text-sm font-medium mb-1"
+            >
+              Confirm password
+            </label>
+            <input
+              id="confirm_password"
+              name="confirm_password"
+              type="password"
+              required
+              minLength={8}
+              autoComplete="new-password"
+              className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
+            />
+            <p className="text-xs text-zinc-500 mt-1">
+              Re-type to make sure there&apos;s no typo.
+            </p>
+          </div>
+
           <button
             type="submit"
             className="w-full rounded bg-primary text-white px-3 py-2 text-sm font-medium hover:opacity-90 transition-opacity"
