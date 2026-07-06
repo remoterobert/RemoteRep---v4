@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getTenantSubscription, hasAiAccess } from "@/lib/subscriptions";
 import { createListing } from "../actions";
 import { NewListingForm } from "./NewListingForm";
 
@@ -41,6 +42,8 @@ export default async function NewListingPage({
   if (!m) redirect("/dashboard");
 
   const params = await searchParams;
+  const { tier } = await getTenantSubscription(m.tenant_id);
+  const aiAllowed = hasAiAccess(tier);
 
   return (
     <main className="flex-1 p-6 max-w-4xl mx-auto w-full">
@@ -68,6 +71,7 @@ export default async function NewListingPage({
       <NewListingForm
         action={createListing}
         companyName={m.tenants.name}
+        hasAiAccess={aiAllowed}
       />
     </main>
   );

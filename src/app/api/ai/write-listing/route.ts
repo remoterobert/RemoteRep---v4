@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { LISTING_STYLES, type ListingStyle } from "@/lib/listings/options";
+import { getCurrentHiringSubscription, hasAiAccess } from "@/lib/subscriptions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -69,6 +70,15 @@ export async function POST(req: NextRequest) {
     .maybeSingle();
   if (!membership) {
     return Response.json({ error: "Hiring role required" }, { status: 403 });
+  }
+
+  // Paywall — free tenants get 402 so the UI can surface the upgrade path.
+  const { tier } = await getCurrentHiringSubscription();
+  if (!hasAiAccess(tier)) {
+    return Response.json(
+      { error: "AI features require Premium or Concierge." },
+      { status: 402 },
+    );
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;

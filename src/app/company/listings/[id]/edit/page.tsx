@@ -1,6 +1,7 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getTenantSubscription, hasAiAccess } from "@/lib/subscriptions";
 import { updateListing } from "../../actions";
 import { NewListingForm } from "../../new/NewListingForm";
 
@@ -124,6 +125,9 @@ export default async function EditListingPage({
   const submitLabel =
     l.status === "published" ? "Save & keep live" : "Save & publish";
 
+  const { tier } = await getTenantSubscription(m.tenant_id);
+  const aiAllowed = hasAiAccess(tier);
+
   return (
     <main className="flex-1 p-6 max-w-4xl mx-auto w-full">
       <Link
@@ -153,6 +157,7 @@ export default async function EditListingPage({
         defaults={defaults}
         listingId={l.id}
         submitLabel={submitLabel}
+        hasAiAccess={aiAllowed}
       />
     </main>
   );

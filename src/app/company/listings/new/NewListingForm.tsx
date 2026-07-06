@@ -4,6 +4,7 @@ import { useState } from "react";
 import { SparklesIcon } from "@heroicons/react/24/outline";
 import { ChipMulti } from "@/components/forms/ChipMulti";
 import { SearchMulti } from "@/components/forms/SearchMulti";
+import { PaywallButton } from "@/components/PaywallModal";
 import {
   SALES_ROLES,
   COMMITMENTS,
@@ -72,12 +73,14 @@ export function NewListingForm({
   defaults,
   listingId,
   submitLabel = "Publish listing",
+  hasAiAccess,
 }: {
   action: (fd: FormData) => void;
   companyName: string;
   defaults?: ListingDefaults;
   listingId?: string;
   submitLabel?: string;
+  hasAiAccess: boolean;
 }) {
   const [description, setDescription] = useState(
     defaults?.description ?? "",
@@ -168,14 +171,24 @@ export function NewListingForm({
             >
               Description <span className="text-danger">*</span>
             </label>
-            <button
-              type="button"
-              onClick={() => setAiOpen((v) => !v)}
-              className="inline-flex items-center gap-1.5 text-xs text-primary hover:opacity-80 font-medium"
-            >
-              <SparklesIcon className="h-4 w-4" />
-              {aiOpen ? "Hide AI writer" : "Draft with AI"}
-            </button>
+            {hasAiAccess ? (
+              <button
+                type="button"
+                onClick={() => setAiOpen((v) => !v)}
+                className="inline-flex items-center gap-1.5 text-xs text-primary hover:opacity-80 font-medium"
+              >
+                <SparklesIcon className="h-4 w-4" />
+                {aiOpen ? "Hide AI writer" : "Draft with AI"}
+              </button>
+            ) : (
+              <PaywallButton
+                feature="ai_basic"
+                className="inline-flex items-center gap-1.5 text-xs text-primary hover:opacity-80 font-medium"
+              >
+                <SparklesIcon className="h-4 w-4" />
+                Draft with AI
+              </PaywallButton>
+            )}
           </div>
 
           {/* AI panel */}

@@ -34,6 +34,7 @@ type ListingRow = {
   description: string;
   published_at: string | null;
   created_at: string;
+  featured_until: string | null;
   tenants:
     | { name: string; client_profiles?: { industry_slug: string | null; headcount: number | null; founded_year: number | null } | { industry_slug: string | null; headcount: number | null; founded_year: number | null }[] | null }
     | { name: string; client_profiles?: { industry_slug: string | null; headcount: number | null; founded_year: number | null } | { industry_slug: string | null; headcount: number | null; founded_year: number | null }[] | null }[]
@@ -257,7 +258,7 @@ export default async function OpportunitiesPage({
   let q = supabase
     .from("listings")
     .select(
-      "id, tenant_id, title, description, published_at, created_at, tenants(name, client_profiles(industry_slug, headcount, founded_year)), listing_details!inner(sales_role, commitment, compensation_type, minimum_compensation, benefits), listing_requirements!inner(deal_amounts, sales_types, decision_makers, sales_environments, sales_cycles, sales_volumes, lead_types, technologies, education, industries, years_of_experience_min)",
+      "id, tenant_id, title, description, published_at, created_at, featured_until, tenants(name, client_profiles(industry_slug, headcount, founded_year)), listing_details!inner(sales_role, commitment, compensation_type, minimum_compensation, benefits), listing_requirements!inner(deal_amounts, sales_types, decision_makers, sales_environments, sales_cycles, sales_volumes, lead_types, technologies, education, industries, years_of_experience_min)",
     )
     .eq("status", "published")
     .eq("visibility", "public")

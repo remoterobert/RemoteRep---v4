@@ -6,8 +6,18 @@ import {
   EyeIcon,
   ChatBubbleLeftRightIcon,
   PencilSquareIcon,
+  BoltIcon,
+  SparklesIcon,
 } from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/server";
+import { boostListing } from "../actions";
+import { enableConcierge, disableConcierge } from "./concierge-actions";
+import { FeatureListingModal } from "./FeatureListingModal";
+import {
+  isFeaturedListing,
+  getTenantSubscription,
+  hasConciergeAccess,
+} from "@/lib/subscriptions";
 
 export const dynamic = "force-dynamic";
 
@@ -51,10 +61,19 @@ const APP_STATUS_LABEL: Record<string, string> = {
 
 export default async function CompanyListingDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{
+    created?: string;
+    offer?: string;
+    boosted?: string;
+    concierge?: string;
+    sourced?: string;
+  }>;
 }) {
   const { id } = await params;
+  const sp = await searchParams;
 
   const supabase = await createClient();
   const {
@@ -81,7 +100,7 @@ export default async function CompanyListingDetailPage({
   const { data: listing } = await supabase
     .from("listings")
     .select(
-      "id, tenant_id, title, description, instructions, calendar_link, status, visibility, published_at, created_at, listing_details(*), listing_requirements(*)",
+      "id, tenant_id, title, description, instructions, calendar_link, status, visibility, published_at, created_at, featured_until, concierge_enabled_at, listing_details(*), listing_requirements(*)",
     )
     .eq("id", id)
     .eq("tenant_id", membership.tenant_id)
@@ -100,6 +119,8 @@ export default async function CompanyListingDetailPage({
     visibility: string;
     published_at: string | null;
     created_at: string;
+    featured_until: string | null;
+    concierge_enabled_at: string | null;
     listing_details:
       | {
           sales_role: string | null;
@@ -204,8 +225,88 @@ export default async function CompanyListingDetailPage({
   const statusCls = STATUS_STYLES[l.status] ?? STATUS_STYLES.draft;
   const statusLabel = STATUS_LABEL[l.status] ?? l.status;
 
+  const { tier } = await getTenantSubscription(membership.tenant_id);
+  const conciergeAllowed = hasConciergeAccess(tier);
+  const conciergeActive = !!l.concierge_enabled_at;
+
   return (
     <main className="flex-1 p-6 max-w-5xl mx-auto w-full">
+      <FeatureListingModal
+        listingId={l.id}
+        boostAction={boostListing}
+        initiallyOpen={sp.offer === "featured" && !isFeaturedListing(l)}
+      />
+
+      {sp.boosted === "1" && (
+        <div className="mb-4 rounded border border-success/40 bg-success/5 p-3 text-sm text-success">
+          Listing boosted. Featured badge is live and it&apos;s pinned at the
+          top of the feed.
+        </div>
+      )}
+
+      {sp.concierge === "enabled" && (
+        <div className="mb-4 rounded border border-success/40 bg-success/5 p-3 text-sm text-success">
+          Concierge activated. Sourced {sp.sourced ?? 0} candidate
+          {sp.sourced === "1" ? "" : "s"} and sent invitations. Watch the
+          chats for replies — the AI will respond automatically once
+          candidates consent.
+        </div>
+      )}
+      {sp.concierge === "disabled" && (
+        <div className="mb-4 rounded border border-border bg-surface-2 p-3 text-sm">
+          Concierge deactivated for this listing. Existing chats stay open;
+          the AI will no longer generate new replies.
+        </div>
+      )}
+
+      {/* Concierge control block. Free/premium tenants see the offer;
+          concierge tenants see the actual enable/disable toggle. */}
+      <div className="mb-6 rounded-2xl border border-primary/30 bg-primary/[0.03] p-4 flex items-start gap-3">
+        <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+          <SparklesIcon className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-semibold mb-0.5">
+            {conciergeActive ? "Concierge is active" : "Concierge assistant"}
+          </div>
+          <p className="text-xs text-light-grey mb-3 leading-snug">
+            {conciergeActive
+              ? "An AI agent is sourcing candidates, answering questions in chats, and offering to book interviews. Your team makes all final decisions."
+              : "Let an AI agent do the sourcing, first-touch messaging, and interview scheduling on this listing."}
+          </p>
+          {conciergeAllowed ? (
+            conciergeActive ? (
+              <form action={disableConcierge}>
+                <input type="hidden" name="listing_id" value={l.id} />
+                <button
+                  type="submit"
+                  className="rounded border border-border px-3 py-1.5 text-xs font-medium hover:bg-surface-3"
+                >
+                  Deactivate concierge
+                </button>
+              </form>
+            ) : (
+              <form action={enableConcierge}>
+                <input type="hidden" name="listing_id" value={l.id} />
+                <button
+                  type="submit"
+                  className="rounded bg-primary text-white px-3 py-1.5 text-xs font-semibold hover:opacity-90"
+                >
+                  Activate concierge for this listing
+                </button>
+              </form>
+            )
+          ) : (
+            <Link
+              href="/settings/billing"
+              className="inline-block rounded bg-primary text-white px-3 py-1.5 text-xs font-semibold hover:opacity-90"
+            >
+              Upgrade to Concierge — $299/mo
+            </Link>
+          )}
+        </div>
+      </div>
+
       <Link
         href="/company/listings"
         className="text-xs text-light-grey hover:text-primary transition-colors mb-3 inline-block"
@@ -215,13 +316,19 @@ export default async function CompanyListingDetailPage({
 
       <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
         <div className="min-w-0">
-          <div className="flex items-center gap-3 mb-1">
+          <div className="flex items-center gap-3 mb-1 flex-wrap">
             <h1 className="text-2xl font-semibold truncate">{l.title}</h1>
             <span
               className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusCls}`}
             >
               {statusLabel}
             </span>
+            {isFeaturedListing(l) && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-warning/15 text-warning ring-1 ring-warning/30 px-2 py-0.5 text-[11px] font-semibold">
+                <BoltIcon className="h-3 w-3" />
+                Featured
+              </span>
+            )}
           </div>
           <p className="text-sm text-light-grey">
             Created{" "}
