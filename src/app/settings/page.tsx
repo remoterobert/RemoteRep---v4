@@ -62,20 +62,20 @@ export default async function SettingsIndexPage() {
           icon={<BellIcon className="h-5 w-5" />}
           title="Notification preferences"
           description="Email + in-app + push notifications by category"
-          status="Coming soon"
+          status="Live"
+        />
+        <SettingsCard
+          href="/settings/security"
+          icon={<KeyIcon className="h-5 w-5" />}
+          title="Password & security"
+          description="Change password, sign out other devices, pause or delete your account"
+          status="Live"
         />
         <SettingsCard
           href="/settings/billing"
           icon={<CreditCardIcon className="h-5 w-5" />}
           title="Billing"
           description="Subscription, invoices, payment methods"
-          status="Coming soon"
-        />
-        <SettingsCard
-          href="#"
-          icon={<KeyIcon className="h-5 w-5" />}
-          title="Password & security"
-          description="Change password, sessions, 2FA"
           status="Coming soon"
         />
       </div>
