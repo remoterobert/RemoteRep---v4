@@ -1,5 +1,9 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import { signup } from "../actions";
+
+export const dynamic = "force-dynamic";
 
 type SearchParams = Promise<{ error?: string }>;
 
@@ -8,6 +12,13 @@ export default async function SignupPage({
 }: {
   searchParams: SearchParams;
 }) {
+  // Already signed in? No need to see the signup form.
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) redirect("/dashboard");
+
   const params = await searchParams;
   const error = params.error;
 
