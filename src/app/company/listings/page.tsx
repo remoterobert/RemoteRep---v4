@@ -143,7 +143,6 @@ export default async function CompanyListingsPage({
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
-          <UpgradeButton currentTier={currentTier} />
           <Link
             href="/company/listings/new"
             className="inline-flex items-center gap-1.5 rounded bg-primary text-white px-4 py-2 text-sm font-semibold hover:opacity-90 transition-opacity"
@@ -151,6 +150,7 @@ export default async function CompanyListingsPage({
             <PlusIcon className="h-4 w-4" />
             New listing
           </Link>
+          <UpgradeButton currentTier={currentTier} />
         </div>
       </div>
 

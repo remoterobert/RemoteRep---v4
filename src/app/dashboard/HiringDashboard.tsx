@@ -274,7 +274,6 @@ export async function HiringDashboard({
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
-          <UpgradeButton currentTier={currentTier} />
           <ListingFilter listings={listings} selectedId={selectedListingId} />
           <Link
             href="/company/listings/new"
@@ -283,6 +282,7 @@ export async function HiringDashboard({
             <ClipboardDocumentListIcon className="h-4 w-4" />
             New listing
           </Link>
+          <UpgradeButton currentTier={currentTier} />
         </div>
       </div>
 
