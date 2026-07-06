@@ -86,3 +86,118 @@ export async function respondToInvitation(formData: FormData) {
   revalidatePath("/dashboard");
   revalidatePath("/candidates");
 }
+
+/**
+ * Kanban stage move. Fires from client-side drag-end handler with the
+ * application id and new status. Wraps the update_application_status
+ * SECURITY DEFINER RPC.
+ */
+export type KanbanStatus =
+  | "invited"
+  | "applied"
+  | "interviewing"
+  | "shortlisted"
+  | "hired"
+  | "rejected"
+  | "withdrawn";
+
+const KANBAN_STATUSES: KanbanStatus[] = [
+  "invited",
+  "applied",
+  "interviewing",
+  "shortlisted",
+  "hired",
+  "rejected",
+  "withdrawn",
+];
+
+export async function moveApplication(
+  applicationId: string,
+  newStatus: KanbanStatus,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!applicationId) return { ok: false, error: "Missing application id" };
+  if (!KANBAN_STATUSES.includes(newStatus)) {
+    return { ok: false, error: `Invalid status: ${newStatus}` };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  const { error } = await supabase.rpc("update_application_status", {
+    p_application_id: applicationId,
+    p_new_status: newStatus,
+  });
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+/**
+ * Client dragged a bookmarked candidate onto Invited. Fires an invitation
+ * (creating the application row via invite_candidate RPC), then removes
+ * the bookmark so the card doesn't appear in two places.
+ */
+export async function convertBookmarkToInvite(
+  candidateUserId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!candidateUserId) return { ok: false, error: "Missing candidate id" };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  const { error: inviteErr } = await supabase.rpc("invite_candidate", {
+    p_candidate_user_id: candidateUserId,
+    p_message: null,
+  });
+  if (inviteErr) return { ok: false, error: inviteErr.message };
+
+  // Remove the bookmark. Non-fatal if it fails.
+  await supabase
+    .from("bookmarks")
+    .delete()
+    .eq("owner_user_id", user.id)
+    .eq("target_type", "candidate")
+    .eq("target_id", candidateUserId);
+
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+/**
+ * Rep dragged a bookmarked listing onto Applied. Applies via apply_to_listing
+ * (which creates the app + chat + notification), then removes the bookmark.
+ */
+export async function convertBookmarkToApply(
+  listingId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!listingId) return { ok: false, error: "Missing listing id" };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Not authenticated" };
+
+  const { error: applyErr } = await supabase.rpc("apply_to_listing", {
+    p_listing_id: listingId,
+    p_message: null,
+  });
+  if (applyErr) return { ok: false, error: applyErr.message };
+
+  await supabase
+    .from("bookmarks")
+    .delete()
+    .eq("owner_user_id", user.id)
+    .eq("target_type", "listing")
+    .eq("target_id", listingId);
+
+  revalidatePath("/dashboard");
+  return { ok: true };
+}
