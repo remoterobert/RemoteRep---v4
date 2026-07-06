@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SearchSelect } from "@/components/forms/SearchSelect";
 import { COUNTRIES, STATES } from "@/lib/locations";
-import { saveCompanyProfile } from "./actions";
+import { saveCompanyProfile, uploadLogo, deleteLogo } from "./actions";
+import { LogoSection } from "./LogoSection";
 
 export const dynamic = "force-dynamic";
 
@@ -60,6 +61,16 @@ export default async function EditCompanyPage({
           {error}
         </div>
       )}
+
+      {/* Logo stands outside the main save form because it has its own
+          upload + delete forms — HTML doesn't allow nested forms. */}
+      <div className="mb-8">
+        <LogoSection
+          currentUrl={profile?.logo_url ?? null}
+          uploadAction={uploadLogo}
+          deleteAction={deleteLogo}
+        />
+      </div>
 
       <form action={saveCompanyProfile} className="space-y-8">
         <section className="space-y-4">
@@ -137,37 +148,6 @@ export default async function EditCompanyPage({
             />
           </div>
 
-          <div>
-            <label
-              htmlFor="logo_url"
-              className="block text-sm font-medium mb-1"
-            >
-              Logo URL
-            </label>
-            <input
-              id="logo_url"
-              name="logo_url"
-              type="url"
-              maxLength={500}
-              defaultValue={profile?.logo_url ?? ""}
-              placeholder="https://your-company.com/logo.png"
-              className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
-            />
-            <p className="text-xs text-light-grey mt-1">
-              Paste a hosted logo URL (PNG or SVG). Direct upload built into a
-              future release.
-            </p>
-            {profile?.logo_url && (
-              <div className="mt-2 h-16 w-16 rounded-lg bg-primary/10 overflow-hidden flex items-center justify-center">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={profile.logo_url}
-                  alt="Company logo preview"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            )}
-          </div>
 
           <fieldset>
             <legend className="block text-sm font-medium mb-2">
