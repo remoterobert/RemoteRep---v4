@@ -20,8 +20,9 @@ export function UpgradeButton({
 
   const targetLabel = currentTier === "free" ? "Premium" : "Concierge";
 
+  // Match the "New listing" button size so headers line up cleanly.
   const base =
-    "inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-semibold transition-opacity";
+    "inline-flex items-center gap-1.5 rounded px-4 py-2 text-sm font-semibold transition-opacity";
   const style =
     variant === "solid"
       ? "bg-primary text-white hover:opacity-90"
@@ -30,16 +31,11 @@ export function UpgradeButton({
   return (
     <Link href="/settings/billing" className={`${base} ${style}`}>
       {variant === "solid" ? (
-        <SparklesIcon className="h-3.5 w-3.5" />
+        <SparklesIcon className="h-4 w-4" />
       ) : (
-        <ArrowUpCircleIcon className="h-3.5 w-3.5" />
+        <ArrowUpCircleIcon className="h-4 w-4" />
       )}
-      <span>
-        Upgrade to {targetLabel}
-        <span className="text-[10px] font-normal opacity-70 ml-1.5">
-          · currently {TIER_LABEL[currentTier]}
-        </span>
-      </span>
+      <span>Upgrade to {targetLabel}</span>
     </Link>
   );
 }
