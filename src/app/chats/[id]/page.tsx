@@ -7,6 +7,8 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { ChatSidebar } from "../ChatSidebar";
 import { ChatThread } from "./ChatThread";
+import { AiConsentGate } from "./AiConsentGate";
+import { grantAiConsent, revokeAiConsent } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -32,11 +34,82 @@ export default async function ChatDetailPage({ params }: { params: Params }) {
 
   const { data: chat } = await supabase
     .from("chats")
-    .select("id, tenant_id, related_application_id, tenants(name, type)")
+    .select(
+      "id, tenant_id, related_application_id, tenants(name, type), applications:related_application_id(candidate_user_id, listing_id, listings(concierge_enabled_at))",
+    )
     .eq("id", chatId)
     .single();
 
   if (!chat) notFound();
+
+  // Concierge consent gate. If this chat has a listing with
+  // concierge_enabled_at, AND the current viewer is the candidate on the
+  // application, AND consent hasn't been recorded, block the chat UI
+  // behind the AiConsentGate.
+  type ChatMeta = {
+    tenant_id: string;
+    applications:
+      | {
+          candidate_user_id: string;
+          listing_id: string | null;
+          listings:
+            | { concierge_enabled_at: string | null }
+            | { concierge_enabled_at: string | null }[]
+            | null;
+        }
+      | Array<{
+          candidate_user_id: string;
+          listing_id: string | null;
+          listings:
+            | { concierge_enabled_at: string | null }
+            | { concierge_enabled_at: string | null }[]
+            | null;
+        }>
+      | null;
+  };
+  const chatMeta = chat as unknown as ChatMeta;
+  const appMeta = Array.isArray(chatMeta.applications)
+    ? chatMeta.applications[0]
+    : chatMeta.applications;
+  const listingMeta = appMeta
+    ? Array.isArray(appMeta.listings)
+      ? appMeta.listings[0]
+      : appMeta.listings
+    : null;
+  const isConciergeChat = !!listingMeta?.concierge_enabled_at;
+  const viewerIsCandidate = appMeta?.candidate_user_id === user.id;
+
+  if (isConciergeChat && viewerIsCandidate) {
+    const { data: consentRow } = await supabase
+      .from("candidate_ai_consent")
+      .select("consented_at, revoked_at")
+      .eq("user_id", user.id)
+      .eq("tenant_id", chatMeta.tenant_id)
+      .maybeSingle();
+    const consentNeeded = !consentRow;
+    if (consentNeeded) {
+      const tenantsField = (
+        chat as unknown as {
+          tenants:
+            | { name: string; type: string }
+            | { name: string; type: string }[]
+            | null;
+        }
+      ).tenants;
+      const tenantInfo = Array.isArray(tenantsField)
+        ? tenantsField[0]
+        : tenantsField;
+      return (
+        <AiConsentGate
+          tenantName={tenantInfo?.name ?? "This company"}
+          chatId={chatId}
+          tenantId={chatMeta.tenant_id}
+          consentAction={grantAiConsent}
+          optOutAction={revokeAiConsent}
+        />
+      );
+    }
+  }
 
   const chatTenants = (
     chat as unknown as {

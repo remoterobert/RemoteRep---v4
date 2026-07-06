@@ -1,10 +1,16 @@
 "use server";
 
+import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendNotificationEmail } from "@/lib/notification-email";
+import { maybeRunConciergeReply } from "@/lib/concierge";
+import {
+  AI_DISCLOSURE_VERSION,
+  disclosureFlatText,
+} from "@/lib/ai-disclosure";
 
 export async function sendMessage(formData: FormData) {
   const chatId = String(formData.get("chat_id") ?? "").trim();
@@ -64,6 +70,98 @@ export async function sendMessage(formData: FormData) {
     ),
   );
 
+  // If this message is from the candidate side and the chat's listing has
+  // concierge enabled + consent recorded, the agent generates a reply.
+  // Fire-and-forget: any failure inside the agent is swallowed so it
+  // never blocks the user-facing message.
+  try {
+    await maybeRunConciergeReply(chatId, user.id);
+  } catch {
+    // agent errors never surface here
+  }
+
   revalidatePath(`/chats/${chatId}`);
   revalidatePath("/chats");
+}
+
+/**
+ * Candidate recorded consent for the concierge AI to interact with them
+ * on this tenant's behalf. Called from the AiConsentGate form.
+ */
+export async function grantAiConsent(formData: FormData) {
+  const chatId = String(formData.get("chat_id") ?? "").trim();
+  const tenantId = String(formData.get("tenant_id") ?? "").trim();
+  if (!chatId || !tenantId) redirect("/chats");
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const h = await headers();
+  const ip =
+    h.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    h.get("x-real-ip") ??
+    null;
+  const userAgent = h.get("user-agent") ?? null;
+
+  await supabase.from("candidate_ai_consent").upsert(
+    {
+      user_id: user.id,
+      tenant_id: tenantId,
+      consented_at: new Date().toISOString(),
+      revoked_at: null,
+      disclosure_version: AI_DISCLOSURE_VERSION,
+      disclosure_shown: disclosureFlatText(),
+      ip_address: ip,
+      user_agent: userAgent,
+    },
+    { onConflict: "user_id,tenant_id" },
+  );
+
+  revalidatePath(`/chats/${chatId}`);
+  redirect(`/chats/${chatId}?consented=1`);
+}
+
+/**
+ * Candidate opts out of AI. Records a revoked consent (so the agent
+ * won't run), and posts a system message to the chat explaining that
+ * only humans will reply going forward.
+ */
+export async function revokeAiConsent(formData: FormData) {
+  const chatId = String(formData.get("chat_id") ?? "").trim();
+  const tenantId = String(formData.get("tenant_id") ?? "").trim();
+  if (!chatId || !tenantId) redirect("/chats");
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const now = new Date().toISOString();
+  await supabase.from("candidate_ai_consent").upsert(
+    {
+      user_id: user.id,
+      tenant_id: tenantId,
+      consented_at: now,
+      revoked_at: now,
+      disclosure_version: AI_DISCLOSURE_VERSION,
+      disclosure_shown: disclosureFlatText(),
+    },
+    { onConflict: "user_id,tenant_id" },
+  );
+
+  // Drop a system message in the chat so the hiring team sees the opt-out.
+  const admin = createAdminClient();
+  await admin.from("messages").insert({
+    chat_id: chatId,
+    author_user_id: user.id,
+    author_kind: "system",
+    body: "The candidate has opted out of AI interaction. Please continue this conversation as a human.",
+  });
+
+  revalidatePath(`/chats/${chatId}`);
+  redirect(`/chats/${chatId}?consent=opted_out`);
 }

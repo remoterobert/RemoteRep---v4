@@ -170,7 +170,57 @@ export async function createListing(formData: FormData) {
     payload: { published: publish },
   });
 
-  redirect(`/company/listings?created=1`);
+  // Send the owner to the new listing's page with the featured-listing
+  // upsell popped open. If they dismiss it, they land on a fully working
+  // detail page. If they accept, boostListing fires and sets featured_until.
+  redirect(`/company/listings/${listingId}?created=1&offer=featured`);
+}
+
+/**
+ * Turn a listing's featured flag on for the requested period. Sets
+ * featured_until to now + 30 days (monthly) or now + 365 days (annual).
+ *
+ * We deliberately don't send the email blast synchronously — that
+ * happens later (real audience management + Resend contacts).
+ */
+export async function boostListing(formData: FormData) {
+  const ctx = await getHiringTenantId();
+  if (!ctx) redirect("/dashboard");
+
+  const listingId = getStr(formData, "listing_id");
+  const period = getStr(formData, "period"); // 'monthly' | 'annual'
+  if (!listingId) redirect("/company/listings");
+
+  const supabase = await createClient();
+
+  const days = period === "annual" ? 365 : 30;
+  const until = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+
+  const { error } = await supabase
+    .from("listings")
+    .update({
+      featured_until: until,
+      featured_reason: "urgent_hiring",
+    })
+    .eq("id", listingId)
+    .eq("tenant_id", ctx.tenantId);
+
+  if (error) {
+    redirect(
+      `/company/listings/${listingId}?error=${encodeURIComponent(error.message)}`,
+    );
+  }
+
+  await supabase.from("events").insert({
+    tenant_id: ctx.tenantId,
+    actor_user_id: ctx.userId,
+    event_type: "listing.featured",
+    entity_type: "listing",
+    entity_id: listingId,
+    payload: { period, featured_until: until },
+  });
+
+  redirect(`/company/listings/${listingId}?boosted=1`);
 }
 
 export async function updateListing(formData: FormData) {
