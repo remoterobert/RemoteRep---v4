@@ -1,9 +1,5 @@
 import Link from "next/link";
-import {
-  ChatBubbleLeftRightIcon,
-  SparklesIcon,
-  ArrowRightIcon,
-} from "@heroicons/react/24/outline";
+import { SparklesIcon } from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -112,52 +108,56 @@ export async function ChatSidebar({
         </p>
       </header>
 
-      {sorted.length === 0 ? (
-        <div className="flex-1 flex flex-col justify-center px-6 pb-8">
-          {/* Hero illustration */}
-          <div className="relative mx-auto mb-6">
-            <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full" />
-            <div className="relative h-20 w-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center">
-              <ChatBubbleLeftRightIcon className="h-9 w-9 text-primary" />
+      <ul className="overflow-y-auto flex-1 px-2 py-2 space-y-0.5">
+        {/* Pinned interactive placeholder — a stand-in for the support bot */}
+        <li>
+          <Link
+            href="/chats"
+            className={`group block px-3 py-3 rounded-xl transition-all duration-150 ${
+              !activeChatId
+                ? "bg-primary/12 dark:bg-primary/15"
+                : "hover:bg-zinc-100 dark:hover:bg-white/[0.04]"
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              <div className="relative shrink-0">
+                <div className="h-11 w-11 rounded-full flex items-center justify-center bg-gradient-to-br from-primary to-primary-blue text-white shadow-sm">
+                  <SparklesIcon className="h-5 w-5" />
+                </div>
+                <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-[#0b1220]" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline justify-between gap-2 mb-0.5">
+                  <div className="text-sm truncate font-bold text-foreground">
+                    RemoteRep Support
+                  </div>
+                  <span className="text-[10px] shrink-0 tracking-wide font-semibold text-primary">
+                    New
+                  </span>
+                </div>
+                <p className="text-[11px] text-emerald-500 truncate mb-1">
+                  Online
+                </p>
+                <p className="text-xs truncate leading-snug text-light-grey">
+                  👋 Welcome! Say hi to see how chats work.
+                </p>
+              </div>
             </div>
-          </div>
+          </Link>
+        </li>
 
-          <h2 className="text-center text-base font-semibold mb-2">
-            No conversations yet
-          </h2>
-          <p className="text-center text-sm text-light-grey leading-relaxed mb-6 max-w-[260px] mx-auto">
-            When a candidate says{" "}
-            <span className="font-semibold text-primary">
-              &ldquo;I&apos;m interested&rdquo;
-            </span>{" "}
-            on your invitation, the conversation lands right here.
-          </p>
-
-          {/* Steps card */}
-          <div className="rounded-xl bg-surface-2 border border-border p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <SparklesIcon className="h-4 w-4 text-primary" />
-              <span className="text-[10px] uppercase tracking-wider font-bold text-light-grey">
-                Getting started
-              </span>
-            </div>
-            <ol className="space-y-2.5 text-xs">
-              <StepLine num={1} text="Browse candidates" />
-              <StepLine num={2} text="Click Invite on a good fit" />
-              <StepLine num={3} text="They accept — chat opens" />
-            </ol>
-            <Link
-              href="/candidates"
-              className="mt-4 flex items-center justify-center gap-1.5 rounded-lg bg-primary text-white px-3 py-2 text-xs font-semibold hover:opacity-90 transition-opacity"
-            >
-              Browse candidates
-              <ArrowRightIcon className="h-3.5 w-3.5" />
-            </Link>
-          </div>
-        </div>
-      ) : (
-        <ul className="overflow-y-auto flex-1 px-2 py-2 space-y-0.5">
-          {sorted.map((row) => {
+        {sorted.length === 0 ? (
+          <li className="px-3 pt-6 pb-4">
+            <p className="text-center text-xs text-light-grey leading-relaxed">
+              Your real conversations will appear here. When a candidate says{" "}
+              <span className="font-semibold text-primary">
+                &ldquo;I&apos;m interested&rdquo;
+              </span>{" "}
+              on your invitation, the chat lands right below.
+            </p>
+          </li>
+        ) : (
+          sorted.map((row) => {
             const otherList = otherByChat.get(row.chat_id) ?? [];
             const otherNames = otherList
               .map((o) => {
@@ -254,23 +254,10 @@ export async function ChatSidebar({
                 </Link>
               </li>
             );
-          })}
-        </ul>
-      )}
+          })
+        )}
+      </ul>
     </aside>
-  );
-}
-
-function StepLine({ num, text }: { num: number; text: string }) {
-  return (
-    <li className="flex items-center gap-2.5">
-      <span className="h-5 w-5 rounded-full bg-primary/15 text-primary text-[10px] font-bold flex items-center justify-center shrink-0">
-        {num}
-      </span>
-      <span className="text-foreground/85 leading-tight">
-        {text}
-      </span>
-    </li>
   );
 }
 
