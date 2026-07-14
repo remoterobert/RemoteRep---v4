@@ -143,32 +143,54 @@ export default async function CandidatesPage({
     : null;
 
   // -------- Fetch candidate data --------
-  const { data: rawRows } = await supabase
+  // NOTE: candidate_profiles is NOT directly embeddable on candidate_specialties
+  // — the two tables relate only through users, so PostgREST rejects the embed
+  // (which silently returned zero candidates). Fetch specialties first, then
+  // load the matching profiles by user_id and join them in memory.
+  const { data: specRows } = await supabase
     .from("candidate_specialties")
-    .select(
-      "user_id, sales_role, users!inner(first_name, last_name), candidate_profiles(headline, years_of_experience, education, sales_types, deal_amounts, decision_makers, sales_environments, sales_cycles, sales_volumes, lead_types, technologies, industry_slugs, visibility)",
-    )
+    .select("user_id, sales_role, users!inner(first_name, last_name)")
     .limit(500);
+
+  const specialtyUserIds = Array.from(
+    new Set((specRows ?? []).map((r) => (r as { user_id: string }).user_id)),
+  );
+
+  const { data: profileRows } =
+    specialtyUserIds.length > 0
+      ? await supabase
+          .from("candidate_profiles")
+          .select(
+            "user_id, headline, years_of_experience, education, sales_types, deal_amounts, decision_makers, sales_environments, sales_cycles, sales_volumes, lead_types, technologies, industry_slugs, visibility",
+          )
+          .in("user_id", specialtyUserIds)
+      : { data: [] };
+
+  type ProfileRow = {
+    user_id: string;
+    headline: string | null;
+    years_of_experience: number | null;
+    education: string | null;
+    sales_types: string[] | null;
+    deal_amounts: string[] | null;
+    decision_makers: string[] | null;
+    sales_environments: string[] | null;
+    sales_cycles: string[] | null;
+    sales_volumes: string[] | null;
+    lead_types: string[] | null;
+    technologies: string[] | null;
+    industry_slugs: string[] | null;
+    visibility: string | null;
+  };
+  const profileByUser = new Map<string, ProfileRow>();
+  for (const p of (profileRows ?? []) as unknown as ProfileRow[]) {
+    profileByUser.set(p.user_id, p);
+  }
 
   type RawRow = {
     user_id: string;
     sales_role: string;
     users: { first_name: string | null; last_name: string | null };
-    candidate_profiles: {
-      headline: string | null;
-      years_of_experience: number | null;
-      education: string | null;
-      sales_types: string[] | null;
-      deal_amounts: string[] | null;
-      decision_makers: string[] | null;
-      sales_environments: string[] | null;
-      sales_cycles: string[] | null;
-      sales_volumes: string[] | null;
-      lead_types: string[] | null;
-      technologies: string[] | null;
-      industry_slugs: string[] | null;
-      visibility: string | null;
-    } | null;
   };
 
   // Group specialties by user_id and gather ProfileForMatch data.
@@ -187,13 +209,13 @@ export default async function CandidatesPage({
       candidateForMatch: CandidateForMatch;
     }
   >();
-  for (const r of (rawRows ?? []) as unknown as RawRow[]) {
+  for (const r of (specRows ?? []) as unknown as RawRow[]) {
     const existing = byUser.get(r.user_id);
     if (existing) {
       existing.specialties.push(r.sales_role);
       existing.candidateForMatch.specialties = existing.specialties;
     } else {
-      const cp = r.candidate_profiles;
+      const cp = profileByUser.get(r.user_id) ?? null;
       byUser.set(r.user_id, {
         user_id: r.user_id,
         first_name: r.users.first_name,
