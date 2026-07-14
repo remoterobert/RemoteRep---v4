@@ -102,13 +102,17 @@ function Badge({
       {/* Tooltip bubble — visible immediately on group-hover, no delay */}
       <div
         role="tooltip"
-        className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 px-3 py-2 rounded-lg bg-[#0b1220] text-white text-xs leading-snug shadow-xl opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-events-none transition-opacity duration-100 whitespace-normal"
+        className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 px-3 py-2 rounded-lg bg-[#0b1220] text-white text-xs leading-snug shadow-xl ring-1 ring-white/25 border border-white/10 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 pointer-events-none transition-opacity duration-100 whitespace-normal"
       >
         {activeTooltip}
-        {/* Little arrow pointing down at the badge */}
+        {/* Little arrow pointing down at the badge — matches the bubble's border */}
         <span
           aria-hidden="true"
-          className="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-[#0b1220]"
+          className="absolute top-full left-1/2 -translate-x-1/2 -mt-[5px] border-[5px] border-transparent border-t-white/25"
+        />
+        <span
+          aria-hidden="true"
+          className="absolute top-full left-1/2 -translate-x-1/2 -mt-[6px] border-4 border-transparent border-t-[#0b1220]"
         />
       </div>
     </div>

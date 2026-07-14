@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   CheckIcon,
+  MapPinIcon,
+  AcademicCapIcon,
   BookmarkIcon as BookmarkOutline,
 } from "@heroicons/react/24/outline";
 import { BookmarkIcon as BookmarkSolid } from "@heroicons/react/24/solid";
@@ -40,9 +42,14 @@ type CandidateRow = {
   first_name: string | null;
   last_name: string | null;
   headline: string | null;
+  photo_url: string | null;
   years_of_experience: number | null;
+  education: string | null;
   sales_types: string[] | null;
   deal_amounts: string[] | null;
+  sales_volumes: string[] | null;
+  city: string | null;
+  state_region: string | null;
   visibility: string | null;
   specialties: string[];
   experienceMatch: number;
@@ -165,7 +172,7 @@ export default async function CandidatesPage({
       ? await supabase
           .from("candidate_profiles")
           .select(
-            "user_id, headline, years_of_experience, education, sales_types, deal_amounts, decision_makers, sales_environments, sales_cycles, sales_volumes, lead_types, technologies, industry_slugs, visibility",
+            "user_id, headline, photo_url, years_of_experience, education, sales_types, deal_amounts, decision_makers, sales_environments, sales_cycles, sales_volumes, lead_types, technologies, industry_slugs, city, state_region, visibility",
           )
           .in("user_id", specialtyUserIds)
       : { data: [] };
@@ -173,6 +180,7 @@ export default async function CandidatesPage({
   type ProfileRow = {
     user_id: string;
     headline: string | null;
+    photo_url: string | null;
     years_of_experience: number | null;
     education: string | null;
     sales_types: string[] | null;
@@ -184,6 +192,8 @@ export default async function CandidatesPage({
     lead_types: string[] | null;
     technologies: string[] | null;
     industry_slugs: string[] | null;
+    city: string | null;
+    state_region: string | null;
     visibility: string | null;
   };
   const profileByUser = new Map<string, ProfileRow>();
@@ -205,9 +215,14 @@ export default async function CandidatesPage({
       first_name: string | null;
       last_name: string | null;
       headline: string | null;
+      photo_url: string | null;
       years_of_experience: number | null;
+      education: string | null;
       sales_types: string[] | null;
       deal_amounts: string[] | null;
+      sales_volumes: string[] | null;
+      city: string | null;
+      state_region: string | null;
       visibility: string | null;
       specialties: string[];
       candidateForMatch: CandidateForMatch;
@@ -225,9 +240,14 @@ export default async function CandidatesPage({
         first_name: r.users.first_name,
         last_name: r.users.last_name,
         headline: cp?.headline ?? null,
+        photo_url: cp?.photo_url ?? null,
         years_of_experience: cp?.years_of_experience ?? null,
+        education: cp?.education ?? null,
         sales_types: cp?.sales_types ?? null,
         deal_amounts: cp?.deal_amounts ?? null,
+        sales_volumes: cp?.sales_volumes ?? null,
+        city: cp?.city ?? null,
+        state_region: cp?.state_region ?? null,
         visibility: cp?.visibility ?? null,
         specialties: [r.sales_role],
         candidateForMatch: {
@@ -292,9 +312,14 @@ export default async function CandidatesPage({
       first_name: c.first_name,
       last_name: c.last_name,
       headline: c.headline,
+      photo_url: c.photo_url,
       years_of_experience: c.years_of_experience,
+      education: c.education,
       sales_types: c.sales_types,
       deal_amounts: c.deal_amounts,
+      sales_volumes: c.sales_volumes,
+      city: c.city,
+      state_region: c.state_region,
       visibility: c.visibility,
       specialties: c.specialties,
       experienceMatch: expScore,
@@ -371,7 +396,7 @@ export default async function CandidatesPage({
   };
 
   return (
-    <main className="flex-1 p-6 max-w-5xl mx-auto w-full">
+    <main className="flex-1 p-6 max-w-7xl mx-auto w-full">
       <div className="flex items-baseline justify-between mb-2 flex-wrap gap-2">
         <div>
           <h1 className="text-2xl font-semibold">Candidates</h1>
@@ -530,6 +555,44 @@ function initials(c: CandidateRow): string {
   return (a + b).toUpperCase() || "?";
 }
 
+// Sales-volume / deal-size ranges are stored low→high; show the top band a
+// rep has worked, since that's the headline number a hiring manager scans for.
+const VOLUME_ORDER = [
+  "$0 - $100,000", "$100,000 - $250,000", "$250,000 - $500,000",
+  "$500,000 - $1M", "$1M - $2M", "$2M - $5M", "$5M+",
+];
+const DEAL_ORDER = [
+  "$0 - $5000", "$5000 - $20,000", "$20,000 - $50,000", "$50,000 - $100,000",
+  "$100,000 - $500,000", "$500,000 - $1M", "$1M+",
+];
+function topRange(arr: string[] | null, order: string[]): string | null {
+  if (!arr || arr.length === 0) return null;
+  let best: string | null = null;
+  let bestIdx = -1;
+  for (const v of arr) {
+    const i = order.indexOf(v);
+    if (i > bestIdx) { bestIdx = i; best = v; }
+  }
+  return best ?? arr[0];
+}
+function locationOf(c: CandidateRow): string | null {
+  const parts = [c.city?.trim(), c.state_region?.trim()].filter(Boolean);
+  return parts.length ? parts.join(", ") : null;
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-zinc-50 dark:bg-white/[0.03] ring-1 ring-zinc-200 dark:ring-white/[0.06] px-3 py-2 min-w-[104px]">
+      <div className="text-[9px] uppercase tracking-wider font-semibold text-light-grey">
+        {label}
+      </div>
+      <div className="text-sm font-bold text-foreground tabular-nums leading-tight mt-0.5 whitespace-nowrap">
+        {value}
+      </div>
+    </div>
+  );
+}
+
 function CandidateCard({
   candidate,
   status,
@@ -548,23 +611,45 @@ function CandidateCard({
   const specialties = candidate.specialties;
   const name = displayName(candidate);
   const inits = initials(candidate);
+  const location = locationOf(candidate);
+  const topVolume = topRange(candidate.sales_volumes, VOLUME_ORDER);
+  const topDeal = topRange(candidate.deal_amounts, DEAL_ORDER);
   const detailHref = listingId
     ? `/profiles/${candidate.user_id}?listing=${listingId}`
     : `/profiles/${candidate.user_id}`;
 
+  const Avatar = (
+    <div
+      className="h-14 w-14 shrink-0 rounded-full flex items-center justify-center text-base font-bold bg-gradient-to-br from-primary/25 to-primary/5 ring-1 ring-primary/20 text-foreground bg-cover bg-center"
+      style={
+        candidate.photo_url
+          ? { backgroundImage: `url(${candidate.photo_url})` }
+          : undefined
+      }
+    >
+      {!candidate.photo_url && inits}
+    </div>
+  );
+
+  // Bookmark — top-right of the card, empty with a red border so it stands out;
+  // fills solid once saved.
   const BookmarkBtn = (
     <form action={toggleCandidateBookmark} className="contents">
       <input type="hidden" name="candidate_user_id" value={candidate.user_id} />
       <button
         type="submit"
-        title={isBookmarked ? "Remove bookmark" : "Save this rep"}
-        aria-label={isBookmarked ? "Remove bookmark" : "Save this rep"}
-        className="p-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800"
+        title={isBookmarked ? "Saved — click to remove" : "Save this rep"}
+        aria-label={isBookmarked ? "Saved — click to remove" : "Save this rep"}
+        className={`p-1.5 rounded-lg border transition-colors ${
+          isBookmarked
+            ? "border-primary bg-primary/10 hover:bg-primary/15"
+            : "border-danger/80 bg-transparent hover:bg-danger/10"
+        }`}
       >
         {isBookmarked ? (
           <BookmarkSolid className="h-5 w-5 text-primary" />
         ) : (
-          <BookmarkOutline className="h-5 w-5 text-light-grey" />
+          <BookmarkOutline className="h-5 w-5 text-danger" />
         )}
       </button>
     </form>
@@ -573,35 +658,31 @@ function CandidateCard({
   let InviteBtn: React.ReactNode;
   if (status === "interviewing") {
     InviteBtn = (
-      <span className="inline-flex items-center gap-1 text-xs bg-interviewing/10 text-interviewing rounded px-2 py-1 font-medium">
-        <CheckIcon className="h-3 w-3" />
+      <span className="inline-flex items-center gap-1 text-xs bg-interviewing/10 text-interviewing rounded-lg px-3 py-2 font-medium">
+        <CheckIcon className="h-3.5 w-3.5" />
         Interested
       </span>
     );
   } else if (status === "invited") {
     InviteBtn = (
-      <span className="inline-flex items-center gap-1 text-xs bg-invited/10 text-invited rounded px-2 py-1 font-medium">
-        <CheckIcon className="h-3 w-3" />
+      <span className="inline-flex items-center gap-1 text-xs bg-invited/10 text-invited rounded-lg px-3 py-2 font-medium">
+        <CheckIcon className="h-3.5 w-3.5" />
         Awaiting reply
       </span>
     );
   } else if (status === "withdrawn") {
     InviteBtn = (
-      <span className="inline-flex items-center gap-1 text-xs bg-zinc-200 dark:bg-zinc-800 text-light-grey rounded px-2 py-1 font-medium">
+      <span className="inline-flex items-center gap-1 text-xs bg-zinc-200 dark:bg-zinc-800 text-light-grey rounded-lg px-3 py-2 font-medium">
         Passed
       </span>
     );
   } else {
     InviteBtn = (
       <form action={inviteCandidate} className="contents">
-        <input
-          type="hidden"
-          name="candidate_user_id"
-          value={candidate.user_id}
-        />
+        <input type="hidden" name="candidate_user_id" value={candidate.user_id} />
         <button
           type="submit"
-          className="text-xs rounded bg-primary text-white px-3 py-1.5 font-medium hover:opacity-90"
+          className="w-full sm:w-auto text-sm rounded-lg bg-primary text-white px-5 py-2 font-semibold hover:opacity-90 transition-opacity shadow-sm shadow-primary/20"
         >
           Invite
         </button>
@@ -609,138 +690,129 @@ function CandidateCard({
     );
   }
 
+  const MatchBlock = showMatch ? (
+    <MatchBadges
+      size="sm"
+      experience={candidate.experienceMatch}
+      goals={candidate.goalsMatch}
+      experienceScored={candidate.experienceScored}
+      goalsScored={candidate.goalsScored}
+      experienceLabel="Exp"
+      goalsLabel="Goals"
+      experienceTooltip={EXPERIENCE_TOOLTIP}
+      goalsTooltip={GOALS_TOOLTIP}
+      emptyExperienceTooltip={EMPTY_EXPERIENCE_TOOLTIP}
+      emptyGoalsTooltip={EMPTY_GOALS_TOOLTIP}
+    />
+  ) : null;
+
+  const MetaRow = (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-light-grey">
+      {location && (
+        <span className="inline-flex items-center gap-1">
+          <MapPinIcon className="h-3.5 w-3.5" />
+          {location}
+        </span>
+      )}
+      {candidate.education && (
+        <span className="inline-flex items-center gap-1">
+          <AcademicCapIcon className="h-3.5 w-3.5" />
+          {candidate.education}
+        </span>
+      )}
+    </div>
+  );
+
+  const Chips = (
+    <div className="flex flex-wrap gap-1.5 mt-3">
+      {specialties.map((r) => (
+        <span
+          key={r}
+          className="text-[11px] bg-primary/10 text-primary rounded-full px-2.5 py-0.5 font-semibold"
+        >
+          {r}
+        </span>
+      ))}
+      {candidate.sales_types?.map((t) => (
+        <span
+          key={t}
+          className="text-[11px] bg-zinc-100 dark:bg-white/[0.06] text-light-grey rounded-full px-2.5 py-0.5"
+        >
+          {t}
+        </span>
+      ))}
+    </div>
+  );
+
+  const Stats = (
+    <div className="flex flex-wrap gap-2">
+      {candidate.years_of_experience != null && (
+        <Stat label="Experience" value={`${candidate.years_of_experience} yrs`} />
+      )}
+      {topVolume && <Stat label="Annual volume" value={topVolume} />}
+      {topDeal && <Stat label="Top deal" value={topDeal} />}
+    </div>
+  );
+
   if (view === "tile") {
     return (
-      <article className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-4">
-        <div className="flex items-start gap-3 mb-3">
-          <div className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-sm font-semibold">
-            {inits}
-          </div>
-          <div className="flex-1">
+      <article className="relative rounded-2xl border border-zinc-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.02] p-5 hover:border-primary/30 hover:shadow-lg transition-all">
+        <div className="absolute top-3 right-3">{BookmarkBtn}</div>
+        <div className="flex items-start gap-3 pr-10">
+          {Avatar}
+          <div className="min-w-0">
             <Link
               href={detailHref}
-              className="font-semibold text-sm hover:text-primary transition-colors"
+              className="font-bold hover:text-primary transition-colors block truncate"
             >
               {name}
             </Link>
-            {candidate.years_of_experience != null && (
-              <p className="text-xs text-light-grey">
-                {candidate.years_of_experience} yrs experience
-              </p>
-            )}
+            {MetaRow}
           </div>
         </div>
-        {showMatch && (
-          <div className="mb-2">
-            <MatchBadges
-              size="sm"
-              experience={candidate.experienceMatch}
-              goals={candidate.goalsMatch}
-              experienceScored={candidate.experienceScored}
-              goalsScored={candidate.goalsScored}
-              experienceLabel="Exp"
-              goalsLabel="Goals"
-              experienceTooltip={EXPERIENCE_TOOLTIP}
-              goalsTooltip={GOALS_TOOLTIP}
-              emptyExperienceTooltip={EMPTY_EXPERIENCE_TOOLTIP}
-              emptyGoalsTooltip={EMPTY_GOALS_TOOLTIP}
-            />
-          </div>
-        )}
         {candidate.headline && (
-          <p className="text-xs text-zinc-600 dark:text-zinc-400 mb-3 line-clamp-2">
+          <p className="text-sm text-zinc-600 dark:text-zinc-300 mt-3 line-clamp-2">
             {candidate.headline}
           </p>
         )}
-        <div className="flex flex-wrap gap-1 mb-3">
-          {specialties.map((r) => (
-            <span
-              key={r}
-              className="text-[10px] bg-primary/10 text-primary rounded px-1.5 py-0.5 font-semibold"
-            >
-              {r}
-            </span>
-          ))}
-          {candidate.sales_types?.map((t) => (
-            <span
-              key={t}
-              className="text-[10px] bg-zinc-100 dark:bg-zinc-800 rounded px-1.5 py-0.5"
-            >
-              {t}
-            </span>
-          ))}
-        </div>
-        <div className="flex justify-end items-center gap-1">
-          {BookmarkBtn}
-          {InviteBtn}
-        </div>
+        {showMatch && <div className="mt-3">{MatchBlock}</div>}
+        <div className="mt-3">{Stats}</div>
+        {Chips}
+        <div className="mt-4 flex justify-end">{InviteBtn}</div>
       </article>
     );
   }
 
   return (
-    <article className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 flex items-start gap-4">
-      <div className="w-12 h-12 shrink-0 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-sm font-semibold">
-        {inits}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-baseline gap-3 mb-1 flex-wrap">
-          <Link
-            href={detailHref}
-            className="font-semibold hover:text-primary transition-colors"
-          >
-            {name}
-          </Link>
-          {candidate.years_of_experience != null && (
-            <span className="text-xs text-light-grey">
-              {candidate.years_of_experience} yrs experience
-            </span>
-          )}
-        </div>
-        {showMatch && (
-          <div className="mb-2">
-            <MatchBadges
-              size="sm"
-              experience={candidate.experienceMatch}
-              goals={candidate.goalsMatch}
-              experienceScored={candidate.experienceScored}
-              goalsScored={candidate.goalsScored}
-              experienceLabel="Exp"
-              goalsLabel="Goals"
-              experienceTooltip={EXPERIENCE_TOOLTIP}
-              goalsTooltip={GOALS_TOOLTIP}
-              emptyExperienceTooltip={EMPTY_EXPERIENCE_TOOLTIP}
-              emptyGoalsTooltip={EMPTY_GOALS_TOOLTIP}
-            />
+    <article className="rounded-2xl border border-zinc-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.02] p-5 hover:border-primary/30 hover:shadow-lg transition-all">
+      <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-6">
+        {/* Identity */}
+        <div className="flex items-start gap-4 flex-1 min-w-0">
+          {Avatar}
+          <div className="min-w-0">
+            <Link
+              href={detailHref}
+              className="text-lg font-bold hover:text-primary transition-colors"
+            >
+              {name}
+            </Link>
+            {MetaRow}
+            {candidate.headline && (
+              <p className="text-sm text-zinc-600 dark:text-zinc-300 mt-1.5 line-clamp-2 max-w-2xl">
+                {candidate.headline}
+              </p>
+            )}
+            {Chips}
           </div>
-        )}
-        {candidate.headline && (
-          <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-2">
-            {candidate.headline}
-          </p>
-        )}
-        <div className="flex flex-wrap gap-1 text-xs">
-          {specialties.map((r) => (
-            <span
-              key={r}
-              className="bg-primary/10 text-primary rounded px-2 py-0.5 font-semibold"
-            >
-              {r}
-            </span>
-          ))}
-          {candidate.sales_types?.map((t) => (
-            <span
-              key={t}
-              className="bg-zinc-100 dark:bg-zinc-800 rounded px-2 py-0.5"
-            >
-              {t}
-            </span>
-          ))}
         </div>
-      </div>
-      <div className="shrink-0 flex items-center gap-1">
-        {BookmarkBtn}
-        {InviteBtn}
+
+        {/* Right rail: bookmark (top-right) + match + key stats + action */}
+        <div className="flex flex-col gap-3 lg:items-end lg:shrink-0">
+          <div className="self-end">{BookmarkBtn}</div>
+          {showMatch && MatchBlock}
+          {Stats}
+          <div className="w-full sm:w-auto">{InviteBtn}</div>
+        </div>
       </div>
     </article>
   );
