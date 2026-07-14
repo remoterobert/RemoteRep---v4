@@ -1,7 +1,11 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { getTenantSubscription, hasAiAccess } from "@/lib/subscriptions";
+import {
+  getTenantSubscription,
+  hasAiAccess,
+  tenantHasActiveFeaturedListing,
+} from "@/lib/subscriptions";
 import { createListing } from "../actions";
 import { NewListingForm } from "./NewListingForm";
 
@@ -43,7 +47,9 @@ export default async function NewListingPage({
 
   const params = await searchParams;
   const { tier } = await getTenantSubscription(m.tenant_id);
-  const aiAllowed = hasAiAccess(tier);
+  // AI is unlocked by a Premium+ plan OR an active Featured ($59) listing.
+  const aiAllowed =
+    hasAiAccess(tier) || (await tenantHasActiveFeaturedListing(m.tenant_id));
 
   return (
     <main className="flex-1 p-6 max-w-4xl mx-auto w-full">

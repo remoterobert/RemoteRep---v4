@@ -86,6 +86,13 @@ export function FeatureListingModal({
             <CheckCircleIcon className="h-4 w-4 text-success mt-0.5 shrink-0" />
             <span>Email blast to our full candidate list</span>
           </li>
+          <li className="flex items-start gap-2">
+            <CheckCircleIcon className="h-4 w-4 text-success mt-0.5 shrink-0" />
+            <span>
+              <span className="font-semibold">AI features included</span> — the
+              AI listing writer and profile helpers, same as Premium
+            </span>
+          </li>
         </ul>
 
         <div className="grid grid-cols-2 gap-2 mb-4">

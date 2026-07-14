@@ -8,6 +8,29 @@ export const TIER_LABEL: Record<SubscriptionTier, string> = {
   concierge: "Concierge",
 };
 
+/**
+ * What each paid tier unlocks *beyond the previous one* — used to tell paid
+ * users exactly what they got, so they aren't guessing about new features.
+ */
+export const TIER_PERKS: Record<SubscriptionTier, string[]> = {
+  free: [
+    "Unlimited job listings",
+    "Kanban ATS + chat",
+    "Browse the candidate directory",
+  ],
+  premium: [
+    "AI listing writer (Default / Repel / Inclusive styles)",
+    "AI profile assist (coming soon)",
+    "Priority support",
+  ],
+  concierge: [
+    "AI sources + invites your best-fit candidates 24/7",
+    "AI replies to candidate messages and offers to book interviews",
+    "Every action logged; final hiring decisions stay with your team",
+    "No listing cap",
+  ],
+};
+
 export const TIER_PRICE_MONTHLY: Record<SubscriptionTier, number | null> = {
   free: null,
   premium: 59,
@@ -120,4 +143,35 @@ export function isFeaturedListing(listing: {
 }): boolean {
   if (!listing.featured_until) return false;
   return new Date(listing.featured_until) > new Date();
+}
+
+/** True if the tenant has at least one currently-featured ($59) listing. */
+export async function tenantHasActiveFeaturedListing(
+  tenantId: string,
+): Promise<boolean> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("listings")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .gt("featured_until", new Date().toISOString())
+    .limit(1);
+  return !!(data && data.length > 0);
+}
+
+/**
+ * AI access for the current hiring user. Granted by a Premium+ subscription OR
+ * by having an active Featured ($59) listing — the Featured boost bundles the
+ * same AI features as Premium.
+ */
+export async function currentHiringAiAccess(): Promise<{
+  allowed: boolean;
+  tier: SubscriptionTier;
+  tenantId: string | null;
+}> {
+  const { tenantId, tier } = await getCurrentHiringSubscription();
+  if (hasAiAccess(tier)) return { allowed: true, tier, tenantId };
+  if (tenantId && (await tenantHasActiveFeaturedListing(tenantId)))
+    return { allowed: true, tier, tenantId };
+  return { allowed: false, tier, tenantId };
 }
