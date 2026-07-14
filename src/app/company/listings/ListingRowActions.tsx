@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   EllipsisHorizontalIcon,
   PencilSquareIcon,
@@ -38,16 +39,35 @@ export function ListingRowActions({
   const [open, setOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [confirmText, setConfirmText] = useState("");
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
 
   const isPublished = status === "published";
   const inactiveLabel = isPublished ? "Mark inactive" : "Mark active";
   const inactiveAction = isPublished ? "unpublish" : "publish";
 
+  function close() {
+    setOpen(false);
+    setConfirming(false);
+    setConfirmText("");
+  }
+  function toggle() {
+    if (!open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      // Anchor the menu's top-right corner just under the button. Using fixed
+      // coordinates + a portal keeps it above (and outside) the table
+      // container so it can't be clipped by the container's overflow.
+      setPos({ top: r.bottom + 4, right: window.innerWidth - r.right });
+    }
+    setOpen((v) => !v);
+  }
+
   return (
-    <div className="relative inline-block text-left">
+    <div className="inline-block text-left">
       <button
+        ref={btnRef}
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggle}
         className="inline-flex items-center gap-1 rounded-md p-1.5 hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition-colors"
         aria-haspopup="menu"
         aria-expanded={open}
@@ -55,19 +75,14 @@ export function ListingRowActions({
         <EllipsisHorizontalIcon className="h-5 w-5 text-light-grey" />
       </button>
 
-      {open && (
+      {open && pos &&
+        createPortal(
         <>
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => {
-              setOpen(false);
-              setConfirming(false);
-              setConfirmText("");
-            }}
-          />
+          <div className="fixed inset-0 z-[100]" onClick={close} />
           <div
             role="menu"
-            className="absolute right-0 mt-1 w-56 rounded-lg border border-border bg-surface-2 shadow-xl z-50 py-1 text-left"
+            style={{ position: "fixed", top: pos.top, right: pos.right }}
+            className="w-56 rounded-lg border border-border bg-surface-2 shadow-xl z-[101] py-1 text-left"
           >
             {/* Edit */}
             <Link
@@ -165,8 +180,9 @@ export function ListingRowActions({
               </form>
             )}
           </div>
-        </>
-      )}
+        </>,
+          document.body,
+        )}
     </div>
   );
 }
