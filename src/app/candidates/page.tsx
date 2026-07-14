@@ -278,23 +278,31 @@ export default async function CandidatesPage({
     };
   });
 
-  // Filter by chip selection OR default to hiring intents' roles.
+  // Show ALL candidates by default — never hide a rep just because their role
+  // isn't what this company is actively hiring for. A specific role chip is the
+  // only thing that narrows the list; ranking (below) surfaces best-fit first.
   const filtered = candidates.filter((c) => {
-    const specialtySet = new Set(c.specialties);
-    if (selectedRole === "all") return true;
-    if (selectedRole) return specialtySet.has(selectedRole);
-    if (activeIntentRoles.size === 0) return true;
-    for (const r of activeIntentRoles) {
-      if (specialtySet.has(r)) return true;
+    if (selectedRole && selectedRole !== "all") {
+      return new Set(c.specialties).has(selectedRole);
     }
-    return false;
+    return true;
   });
 
-  // Rank by combined match score when a listing is selected.
+  // Rank best-fit first, but NEVER exclude: weaker matches simply sink lower.
   if (selectedListingForMatch) {
     filtered.sort(
       (a, b) =>
         b.experienceMatch + b.goalsMatch - (a.experienceMatch + a.goalsMatch),
+    );
+  } else {
+    // No listing to score against — order by overlap with the roles this
+    // company is hiring for, then by experience, so the most relevant lead.
+    const overlap = (c: CandidateRow) =>
+      c.specialties.reduce((n, r) => n + (activeIntentRoles.has(r) ? 1 : 0), 0);
+    filtered.sort(
+      (a, b) =>
+        overlap(b) - overlap(a) ||
+        (b.years_of_experience ?? 0) - (a.years_of_experience ?? 0),
     );
   }
 
