@@ -144,3 +144,34 @@ export function isFeaturedListing(listing: {
   if (!listing.featured_until) return false;
   return new Date(listing.featured_until) > new Date();
 }
+
+/** True if the tenant has at least one currently-featured ($59) listing. */
+export async function tenantHasActiveFeaturedListing(
+  tenantId: string,
+): Promise<boolean> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("listings")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .gt("featured_until", new Date().toISOString())
+    .limit(1);
+  return !!(data && data.length > 0);
+}
+
+/**
+ * AI access for the current hiring user. Granted by a Premium+ subscription OR
+ * by having an active Featured ($59) listing — the Featured boost bundles the
+ * same AI features as Premium.
+ */
+export async function currentHiringAiAccess(): Promise<{
+  allowed: boolean;
+  tier: SubscriptionTier;
+  tenantId: string | null;
+}> {
+  const { tenantId, tier } = await getCurrentHiringSubscription();
+  if (hasAiAccess(tier)) return { allowed: true, tier, tenantId };
+  if (tenantId && (await tenantHasActiveFeaturedListing(tenantId)))
+    return { allowed: true, tier, tenantId };
+  return { allowed: false, tier, tenantId };
+}

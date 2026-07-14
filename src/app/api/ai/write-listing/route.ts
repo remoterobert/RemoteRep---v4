@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { LISTING_STYLES, type ListingStyle } from "@/lib/listings/options";
-import { getCurrentHiringSubscription, hasAiAccess } from "@/lib/subscriptions";
+import { currentHiringAiAccess } from "@/lib/subscriptions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -73,10 +73,11 @@ export async function POST(req: NextRequest) {
   }
 
   // Paywall — free tenants get 402 so the UI can surface the upgrade path.
-  const { tier } = await getCurrentHiringSubscription();
-  if (!hasAiAccess(tier)) {
+  // AI is unlocked by a Premium+ plan OR an active Featured ($59) listing.
+  const { allowed: aiAllowed } = await currentHiringAiAccess();
+  if (!aiAllowed) {
     return Response.json(
-      { error: "AI features require Premium or Concierge." },
+      { error: "AI features require Premium, Concierge, or a Featured listing." },
       { status: 402 },
     );
   }
