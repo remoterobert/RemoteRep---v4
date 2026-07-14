@@ -118,7 +118,7 @@ export async function HiringDashboard({
 
   // Fetch candidate identities for bookmarks (users table isn't inline
   // because bookmarks.target_id doesn't have a FK PostgREST can auto-join).
-  let bookmarkUsers = new Map<
+  const bookmarkUsers = new Map<
     string,
     { first_name: string | null; last_name: string | null; email: string }
   >();
