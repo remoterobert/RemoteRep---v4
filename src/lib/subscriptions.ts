@@ -8,6 +8,29 @@ export const TIER_LABEL: Record<SubscriptionTier, string> = {
   concierge: "Concierge",
 };
 
+/**
+ * What each paid tier unlocks *beyond the previous one* — used to tell paid
+ * users exactly what they got, so they aren't guessing about new features.
+ */
+export const TIER_PERKS: Record<SubscriptionTier, string[]> = {
+  free: [
+    "Unlimited job listings",
+    "Kanban ATS + chat",
+    "Browse the candidate directory",
+  ],
+  premium: [
+    "AI listing writer (Default / Repel / Inclusive styles)",
+    "AI profile assist (coming soon)",
+    "Priority support",
+  ],
+  concierge: [
+    "AI sources + invites your best-fit candidates 24/7",
+    "AI replies to candidate messages and offers to book interviews",
+    "Every action logged; final hiring decisions stay with your team",
+    "No listing cap",
+  ],
+};
+
 export const TIER_PRICE_MONTHLY: Record<SubscriptionTier, number | null> = {
   free: null,
   premium: 59,

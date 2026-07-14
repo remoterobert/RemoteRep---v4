@@ -8,7 +8,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { ListingRowActions } from "./ListingRowActions";
 import { setListingStatus, deleteListing } from "./actions";
-import { UpgradeButton } from "@/components/UpgradeButton";
+import { PlanBadge } from "@/components/PlanBadge";
 import { getTenantSubscription, isFeaturedListing } from "@/lib/subscriptions";
 
 export const dynamic = "force-dynamic";
@@ -150,7 +150,7 @@ export default async function CompanyListingsPage({
             <PlusIcon className="h-4 w-4" />
             New listing
           </Link>
-          <UpgradeButton currentTier={currentTier} />
+          <PlanBadge currentTier={currentTier} />
         </div>
       </div>
 

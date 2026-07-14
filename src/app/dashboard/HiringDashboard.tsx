@@ -11,7 +11,8 @@ import { Kanban, type KanbanCardData, type ColumnId } from "./Kanban";
 import { ClosedToggle } from "./ClosedToggle";
 import { ListingFilter } from "./ListingFilter";
 import { QuickStartCard, type QuickStartStep } from "./QuickStartCard";
-import { UpgradeButton } from "@/components/UpgradeButton";
+import { PlanBadge } from "@/components/PlanBadge";
+import { PremiumFeaturesCallout } from "@/components/PremiumFeaturesCallout";
 import { getTenantSubscription } from "@/lib/subscriptions";
 
 const KANBAN_STAGES: ColumnId[] = [
@@ -282,9 +283,11 @@ export async function HiringDashboard({
             <ClipboardDocumentListIcon className="h-4 w-4" />
             New listing
           </Link>
-          <UpgradeButton currentTier={currentTier} />
+          <PlanBadge currentTier={currentTier} />
         </div>
       </div>
+
+      <PremiumFeaturesCallout tier={currentTier} />
 
       <QuickStartCard
         steps={quickStartSteps}
