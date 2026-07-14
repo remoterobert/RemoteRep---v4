@@ -5,6 +5,44 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { sendNotificationEmail } from "@/lib/notification-email";
 
+/**
+ * Toggle a bookmark on a candidate (rep) for the current hiring user.
+ * Owner-scoped (RLS); mirrors the opportunities bookmark toggle. The saved
+ * reps show up in the hiring dashboard's bookmarks column.
+ */
+export async function toggleCandidateBookmark(formData: FormData) {
+  const candidateUserId = String(
+    formData.get("candidate_user_id") ?? "",
+  ).trim();
+  if (!candidateUserId) return;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: existing } = await supabase
+    .from("bookmarks")
+    .select("id")
+    .eq("owner_user_id", user.id)
+    .eq("target_type", "candidate")
+    .eq("target_id", candidateUserId)
+    .maybeSingle();
+
+  if (existing) {
+    await supabase.from("bookmarks").delete().eq("id", existing.id);
+  } else {
+    await supabase.from("bookmarks").insert({
+      owner_user_id: user.id,
+      target_type: "candidate",
+      target_id: candidateUserId,
+    });
+  }
+
+  revalidatePath("/candidates");
+}
+
 export async function inviteCandidate(formData: FormData) {
   const candidateUserId = String(formData.get("candidate_user_id") ?? "").trim();
   if (!candidateUserId) return;

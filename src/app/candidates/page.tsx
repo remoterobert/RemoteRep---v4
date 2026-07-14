@@ -1,8 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CheckIcon } from "@heroicons/react/24/outline";
+import {
+  CheckIcon,
+  BookmarkIcon as BookmarkOutline,
+} from "@heroicons/react/24/outline";
+import { BookmarkIcon as BookmarkSolid } from "@heroicons/react/24/solid";
 import { createClient } from "@/lib/supabase/server";
-import { inviteCandidate } from "./actions";
+import { inviteCandidate, toggleCandidateBookmark } from "./actions";
 import { MatchListingSelect } from "./MatchListingSelect";
 import { MatchBadges } from "@/components/MatchBadges";
 import {
@@ -343,6 +347,20 @@ export default async function CandidatesPage({
     );
   }
 
+  // Which of these candidates the current user has bookmarked ("saved reps").
+  const { data: bookmarkRows } =
+    candidateIds.length > 0
+      ? await supabase
+          .from("bookmarks")
+          .select("target_id")
+          .eq("owner_user_id", user.id)
+          .eq("target_type", "candidate")
+          .in("target_id", candidateIds)
+      : { data: [] };
+  const bookmarkedCandidates = new Set(
+    (bookmarkRows ?? []).map((b) => b.target_id as string),
+  );
+
   const baseQs = new URLSearchParams();
   if (selectedListingId) baseQs.set("listing", selectedListingId);
   if (selectedRole) baseQs.set("role", selectedRole);
@@ -474,6 +492,7 @@ export default async function CandidatesPage({
               view="tile"
               showMatch={!!selectedListingForMatch}
               listingId={selectedListingId}
+              isBookmarked={bookmarkedCandidates.has(c.user_id)}
             />
           ))}
         </div>
@@ -487,6 +506,7 @@ export default async function CandidatesPage({
               view="list"
               showMatch={!!selectedListingForMatch}
               listingId={selectedListingId}
+              isBookmarked={bookmarkedCandidates.has(c.user_id)}
             />
           ))}
         </div>
@@ -516,12 +536,14 @@ function CandidateCard({
   view,
   showMatch,
   listingId,
+  isBookmarked,
 }: {
   candidate: CandidateRow;
   status: "invited" | "interviewing" | "withdrawn" | null;
   view: "tile" | "list";
   showMatch: boolean;
   listingId: string | null;
+  isBookmarked: boolean;
 }) {
   const specialties = candidate.specialties;
   const name = displayName(candidate);
@@ -529,6 +551,24 @@ function CandidateCard({
   const detailHref = listingId
     ? `/profiles/${candidate.user_id}?listing=${listingId}`
     : `/profiles/${candidate.user_id}`;
+
+  const BookmarkBtn = (
+    <form action={toggleCandidateBookmark} className="contents">
+      <input type="hidden" name="candidate_user_id" value={candidate.user_id} />
+      <button
+        type="submit"
+        title={isBookmarked ? "Remove bookmark" : "Save this rep"}
+        aria-label={isBookmarked ? "Remove bookmark" : "Save this rep"}
+        className="p-1.5 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800"
+      >
+        {isBookmarked ? (
+          <BookmarkSolid className="h-5 w-5 text-primary" />
+        ) : (
+          <BookmarkOutline className="h-5 w-5 text-light-grey" />
+        )}
+      </button>
+    </form>
+  );
 
   let InviteBtn: React.ReactNode;
   if (status === "interviewing") {
@@ -630,7 +670,10 @@ function CandidateCard({
             </span>
           ))}
         </div>
-        <div className="flex justify-end">{InviteBtn}</div>
+        <div className="flex justify-end items-center gap-1">
+          {BookmarkBtn}
+          {InviteBtn}
+        </div>
       </article>
     );
   }
@@ -695,7 +738,10 @@ function CandidateCard({
           ))}
         </div>
       </div>
-      <div className="shrink-0">{InviteBtn}</div>
+      <div className="shrink-0 flex items-center gap-1">
+        {BookmarkBtn}
+        {InviteBtn}
+      </div>
     </article>
   );
 }
