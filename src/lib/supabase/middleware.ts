@@ -1,5 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  IMPERSONATION_COOKIE,
+  impersonationCookieOptions,
+} from "@/lib/impersonation-cookie";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -60,6 +64,21 @@ export async function updateSession(request: NextRequest) {
     url.searchParams.set("error", "Please sign in to continue.");
     url.searchParams.set("redirect", pathname + request.nextUrl.search);
     return NextResponse.redirect(url);
+  }
+
+  // Re-affirm the admin-impersonation marker on every response. Supabase's
+  // setAll recreates `supabaseResponse` when it refreshes the session, which
+  // drops any cookie not explicitly re-set on the new response — that's why the
+  // "Return to admin" banner vanished on refresh while the session survived
+  // (the session cookies get re-set every request; this one didn't). Carrying
+  // it forward here (with a sliding 1h expiry) keeps impersonation intact.
+  const marker = request.cookies.get(IMPERSONATION_COOKIE);
+  if (marker) {
+    supabaseResponse.cookies.set(
+      IMPERSONATION_COOKIE,
+      marker.value,
+      impersonationCookieOptions(),
+    );
   }
 
   return supabaseResponse;
