@@ -1,7 +1,11 @@
 import { cookies } from "next/headers";
+import {
+  IMPERSONATION_COOKIE,
+  IMPERSONATION_MAX_AGE_SECONDS as MAX_AGE_SECONDS,
+  impersonationCookieOptions,
+} from "./impersonation-cookie";
 
-export const IMPERSONATION_COOKIE = "remoterep.impersonation_original";
-const MAX_AGE_SECONDS = 60 * 60; // 1 hour
+export { IMPERSONATION_COOKIE };
 
 export type ImpersonationMarker = {
   original_user_id: string;
@@ -41,13 +45,7 @@ export async function writeImpersonationMarker(
   marker: ImpersonationMarker,
 ): Promise<void> {
   const c = await cookies();
-  c.set(IMPERSONATION_COOKIE, JSON.stringify(marker), {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: MAX_AGE_SECONDS,
-    path: "/",
-  });
+  c.set(IMPERSONATION_COOKIE, JSON.stringify(marker), impersonationCookieOptions());
 }
 
 export async function clearImpersonationMarker(): Promise<void> {
