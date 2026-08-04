@@ -169,7 +169,7 @@ export function ChatThread({
               >
                 {!mine && (
                   <div className="text-[10px] font-semibold text-light-grey mb-0.5">
-                    {nameByUserId[m.author_user_id] ?? "Them"}
+                    {nameByUserId[m.author_user_id] ?? "They"}
                   </div>
                 )}
                 <p className="text-sm whitespace-pre-wrap break-words">

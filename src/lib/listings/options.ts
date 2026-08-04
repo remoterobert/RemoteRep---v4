@@ -32,9 +32,9 @@ export const BENEFITS = [
 
 export const COMPENSATION_TYPES = [
   "Salary",
-  "Base + comission",
-  "Comission-only",
-  "Draw against comission",
+  "Base + commission",
+  "Commission-only",
+  "Draw against commission",
   "Hourly",
 ] as const;
 
