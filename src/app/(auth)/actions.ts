@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { tryLegacyLogin } from "@/lib/legacy-login";
 
 async function getSiteOrigin(): Promise<string> {
   // Prefer explicit env var — most reliable, especially on Railway where
@@ -120,6 +121,21 @@ export async function login(formData: FormData) {
         `/signup/check-email?email=${encodeURIComponent(email)}&unverified=1`,
       );
     }
+
+    // Seamless login for migrated v3 users: they have their old password parked
+    // in legacy_credentials but no Supabase password yet. Verify + upgrade it,
+    // then retry the sign-in — no reset email needed.
+    const upgraded = await tryLegacyLogin(email, password);
+    if (upgraded) {
+      const { error: retryError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (!retryError) {
+        redirect("/dashboard");
+      }
+    }
+
     redirect(`/login?error=${encodeURIComponent(error.message)}`);
   }
 
