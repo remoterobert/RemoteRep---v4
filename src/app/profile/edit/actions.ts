@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { resizeImage } from "@/lib/resize-image";
 
 function getStr(fd: FormData, name: string): string {
   return String(fd.get(name) ?? "").trim();
@@ -309,9 +310,16 @@ export async function uploadPhoto(formData: FormData) {
   const ext = PHOTO_MIME_TO_EXT[f.type] ?? "bin";
   const storagePath = `${user.id}/photo-${Date.now()}.${ext}`;
 
+  // Shrink big camera photos down to a web-friendly size before storing, so
+  // profiles load fast and the bucket stays small.
+  const resized = await resizeImage(
+    Buffer.from(await f.arrayBuffer()),
+    f.type,
+  );
+
   const { error: uploadError } = await supabase.storage
     .from("photos")
-    .upload(storagePath, f, {
+    .upload(storagePath, resized, {
       contentType: f.type,
       upsert: true,
     });

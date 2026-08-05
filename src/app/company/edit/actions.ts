@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { resizeImage } from "@/lib/resize-image";
 
 const ALLOWED_LOGO_MIME = new Set([
   "image/jpeg",
@@ -159,9 +160,16 @@ export async function uploadLogo(formData: FormData) {
   const ext = MIME_TO_EXT[f.type] ?? "bin";
   const storagePath = `${tenantId}/logo-${Date.now()}.${ext}`;
 
+  // Shrink oversized logo uploads before storing (SVG/PDF pass through), so
+  // company logos load fast everywhere they appear.
+  const resized = await resizeImage(
+    Buffer.from(await f.arrayBuffer()),
+    f.type,
+  );
+
   const { error: uploadError } = await supabase.storage
     .from("logos")
-    .upload(storagePath, f, {
+    .upload(storagePath, resized, {
       contentType: f.type,
       upsert: true,
     });
