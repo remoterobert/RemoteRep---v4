@@ -44,3 +44,4 @@ next-env.d.ts
 
 # Local-only safety fallback (pre-v4 git history snapshot)
 .git.old/
+.v3-data/
