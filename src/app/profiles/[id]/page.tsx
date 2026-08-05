@@ -7,6 +7,7 @@ import {
   UserCircleIcon,
 } from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/server";
+import { isPlatformAdmin } from "@/lib/is-platform-admin";
 import { inviteCandidate } from "@/app/candidates/actions";
 import { MatchBadges } from "@/components/MatchBadges";
 import { ShareButton } from "@/components/ShareButton";
@@ -77,9 +78,12 @@ export default async function PublicProfilePage({
 
   if (!userRow) notFound();
 
-  // Gate: non-owner viewing a hidden profile → 404
+  // Gate: non-owner viewing a hidden profile → 404. Platform admins can view
+  // any profile (public or hidden) — the admin "View profile" link relies on
+  // this, otherwise every non-public rep 404s from the admin panel.
   const isOwner = user?.id === candidateUserId;
-  if (!isOwner && profile?.visibility !== "public") {
+  const isAdmin = await isPlatformAdmin();
+  if (!isOwner && !isAdmin && profile?.visibility !== "public") {
     notFound();
   }
 

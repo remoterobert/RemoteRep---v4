@@ -52,7 +52,11 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/onboarding") ||
     pathname.startsWith("/candidates") ||
     pathname.startsWith("/admin") ||
-    pathname.startsWith("/profile") ||
+    // NB: "/profile/..." (the owner's own edit page) is protected, but
+    // "/profiles/..." (public shareable profiles) deliberately is NOT — so
+    // match with a trailing slash, not a bare prefix.
+    pathname === "/profile" ||
+    pathname.startsWith("/profile/") ||
     pathname.startsWith("/opportunities") ||
     pathname.startsWith("/company") ||
     pathname.startsWith("/chats") ||
