@@ -2,8 +2,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signup } from "../actions";
+import AuthShell from "../AuthShell";
 
 export const dynamic = "force-dynamic";
+
+const FIELD =
+  "w-full rounded-lg border border-border bg-surface px-4 py-2.5 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20";
 
 type SearchParams = Promise<{ error?: string }>;
 
@@ -20,95 +24,82 @@ export default async function SignupPage({
   if (user) redirect("/dashboard");
 
   const params = await searchParams;
-  const error = params.error;
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-6">
-      <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-semibold mb-2">Create your account</h1>
-        <p className="text-sm text-zinc-500 mb-6">
-          Sign up to RemoteRep v4.
-        </p>
+    <AuthShell
+      active="signup"
+      title="Create your account"
+      subtitle="Join RemoteRep — it's free to get started."
+      error={params.error}
+    >
+      <form action={signup} className="space-y-4">
+        <div>
+          <label htmlFor="email" className="mb-1.5 block text-sm font-medium">
+            Email
+          </label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            required
+            autoComplete="email"
+            placeholder="you@company.com"
+            className={FIELD}
+          />
+        </div>
 
-        {error && (
-          <div
-            role="alert"
-            className="mb-4 rounded border border-red-300 bg-red-50 dark:bg-red-950 dark:border-red-900 p-3 text-sm text-red-800 dark:text-red-200"
+        <div>
+          <label
+            htmlFor="password"
+            className="mb-1.5 block text-sm font-medium"
           >
-            {error}
-          </div>
-        )}
+            Password
+          </label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            required
+            minLength={8}
+            autoComplete="new-password"
+            placeholder="At least 8 characters"
+            className={FIELD}
+          />
+        </div>
 
-        <form action={signup} className="space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium mb-1">
-              Email
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              required
-              autoComplete="email"
-              className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium mb-1"
-            >
-              Password
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              minLength={8}
-              autoComplete="new-password"
-              className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
-            />
-            <p className="text-xs text-zinc-500 mt-1">At least 8 characters.</p>
-          </div>
-
-          <div>
-            <label
-              htmlFor="confirm_password"
-              className="block text-sm font-medium mb-1"
-            >
-              Confirm password
-            </label>
-            <input
-              id="confirm_password"
-              name="confirm_password"
-              type="password"
-              required
-              minLength={8}
-              autoComplete="new-password"
-              className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
-            />
-            <p className="text-xs text-zinc-500 mt-1">
-              Re-type to make sure there&apos;s no typo.
-            </p>
-          </div>
-
-          <button
-            type="submit"
-            className="w-full rounded bg-primary text-white px-3 py-2 text-sm font-medium hover:opacity-90 transition-opacity"
+        <div>
+          <label
+            htmlFor="confirm_password"
+            className="mb-1.5 block text-sm font-medium"
           >
-            Create account
-          </button>
-        </form>
+            Confirm password
+          </label>
+          <input
+            id="confirm_password"
+            name="confirm_password"
+            type="password"
+            required
+            minLength={8}
+            autoComplete="new-password"
+            placeholder="Re-type your password"
+            className={FIELD}
+          />
+        </div>
 
-        <p className="text-sm text-zinc-500 mt-6">
-          Already have an account?{" "}
-          <Link href="/login" className="underline">
-            Sign in
-          </Link>
-        </p>
-      </div>
-    </main>
+        <button
+          type="submit"
+          className="w-full rounded-lg bg-gradient-to-r from-primary to-primary-blue px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:opacity-95 active:scale-[0.99]"
+        >
+          Create account
+        </button>
+      </form>
+
+      <p className="mt-6 text-sm text-foreground/60">
+        Already have an account?{" "}
+        <Link href="/login" className="font-medium text-primary hover:underline">
+          Sign in
+        </Link>
+      </p>
+    </AuthShell>
   );
 }
