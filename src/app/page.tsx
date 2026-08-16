@@ -1,17 +1,26 @@
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { MarketingHome } from "./(marketing)/MarketingHome";
 
 export const dynamic = "force-dynamic";
 
-// The app lives at app.remoterep.com; the public marketing site is separate
-// (remoterep.com). So the app root has no landing page of its own — send
-// visitors straight to their destination: the dashboard if signed in, the
-// (polished, full-screen) login screen if not.
+// The marketing site (remoterep.com) and the app (app.remoterep.com) share this
+// one Next app. On the app host, the root sends people to their destination
+// (dashboard if signed in, otherwise the login screen). On every other host —
+// the marketing domain, preview URLs, localhost — we show the marketing
+// landing page.
 export default async function Home() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const h = await headers();
+  const host = (h.get("host") ?? "").toLowerCase();
 
-  redirect(user ? "/dashboard" : "/login");
+  if (host.startsWith("app.")) {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    redirect(user ? "/dashboard" : "/login");
+  }
+
+  return <MarketingHome />;
 }
