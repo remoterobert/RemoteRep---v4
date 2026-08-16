@@ -90,8 +90,21 @@ function GhostCta({
 export function MarketingHome() {
   return (
     <div className="fixed inset-0 z-40 overflow-y-auto overflow-x-hidden bg-[#05070f] text-white antialiased [scrollbar-width:thin]">
+      {/* One continuous ambient field behind everything — pinned to the
+          viewport while content scrolls over it, so the page reads as a single
+          luminous surface instead of stacked, seamed sections. */}
+      <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
+        <div className="absolute inset-0 bg-[radial-gradient(120%_80%_at_50%_-10%,#101a3a_0%,#080d1e_45%,#05070f_100%)]" />
+        <div className="mkt-aurora-a absolute -left-48 top-[-12%] h-[48rem] w-[48rem] rounded-full bg-primary-blue/16 blur-[160px]" />
+        <div className="mkt-aurora-b absolute right-[-18%] top-[22%] h-[52rem] w-[52rem] rounded-full bg-[#7c5cff]/14 blur-[170px]" />
+        <div className="mkt-aurora-c absolute left-[6%] top-[58%] h-[44rem] w-[44rem] rounded-full bg-secondary/9 blur-[160px]" />
+        <div className="mkt-aurora-a absolute right-[4%] bottom-[-8%] h-[42rem] w-[42rem] rounded-full bg-primary/12 blur-[160px]" />
+        <div className="mkt-grid absolute inset-0 [mask-image:radial-gradient(ellipse_at_50%_0%,black,transparent_65%)] opacity-35" />
+      </div>
+
+      <div className="relative z-10">
       {/* ── Sticky glass nav ───────────────────────────────────── */}
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#05070f]/70 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-[#070a16]/50 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
           <Link href="/" className="flex items-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -130,15 +143,7 @@ export function MarketingHome() {
       </header>
 
       {/* ── Hero ───────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden">
-        {/* aurora + grid */}
-        <div className="pointer-events-none absolute inset-0">
-          <div className="mkt-aurora-a absolute -left-32 -top-40 h-[38rem] w-[38rem] rounded-full bg-primary-blue/25 blur-[120px]" />
-          <div className="mkt-aurora-b absolute -right-40 top-0 h-[42rem] w-[42rem] rounded-full bg-[#7c5cff]/20 blur-[130px]" />
-          <div className="mkt-aurora-c absolute bottom-0 left-1/3 h-[30rem] w-[30rem] rounded-full bg-secondary/10 blur-[120px]" />
-          <div className="mkt-grid absolute inset-0 [mask-image:radial-gradient(ellipse_at_center,black,transparent_75%)] opacity-60" />
-        </div>
-
+      <section className="relative">
         <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-5 pb-24 pt-16 lg:grid-cols-[1.05fr_0.95fr] lg:pb-28 lg:pt-24">
           <div>
             <Reveal>
@@ -208,7 +213,7 @@ export function MarketingHome() {
       </section>
 
       {/* ── Client marquee ─────────────────────────────────────── */}
-      <section className="border-y border-white/10 bg-white/[0.02] py-8">
+      <section className="py-10">
         <p className="mb-6 text-center text-xs font-bold uppercase tracking-[0.2em] text-white/35">
           Companies We&apos;ve Worked With
         </p>
@@ -267,10 +272,7 @@ export function MarketingHome() {
       </section>
 
       {/* ── How it works ───────────────────────────────────────── */}
-      <section id="how" className="relative overflow-hidden py-24">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute left-1/2 top-0 h-96 w-96 -translate-x-1/2 rounded-full bg-primary-blue/10 blur-[120px]" />
-        </div>
+      <section id="how" className="relative py-24">
         <div className="relative mx-auto max-w-6xl px-5">
           <Reveal>
             <h2 className="mx-auto max-w-3xl text-center text-3xl font-bold tracking-tight sm:text-[2.6rem] sm:leading-[1.1]">
@@ -374,10 +376,7 @@ export function MarketingHome() {
       </section>
 
       {/* ── Differentiation ────────────────────────────────────── */}
-      <section className="relative overflow-hidden py-28">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="mkt-aurora-a absolute left-1/2 top-1/2 h-[36rem] w-[36rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#7c5cff]/15 blur-[130px]" />
-        </div>
+      <section className="relative py-24">
         <div className="relative mx-auto max-w-3xl px-5 text-center">
           <Reveal>
             <h2 className="text-3xl font-bold tracking-tight sm:text-[2.6rem] sm:leading-[1.1]">
@@ -577,13 +576,9 @@ export function MarketingHome() {
       </section>
 
       {/* ── Final CTA ──────────────────────────────────────────── */}
-      <section className="relative overflow-hidden px-5 py-24">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="mkt-aurora-b absolute left-1/4 top-0 h-[30rem] w-[30rem] rounded-full bg-primary-blue/25 blur-[120px]" />
-          <div className="mkt-aurora-c absolute bottom-0 right-1/4 h-[26rem] w-[26rem] rounded-full bg-secondary/15 blur-[120px]" />
-        </div>
+      <section className="relative px-5 py-24">
         <Reveal className="relative">
-          <div className="mx-auto max-w-3xl rounded-3xl border border-white/10 bg-white/[0.03] px-6 py-14 text-center backdrop-blur-xl sm:px-12">
+          <div className="mx-auto max-w-3xl rounded-3xl border border-white/10 bg-white/[0.04] px-6 py-14 text-center shadow-[0_30px_80px_-30px_rgba(0,121,254,0.4)] backdrop-blur-xl sm:px-12">
             <h2 className="text-3xl font-bold tracking-tight sm:text-[2.6rem] sm:leading-[1.1]">
               Set up your account in just 3 minutes and start browsing remote
               sales reps.
@@ -600,7 +595,7 @@ export function MarketingHome() {
       </section>
 
       {/* ── Footer ─────────────────────────────────────────────── */}
-      <footer className="border-t border-white/10 py-12">
+      <footer className="border-t border-white/[0.06] py-12">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 px-5 text-center text-sm text-white/50">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -620,6 +615,7 @@ export function MarketingHome() {
           <p className="text-white/30">©2023. All rights reserved.</p>
         </div>
       </footer>
+      </div>
     </div>
   );
 }
