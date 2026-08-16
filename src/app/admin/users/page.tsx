@@ -61,7 +61,7 @@ export default async function AdminUsersPage({
   let query = supabase
     .from("users")
     .select(
-      "id, email, first_name, last_name, status, created_at, last_seen_at, tags, notes, access_level, archived_at, reference_source, is_super_admin, tenant_members!user_id(role, tenants(name, type)), candidate_profiles(user_id, visibility)",
+      "id, email, first_name, last_name, status, created_at, last_seen_at, tags, notes, access_level, archived_at, reference_source, is_super_admin, tenant_members!user_id(role, tenants(name, type)), candidate_profiles(user_id, visibility, photo_url)",
     );
 
   if (q) {
@@ -106,7 +106,10 @@ export default async function AdminUsersPage({
     reference_source: string | null;
     is_super_admin: boolean | null;
     tenant_members: MembershipRow[];
-    candidate_profiles: unknown[] | { user_id: string; visibility: string } | null;
+    candidate_profiles:
+      | unknown[]
+      | { user_id: string; visibility: string; photo_url: string | null }
+      | null;
   };
   const allRows = (users ?? []) as unknown as UserRow[];
 
@@ -216,6 +219,13 @@ export default async function AdminUsersPage({
               const initials = (
                 (u.first_name?.[0] ?? "") + (u.last_name?.[0] ?? "")
               ).toUpperCase() || u.email[0].toUpperCase();
+              // Candidate profile photo (the embed is an array or a single row
+              // depending on the relationship shape) — fall back to initials.
+              const cp = u.candidate_profiles;
+              const cpRow = (Array.isArray(cp) ? cp[0] : cp) as
+                | { photo_url?: string | null }
+                | undefined;
+              const photoUrl = cpRow?.photo_url ?? null;
 
               return (
                 <tr
@@ -225,9 +235,18 @@ export default async function AdminUsersPage({
                   {/* User (avatar + name + email) */}
                   <td className="p-3">
                     <div className="flex items-center gap-2.5">
-                      <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">
-                        {initials}
-                      </div>
+                      {photoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={photoUrl}
+                          alt=""
+                          className="h-8 w-8 rounded-full object-cover shrink-0 bg-surface-3"
+                        />
+                      ) : (
+                        <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">
+                          {initials}
+                        </div>
+                      )}
                       <div className="min-w-0">
                         <div className="text-sm font-medium truncate">
                           <Link
