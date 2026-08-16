@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { feature } from "topojson-client";
 
 /**
  * A spinning dotted globe with glowing markers on the US (emphasized) and
@@ -105,6 +106,40 @@ export default function GlobeConnections({
       for (let lo = -180; lo < 180; lo += 12) grid.push(vec(la, lo));
     }
 
+    // Country borders (precomputed as unit vectors once loaded) so the sphere
+    // clearly reads as Earth. Loaded from a local topojson; the dots/markers
+    // render immediately and the outlines pop in when ready.
+    let outlines: Vec[][] = [];
+    const ac = new AbortController();
+    fetch("/geo/countries-110m.json", { signal: ac.signal })
+      .then((r) => r.json())
+      .then((topo) => {
+        const fc = feature(topo, topo.objects.countries) as unknown as {
+          features: {
+            geometry: { type: string; coordinates: unknown } | null;
+          }[];
+        };
+        const rings: Vec[][] = [];
+        for (const f of fc.features) {
+          const g = f.geometry;
+          if (!g) continue;
+          const polys =
+            g.type === "Polygon"
+              ? [g.coordinates as number[][][]]
+              : (g.coordinates as number[][][][]);
+          for (const poly of polys) {
+            for (const ring of poly) {
+              const vs = ring.map(([lng, lat]) => vec(lat, lng));
+              if (vs.length > 1) rings.push(vs);
+            }
+          }
+        }
+        outlines = rings;
+      })
+      .catch(() => {
+        /* offline / aborted — dots still render without borders */
+      });
+
     let raf = 0;
     let rot = 98 * D2R; // start facing the US
     let W = 0;
@@ -164,6 +199,31 @@ export default function GlobeConnections({
         const sy = cy - R * v.y;
         c.fillStyle = `rgba(120,170,235,${0.1 + v.z * 0.18})`;
         c.fillRect(sx, sy, 1.3, 1.3);
+      }
+
+      // Country borders (front hemisphere only).
+      if (outlines.length) {
+        c.strokeStyle = "rgba(150,195,245,0.3)";
+        c.lineWidth = 0.6;
+        for (const ring of outlines) {
+          c.beginPath();
+          let drawing = false;
+          for (const bv of ring) {
+            const v = rotY(bv, rot);
+            if (v.z > 0) {
+              const sx = cx + R * v.x;
+              const sy = cy - R * v.y;
+              if (drawing) c.lineTo(sx, sy);
+              else {
+                c.moveTo(sx, sy);
+                drawing = true;
+              }
+            } else {
+              drawing = false;
+            }
+          }
+          c.stroke();
+        }
       }
 
       // Connection arcs + travelling signal dots.
@@ -250,6 +310,7 @@ export default function GlobeConnections({
     return () => {
       cancelAnimationFrame(raf);
       ro.disconnect();
+      ac.abort();
     };
   }, []);
 
