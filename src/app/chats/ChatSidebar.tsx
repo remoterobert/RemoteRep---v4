@@ -2,6 +2,7 @@ import Link from "next/link";
 import { SparklesIcon } from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { htmlToText } from "@/lib/messageText";
 
 /**
  * Server component: fetches the current user's chats and renders the
@@ -306,7 +307,7 @@ export async function ChatSidebar({
                               : "text-light-grey"
                           }`}
                         >
-                          {preview.body}
+                          {htmlToText(preview.body)}
                         </p>
                       ) : (
                         <p className="text-xs text-light-grey italic">

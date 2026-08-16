@@ -6,6 +6,7 @@ import {
   SparklesIcon,
 } from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/client";
+import { htmlToText } from "@/lib/messageText";
 import { sendMessage } from "./actions";
 
 export type Message = {
@@ -173,7 +174,7 @@ export function ChatThread({
                   </div>
                 )}
                 <p className="text-sm whitespace-pre-wrap break-words">
-                  {m.body}
+                  {htmlToText(m.body)}
                 </p>
                 <div
                   className={`text-[10px] mt-1 ${mine ? "text-white/70" : "text-light-grey"}`}
