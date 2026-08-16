@@ -128,8 +128,10 @@ export function ChatThread({
   const showIcebreakers = myMessageCount < 2;
 
   const coachingHeadline = iAmHiring
-    ? `Introduce your team to ${otherName}`
-    : `${otherName} reached out — introduce yourself`;
+    ? `Introduce your team to ${otherName || "them"}`
+    : otherName
+      ? `${otherName} reached out — introduce yourself`
+      : `They reached out — introduce yourself`;
   const coachingSubtext = iAmHiring
     ? "Share what your team does, why the role is exciting, and propose a time to connect. Response rates jump dramatically when you name a specific time in the first message."
     : "Say hi, mention what caught your interest, and ask what would help them evaluate you as a fit. Fast replies win.";

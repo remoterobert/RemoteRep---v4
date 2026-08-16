@@ -5,6 +5,7 @@ import {
   BriefcaseIcon,
 } from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { ChatSidebar } from "../ChatSidebar";
 import { ChatThread } from "./ChatThread";
 import { AiConsentGate } from "./AiConsentGate";
@@ -120,7 +121,14 @@ export default async function ChatDetailPage({ params }: { params: Params }) {
   const tenantName = tenantInfo?.name ?? "";
   const tenantType = tenantInfo?.type ?? "";
 
-  const { data: otherParticipants } = await supabase
+  // The counterpart's name lives behind RLS (a user can't read another user's
+  // `users` row), so `users!inner` silently drops them and the chat reads as
+  // "Conversation" / "them". The visitor is a confirmed participant of this
+  // chat (checked above), so resolve names with the service-role client,
+  // scoped to this chatId.
+  const admin = createAdminClient();
+
+  const { data: otherParticipants } = await admin
     .from("chat_participants")
     .select("user_id, users!inner(first_name, last_name, email)")
     .eq("chat_id", chatId)
@@ -156,7 +164,7 @@ export default async function ChatDetailPage({ params }: { params: Params }) {
     .eq("chat_id", chatId)
     .eq("user_id", user.id);
 
-  const { data: allParts } = await supabase
+  const { data: allParts } = await admin
     .from("chat_participants")
     .select("user_id, users!inner(first_name, last_name, email)")
     .eq("chat_id", chatId);
@@ -246,7 +254,7 @@ export default async function ChatDetailPage({ params }: { params: Params }) {
           initialMessages={initialMessages ?? []}
           nameByUserId={nameByUserId}
           icebreakers={icebreakers}
-          otherName={headerNames || "them"}
+          otherName={headerNames}
           iAmHiring={iAmHiring}
         />
       </main>
