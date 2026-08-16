@@ -26,7 +26,10 @@ export default function AuthShell({
     }`;
 
   return (
-    <main className="min-h-screen w-full lg:grid lg:grid-cols-[1.05fr_1fr]">
+    // Full-screen overlay so the login/signup screens stand on their own —
+    // they sit above the global guest top-nav (rendered by AppShell) rather
+    // than beneath it, which would double up the logo and chrome.
+    <main className="fixed inset-0 z-50 overflow-y-auto bg-surface lg:grid lg:grid-cols-[1.05fr_1fr]">
       {/* ── Left: marketing panel ─────────────────────────────────── */}
       <aside className="relative hidden overflow-hidden bg-dark-background px-12 py-14 text-white lg:flex lg:flex-col lg:justify-between xl:px-16">
         {/* ambient color + grid */}
