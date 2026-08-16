@@ -142,6 +142,30 @@ export async function HiringDashboard({
     }
   }
 
+  // Candidate photos for the cards. candidate_profiles isn't embeddable via
+  // PostgREST through users here, so fetch by user id and map — mirrors the
+  // Browse Talent page.
+  const candidateUserIds = [
+    ...new Set([
+      ...bookmarks.map((b) => b.target_id),
+      ...apps.map((a) => a.candidate_user_id),
+    ]),
+  ];
+  const photoByUser = new Map<string, string>();
+  if (candidateUserIds.length > 0) {
+    const { data: photoRows } = await supabase
+      .from("candidate_profiles")
+      .select("user_id, photo_url")
+      .in("user_id", candidateUserIds)
+      .not("photo_url", "is", null);
+    for (const p of (photoRows ?? []) as Array<{
+      user_id: string;
+      photo_url: string | null;
+    }>) {
+      if (p.photo_url) photoByUser.set(p.user_id, p.photo_url);
+    }
+  }
+
   // --------- Build Kanban cards ---------
   const cards: KanbanCardData[] = [];
 
@@ -159,6 +183,7 @@ export async function HiringDashboard({
       subtitle: u?.email,
       href: `/candidates/${bm.target_id}`,
       avatarInitials: initialsFrom(u?.first_name, u?.last_name, u?.email),
+      photoUrl: photoByUser.get(bm.target_id) ?? null,
       kind: "bookmark_candidate",
       bookmarkTargetId: bm.target_id,
     });
@@ -190,6 +215,7 @@ export async function HiringDashboard({
         a.users.last_name,
         a.users.email,
       ),
+      photoUrl: photoByUser.get(a.candidate_user_id) ?? null,
       kind: "application",
       applicationId: a.id,
     });

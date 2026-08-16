@@ -66,6 +66,7 @@ type NormalizedListing = {
   title: string;
   companyName: string;
   companyInitials: string;
+  companyLogo: string | null;
   shortDescription: string;
   salesRole: string;
   commitment: string;
@@ -96,13 +97,15 @@ function normalize(
   >;
   const clientProfile = unwrapOne(
     (tenant as { client_profiles?: unknown } | null)?.client_profiles as
-      | { industry_slug: string | null; headcount: number | null; founded_year: number | null }
-      | { industry_slug: string | null; headcount: number | null; founded_year: number | null }[]
+      | { industry_slug: string | null; headcount: number | null; founded_year: number | null; logo_url: string | null }
+      | { industry_slug: string | null; headcount: number | null; founded_year: number | null; logo_url: string | null }[]
       | null
       | undefined,
   );
 
   const companyName = tenant?.name ?? "Company";
+  const companyLogo =
+    (clientProfile as { logo_url?: string | null } | null)?.logo_url ?? null;
   const companyInitials =
     companyName
       .split(/\s+/)
@@ -155,6 +158,7 @@ function normalize(
     title: row.title,
     companyName,
     companyInitials,
+    companyLogo,
     shortDescription,
     salesRole: details?.sales_role ?? "",
     commitment: details?.commitment?.join(" / ") ?? "",
@@ -258,7 +262,7 @@ export default async function OpportunitiesPage({
   let q = supabase
     .from("listings")
     .select(
-      "id, tenant_id, title, description, published_at, created_at, featured_until, tenants(name, client_profiles(industry_slug, headcount, founded_year)), listing_details!inner(sales_role, commitment, compensation_type, minimum_compensation, benefits), listing_requirements!inner(deal_amounts, sales_types, decision_makers, sales_environments, sales_cycles, sales_volumes, lead_types, technologies, education, industries, years_of_experience_min)",
+      "id, tenant_id, title, description, published_at, created_at, featured_until, tenants(name, client_profiles(industry_slug, headcount, founded_year, logo_url)), listing_details!inner(sales_role, commitment, compensation_type, minimum_compensation, benefits), listing_requirements!inner(deal_amounts, sales_types, decision_makers, sales_environments, sales_cycles, sales_volumes, lead_types, technologies, education, industries, years_of_experience_min)",
     )
     .eq("status", "published")
     .eq("visibility", "public")
@@ -442,9 +446,18 @@ function OpportunityCard({
     return (
       <article className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 flex flex-col">
         <div className="flex items-start gap-3 mb-3">
-          <div className="w-10 h-10 rounded bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-xs font-semibold shrink-0">
-            {opp.companyInitials}
-          </div>
+          {opp.companyLogo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={opp.companyLogo}
+              alt=""
+              className="w-10 h-10 rounded object-cover shrink-0 bg-zinc-200 dark:bg-zinc-800"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-xs font-semibold shrink-0">
+              {opp.companyInitials}
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <Link
               href={`/listings/${opp.id}`}
@@ -503,9 +516,18 @@ function OpportunityCard({
 
   return (
     <article className="border border-zinc-200 dark:border-zinc-800 rounded-lg p-4 flex items-start gap-4">
-      <div className="w-12 h-12 shrink-0 rounded bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-sm font-semibold">
-        {opp.companyInitials}
-      </div>
+      {opp.companyLogo ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={opp.companyLogo}
+          alt=""
+          className="w-12 h-12 shrink-0 rounded object-cover bg-zinc-200 dark:bg-zinc-800"
+        />
+      ) : (
+        <div className="w-12 h-12 shrink-0 rounded bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-sm font-semibold">
+          {opp.companyInitials}
+        </div>
+      )}
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-3 mb-1 flex-wrap">
           <Link

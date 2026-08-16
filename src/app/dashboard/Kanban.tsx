@@ -64,6 +64,7 @@ export type KanbanCardData = {
   href?: string;
   chatHref?: string;
   avatarInitials?: string;
+  photoUrl?: string | null;
   // Kind determines how a drag transition maps to a server call.
   kind: "application" | "bookmark_candidate" | "bookmark_listing";
   applicationId?: string;
@@ -302,10 +303,19 @@ function CardBody({
       }`}
     >
       <div className="flex items-start gap-2">
-        {card.avatarInitials && (
-          <div className="h-7 w-7 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center shrink-0">
-            {card.avatarInitials}
-          </div>
+        {card.photoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={card.photoUrl}
+            alt=""
+            className="h-7 w-7 rounded-full object-cover shrink-0 bg-primary/10"
+          />
+        ) : (
+          card.avatarInitials && (
+            <div className="h-7 w-7 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center shrink-0">
+              {card.avatarInitials}
+            </div>
+          )
         )}
         <div className="min-w-0 flex-1">
           <div className="text-xs font-semibold truncate leading-tight">
