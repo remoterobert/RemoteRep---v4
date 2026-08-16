@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   EllipsisHorizontalIcon,
   ChartBarIcon,
@@ -46,6 +47,36 @@ export function UserRowActions({
   const [copied, setCopied] = useState<null | "id" | "url">(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleteText, setDeleteText] = useState("");
+  const [pos, setPos] = useState<{
+    top?: number;
+    bottom?: number;
+    right: number;
+  } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  function close() {
+    setOpen(false);
+    setConfirmingDelete(false);
+    setDeleteText("");
+  }
+  function toggle() {
+    if (!open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      // Fixed coords + a portal keep the menu outside the table's scroll
+      // container so it can't be clipped. Flip it above the button when there
+      // isn't room below (rows near the bottom of the list).
+      const MENU_MAX_H = 460;
+      const openUp =
+        r.bottom + MENU_MAX_H > window.innerHeight && r.top > MENU_MAX_H;
+      setPos({
+        right: window.innerWidth - r.right,
+        ...(openUp
+          ? { bottom: window.innerHeight - r.top + 4 }
+          : { top: r.bottom + 4 }),
+      });
+    }
+    setOpen((v) => !v);
+  }
 
   const profileUrl =
     typeof window !== "undefined"
@@ -59,10 +90,11 @@ export function UserRowActions({
   }
 
   return (
-    <div className="relative inline-block text-left">
+    <div className="inline-block text-left">
       <button
+        ref={btnRef}
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggle}
         aria-haspopup="menu"
         aria-expanded={open}
         className="inline-flex items-center gap-1 rounded-md p-1.5 hover:bg-surface-3 transition-colors"
@@ -70,20 +102,23 @@ export function UserRowActions({
         <EllipsisHorizontalIcon className="h-5 w-5 text-light-grey" />
       </button>
 
-      {open && (
-        <>
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => {
-              setOpen(false);
-              setConfirmingDelete(false);
-              setDeleteText("");
-            }}
-          />
-          <div
-            role="menu"
-            className="absolute right-0 mt-1 w-60 rounded-lg border border-border bg-surface-2 shadow-xl z-50 py-1 text-left"
-          >
+      {open &&
+        pos &&
+        createPortal(
+          <>
+            <div className="fixed inset-0 z-[100]" onClick={close} />
+            <div
+              role="menu"
+              style={{
+                position: "fixed",
+                right: pos.right,
+                top: pos.top,
+                bottom: pos.bottom,
+                maxHeight: "calc(100vh - 24px)",
+                overflowY: "auto",
+              }}
+              className="w-60 rounded-lg border border-border bg-surface-2 shadow-xl z-[101] py-1 text-left"
+            >
             {/* View */}
             <Link
               href={`/admin/users/${user.id}`}
@@ -245,9 +280,10 @@ export function UserRowActions({
                 </div>
               </form>
             )}
-          </div>
-        </>
-      )}
+            </div>
+          </>,
+          document.body,
+        )}
     </div>
   );
 }
