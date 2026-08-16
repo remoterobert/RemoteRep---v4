@@ -96,7 +96,7 @@ function GhostCta({
   return (
     <Link
       href={`${APP}/signup`}
-      className={`inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-3.5 text-sm font-semibold text-white backdrop-blur transition hover:border-white/30 hover:bg-white/10 ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-3.5 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/10 ${className}`}
     >
       {children}
     </Link>
@@ -111,10 +111,10 @@ export function MarketingHome() {
           luminous surface instead of stacked, seamed sections. */}
       <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
         <div className="absolute inset-0 bg-[radial-gradient(120%_80%_at_50%_-10%,#101a3a_0%,#080d1e_45%,#05070f_100%)]" />
-        <div className="mkt-aurora-a absolute -left-48 top-[-12%] h-[48rem] w-[48rem] rounded-full bg-primary-blue/16 blur-[160px]" />
-        <div className="mkt-aurora-b absolute right-[-18%] top-[22%] h-[52rem] w-[52rem] rounded-full bg-[#7c5cff]/14 blur-[170px]" />
-        <div className="mkt-aurora-c absolute left-[6%] top-[58%] h-[44rem] w-[44rem] rounded-full bg-secondary/9 blur-[160px]" />
-        <div className="mkt-aurora-a absolute right-[4%] bottom-[-8%] h-[42rem] w-[42rem] rounded-full bg-primary/12 blur-[160px]" />
+        <div className="mkt-aurora-a absolute -left-48 top-[-12%] h-[48rem] w-[48rem] rounded-full bg-primary-blue/16 blur-[90px]" />
+        <div className="mkt-aurora-b absolute right-[-18%] top-[22%] h-[52rem] w-[52rem] rounded-full bg-[#7c5cff]/14 blur-[90px]" />
+        <div className="mkt-aurora-c absolute left-[6%] top-[58%] h-[44rem] w-[44rem] rounded-full bg-secondary/9 blur-[90px]" />
+        <div className="mkt-aurora-a absolute right-[4%] bottom-[-8%] h-[42rem] w-[42rem] rounded-full bg-primary/12 blur-[90px]" />
         <div className="mkt-grid absolute inset-0 [mask-image:radial-gradient(ellipse_at_50%_0%,black,transparent_65%)] opacity-35" />
       </div>
 
@@ -163,7 +163,7 @@ export function MarketingHome() {
         <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-5 pb-24 pt-16 lg:grid-cols-[1.05fr_0.95fr] lg:pb-28 lg:pt-24">
           <div>
             <Reveal>
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-xs font-semibold text-white/80 backdrop-blur">
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-xs font-semibold text-white/80">
                 <SparklesIcon className="h-3.5 w-3.5 text-secondary" />
                 The sales-specific hiring platform
               </span>
@@ -273,7 +273,7 @@ export function MarketingHome() {
             },
           ].map((c, i) => (
             <Reveal key={c.t} delay={i * 90}>
-              <div className="group h-full rounded-2xl border border-white/10 bg-white/[0.03] p-7 backdrop-blur transition hover:border-secondary/40 hover:bg-white/[0.05]">
+              <div className="group h-full rounded-2xl border border-white/10 bg-white/[0.03] p-7 transition hover:border-secondary/40 hover:bg-white/[0.05]">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-secondary/25 to-secondary/5 text-secondary ring-1 ring-secondary/20">
                   <c.icon className="h-5 w-5" />
                 </div>
@@ -319,7 +319,7 @@ export function MarketingHome() {
               },
             ].map((s, i) => (
               <Reveal key={s.n} delay={i * 100}>
-                <div className="relative h-full rounded-2xl border border-white/10 bg-white/[0.03] p-7 backdrop-blur">
+                <div className="relative h-full rounded-2xl border border-white/10 bg-white/[0.03] p-7">
                   <div className="bg-gradient-to-br from-white to-white/40 bg-clip-text text-5xl font-black tracking-tighter text-transparent">
                     {s.n}
                   </div>
@@ -422,7 +422,7 @@ export function MarketingHome() {
       <section id="ai" className="mx-auto max-w-6xl px-5 py-24">
         <Reveal>
           <div className="text-center">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-xs font-semibold text-white/80 backdrop-blur">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-xs font-semibold text-white/80">
               <CpuChipIcon className="h-3.5 w-3.5 text-secondary" />
               Powered by AI
             </span>
@@ -441,7 +441,7 @@ export function MarketingHome() {
 
         <div className="mt-14 grid gap-5 lg:grid-cols-6">
           <Reveal className="lg:col-span-4">
-            <div className="relative h-full overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-8 backdrop-blur">
+            <div className="relative h-full overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-8">
               <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-secondary/10 blur-3xl" />
               <div className="relative flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-secondary/25 to-secondary/5 text-secondary ring-1 ring-secondary/20">
                 <CpuChipIcon className="h-6 w-6" />
@@ -458,7 +458,7 @@ export function MarketingHome() {
           </Reveal>
 
           <Reveal delay={80} className="lg:col-span-2">
-            <div className="h-full rounded-2xl border border-white/10 bg-white/[0.03] p-7 backdrop-blur">
+            <div className="h-full rounded-2xl border border-white/10 bg-white/[0.03] p-7">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/20 text-primary-blue ring-1 ring-primary/30">
                 <SparklesIcon className="h-5 w-5" />
               </div>
@@ -471,7 +471,7 @@ export function MarketingHome() {
           </Reveal>
 
           <Reveal delay={120} className="lg:col-span-3">
-            <div className="h-full rounded-2xl border border-white/10 bg-white/[0.03] p-7 backdrop-blur">
+            <div className="h-full rounded-2xl border border-white/10 bg-white/[0.03] p-7">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/20 text-primary-blue ring-1 ring-primary/30">
                 <BoltIcon className="h-5 w-5" />
               </div>
@@ -484,7 +484,7 @@ export function MarketingHome() {
           </Reveal>
 
           <Reveal delay={160} className="lg:col-span-3">
-            <div className="h-full rounded-2xl border border-white/10 bg-white/[0.03] p-7 backdrop-blur">
+            <div className="h-full rounded-2xl border border-white/10 bg-white/[0.03] p-7">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/20 text-primary-blue ring-1 ring-primary/30">
                 <ClipboardDocumentCheckIcon className="h-5 w-5" />
               </div>
@@ -519,7 +519,7 @@ export function MarketingHome() {
             },
           ].map((t, i) => (
             <Reveal key={t.a} delay={i * 90}>
-              <figure className="flex h-full flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-7 backdrop-blur transition hover:border-white/20">
+              <figure className="flex h-full flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-7 transition hover:border-white/20">
                 <div className="flex gap-0.5 text-secondary">
                   {Array.from({ length: 5 }).map((_, s) => (
                     <StarIcon key={s} className="h-4 w-4" />

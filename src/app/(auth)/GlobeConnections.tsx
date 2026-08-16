@@ -129,7 +129,12 @@ export default function GlobeConnections({
               : (g.coordinates as number[][][][]);
           for (const poly of polys) {
             for (const ring of poly) {
-              const vs = ring.map(([lng, lat]) => vec(lat, lng));
+              // Decimate to every other point — roughly halves per-frame work
+              // with no visible loss at globe scale.
+              const vs: Vec[] = [];
+              for (let k = 0; k < ring.length; k += 2) {
+                vs.push(vec(ring[k][1], ring[k][0]));
+              }
               if (vs.length > 1) rings.push(vs);
             }
           }
@@ -152,7 +157,7 @@ export default function GlobeConnections({
       const rect = parent.getBoundingClientRect();
       W = rect.width;
       H = rect.height;
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       el.width = Math.max(1, Math.floor(W * dpr));
       el.height = Math.max(1, Math.floor(H * dpr));
     }
@@ -305,11 +310,30 @@ export default function GlobeConnections({
     resize();
     const ro = new ResizeObserver(resize);
     if (el.parentElement) ro.observe(el.parentElement);
+
+    // Pause the whole animation when the globe is scrolled off-screen — no
+    // point burning CPU (and stealing frames from smooth scrolling) when it
+    // isn't visible.
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !raf) {
+          last = performance.now();
+          raf = requestAnimationFrame(frame);
+        } else if (!entry.isIntersecting && raf) {
+          cancelAnimationFrame(raf);
+          raf = 0;
+        }
+      },
+      { threshold: 0 },
+    );
+    io.observe(el);
+
     raf = requestAnimationFrame(frame);
 
     return () => {
       cancelAnimationFrame(raf);
       ro.disconnect();
+      io.disconnect();
       ac.abort();
     };
   }, []);

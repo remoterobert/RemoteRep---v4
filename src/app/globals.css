@@ -116,12 +116,10 @@ html {
 @keyframes mkt-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
 @keyframes mkt-spin-slow { to { transform: rotate(360deg); } }
 
-.mkt-aurora-a { animation: mkt-aurora-a 20s ease-in-out infinite; }
-.mkt-aurora-b { animation: mkt-aurora-b 26s ease-in-out infinite; }
-.mkt-aurora-c { animation: mkt-aurora-c 16s ease-in-out infinite; }
+/* Aurora orbs are STATIC — animating huge blurred elements repaints every
+   frame and destroys scroll performance. The gradients still look premium;
+   motion comes from the marquee, gradient shine, globe, and scroll-reveal. */
 .mkt-marquee { animation: mkt-marquee 45s linear infinite; }
-.mkt-float { animation: mkt-float 8s ease-in-out infinite; }
-.mkt-spin-slow { animation: mkt-spin-slow 24s linear infinite; }
 
 /* Animated gradient (shine) text — pair with a bg-clip-text gradient. */
 .mkt-shine { background-size: 200% auto; animation: mkt-shine 6s linear infinite; }
