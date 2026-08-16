@@ -51,6 +51,11 @@ type CandidateRow = {
   city: string | null;
   state_region: string | null;
   visibility: string | null;
+  decision_makers: string[] | null;
+  sales_environments: string[] | null;
+  sales_cycles: string[] | null;
+  lead_types: string[] | null;
+  technologies: string[] | null;
   specialties: string[];
   experienceMatch: number;
   goalsMatch: number;
@@ -224,6 +229,11 @@ export default async function CandidatesPage({
       city: string | null;
       state_region: string | null;
       visibility: string | null;
+      decision_makers: string[] | null;
+      sales_environments: string[] | null;
+      sales_cycles: string[] | null;
+      lead_types: string[] | null;
+      technologies: string[] | null;
       specialties: string[];
       candidateForMatch: CandidateForMatch;
     }
@@ -249,6 +259,11 @@ export default async function CandidatesPage({
         city: cp?.city ?? null,
         state_region: cp?.state_region ?? null,
         visibility: cp?.visibility ?? null,
+        decision_makers: cp?.decision_makers ?? null,
+        sales_environments: cp?.sales_environments ?? null,
+        sales_cycles: cp?.sales_cycles ?? null,
+        lead_types: cp?.lead_types ?? null,
+        technologies: cp?.technologies ?? null,
         specialties: [r.sales_role],
         candidateForMatch: {
           years_of_experience: cp?.years_of_experience ?? null,
@@ -321,6 +336,11 @@ export default async function CandidatesPage({
       city: c.city,
       state_region: c.state_region,
       visibility: c.visibility,
+      decision_makers: c.decision_makers,
+      sales_environments: c.sales_environments,
+      sales_cycles: c.sales_cycles,
+      lead_types: c.lead_types,
+      technologies: c.technologies,
       specialties: c.specialties,
       experienceMatch: expScore,
       goalsMatch: goalsScore,
@@ -754,6 +774,30 @@ function CandidateCard({
     </div>
   );
 
+  // Richer attribute list — shown in the List view only (Tile stays compact
+  // and sends people to the full profile via "See more").
+  const detailRows: { label: string; values: string[] | null }[] = [
+    { label: "Sells to", values: candidate.decision_makers },
+    { label: "Environment", values: candidate.sales_environments },
+    { label: "Sales cycle", values: candidate.sales_cycles },
+    { label: "Leads", values: candidate.lead_types },
+    { label: "Tools", values: candidate.technologies },
+  ];
+  const MoreDetails = (
+    <dl className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1 text-xs max-w-2xl">
+      {detailRows
+        .filter((d) => d.values && d.values.length > 0)
+        .map((d) => (
+          <div key={d.label} className="flex gap-1.5 min-w-0">
+            <dt className="text-light-grey shrink-0">{d.label}:</dt>
+            <dd className="text-foreground/80 truncate">
+              {d.values!.join(", ")}
+            </dd>
+          </div>
+        ))}
+    </dl>
+  );
+
   if (view === "tile") {
     return (
       <article className="relative rounded-2xl border border-zinc-200 dark:border-white/[0.08] bg-white dark:bg-white/[0.02] p-5 hover:border-primary/30 hover:shadow-lg transition-all">
@@ -778,7 +822,15 @@ function CandidateCard({
         {showMatch && <div className="mt-3">{MatchBlock}</div>}
         <div className="mt-3">{Stats}</div>
         {Chips}
-        <div className="mt-4 flex justify-end">{InviteBtn}</div>
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <Link
+            href={detailHref}
+            className="text-xs font-semibold text-primary hover:underline whitespace-nowrap"
+          >
+            See more →
+          </Link>
+          {InviteBtn}
+        </div>
       </article>
     );
   }
@@ -803,6 +855,7 @@ function CandidateCard({
               </p>
             )}
             {Chips}
+            {MoreDetails}
           </div>
         </div>
 
