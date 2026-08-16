@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ConnectingLines from "./ConnectingLines";
 
 /**
  * Split-screen shell for the login / signup pages: a bold navy marketing
@@ -37,7 +38,7 @@ export default function AuthShell({
           <div className="absolute -left-28 -top-28 h-96 w-96 rounded-full bg-primary-blue/30 blur-3xl" />
           <div className="absolute right-[-6rem] top-1/3 h-80 w-80 rounded-full bg-primary/40 blur-3xl" />
           <div className="absolute bottom-[-6rem] left-1/4 h-72 w-72 rounded-full bg-secondary/10 blur-3xl" />
-          <div className="absolute inset-0 opacity-[0.05] [background-image:linear-gradient(to_right,#fff_1px,transparent_1px),linear-gradient(to_bottom,#fff_1px,transparent_1px)] [background-size:44px_44px]" />
+          <ConnectingLines className="absolute inset-0 h-full w-full" />
         </div>
 
         {/* logo */}
