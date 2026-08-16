@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SparklesIcon } from "@heroicons/react/24/outline";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
  * Server component: fetches the current user's chats and renders the
@@ -38,9 +39,14 @@ export async function ChatSidebar({
   const rows = (myChats ?? []) as unknown as PartRow[];
   const chatIds = rows.map((r) => r.chat_id);
 
+  // The counterpart's name/photo lives behind RLS — a user can't read another
+  // user's `users` row, so the `users!inner` join silently drops them and the
+  // chat renders as "Conversation". Use the service-role client, scoped to
+  // THIS user's own chats (chatIds), to resolve who they're talking to.
+  const admin = createAdminClient();
   const { data: otherParts } =
     chatIds.length > 0
-      ? await supabase
+      ? await admin
           .from("chat_participants")
           .select("chat_id, user_id, users!inner(first_name, last_name, email)")
           .in("chat_id", chatIds)
@@ -62,6 +68,45 @@ export async function ChatSidebar({
     const arr = otherByChat.get(o.chat_id) ?? [];
     arr.push(o);
     otherByChat.set(o.chat_id, arr);
+  }
+
+  // Counterpart avatar: their own profile photo if they have one, otherwise
+  // the company logo of the chat's tenant. Both are read via the admin client
+  // (scoped to this user's chats' participants and tenants).
+  const otherUserIds = [...new Set(others.map((o) => o.user_id))];
+  const { data: photoRows } =
+    otherUserIds.length > 0
+      ? await admin
+          .from("candidate_profiles")
+          .select("user_id, photo_url")
+          .in("user_id", otherUserIds)
+          .not("photo_url", "is", null)
+      : { data: [] };
+  const photoByUser = new Map<string, string>();
+  for (const p of (photoRows ?? []) as {
+    user_id: string;
+    photo_url: string | null;
+  }[]) {
+    if (p.photo_url) photoByUser.set(p.user_id, p.photo_url);
+  }
+
+  const tenantIds = [
+    ...new Set(rows.map((r) => r.chats.tenant_id).filter(Boolean)),
+  ];
+  const { data: logoRows } =
+    tenantIds.length > 0
+      ? await admin
+          .from("client_profiles")
+          .select("tenant_id, logo_url")
+          .in("tenant_id", tenantIds)
+          .not("logo_url", "is", null)
+      : { data: [] };
+  const logoByTenant = new Map<string, string>();
+  for (const l of (logoRows ?? []) as {
+    tenant_id: string;
+    logo_url: string | null;
+  }[]) {
+    if (l.logo_url) logoByTenant.set(l.tenant_id, l.logo_url);
   }
 
   const { data: latestPerChat } =
@@ -159,28 +204,38 @@ export async function ChatSidebar({
         ) : (
           sorted.map((row) => {
             const otherList = otherByChat.get(row.chat_id) ?? [];
-            const otherNames = otherList
-              .map((o) => {
-                const fn = o.users.first_name?.trim();
-                const ln = o.users.last_name?.trim();
-                if (fn || ln) return `${fn ?? ""} ${ln ?? ""}`.trim();
-                return o.users.email;
-              })
-              .join(", ");
-            const initials = (() => {
-              const first = otherList[0];
-              if (!first) return "?";
-              const fn = first.users.first_name?.trim();
-              const ln = first.users.last_name?.trim();
-              const a = fn?.[0] ?? "";
-              const b = ln?.[0] ?? "";
-              return ((a + b) || first.users.email[0]).toUpperCase();
-            })();
             const preview = previewByChat.get(row.chat_id);
             const tenants = row.chats.tenants;
             const tenantName = Array.isArray(tenants)
               ? ((tenants[0] as { name: string } | undefined)?.name ?? "")
               : ((tenants as { name: string } | null)?.name ?? "");
+
+            // Title = the counterpart's real name, else the company name.
+            const otherDisplayName = otherList
+              .map((o) => {
+                const fn = o.users.first_name?.trim();
+                const ln = o.users.last_name?.trim();
+                return fn || ln ? `${fn ?? ""} ${ln ?? ""}`.trim() : "";
+              })
+              .filter(Boolean)
+              .join(", ");
+            const title = otherDisplayName || tenantName || "Conversation";
+
+            // Avatar = counterpart's photo, else the company logo, else initials.
+            const counterpartPhoto =
+              otherList.map((o) => photoByUser.get(o.user_id)).find(Boolean) ??
+              (row.chats.tenant_id
+                ? logoByTenant.get(row.chats.tenant_id)
+                : undefined) ??
+              null;
+            const initials =
+              title
+                .split(/\s+/)
+                .map((w) => w[0])
+                .filter(Boolean)
+                .slice(0, 2)
+                .join("")
+                .toUpperCase() || "?";
             const isActive = row.chat_id === activeChatId;
 
             const unread =
@@ -201,15 +256,24 @@ export async function ChatSidebar({
                 >
                   <div className="flex items-start gap-3">
                     <div className="relative shrink-0">
-                      <div
-                        className={`h-11 w-11 rounded-full flex items-center justify-center text-sm font-bold shadow-sm ${
-                          isActive
-                            ? "bg-gradient-to-br from-primary to-primary-blue text-white"
-                            : "bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-white/10 dark:to-white/[0.03] text-foreground ring-1 ring-white/5"
-                        }`}
-                      >
-                        {initials}
-                      </div>
+                      {counterpartPhoto ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={counterpartPhoto}
+                          alt=""
+                          className="h-11 w-11 rounded-full object-cover shadow-sm bg-surface-3"
+                        />
+                      ) : (
+                        <div
+                          className={`h-11 w-11 rounded-full flex items-center justify-center text-sm font-bold shadow-sm ${
+                            isActive
+                              ? "bg-gradient-to-br from-primary to-primary-blue text-white"
+                              : "bg-gradient-to-br from-zinc-100 to-zinc-200 dark:from-white/10 dark:to-white/[0.03] text-foreground ring-1 ring-white/5"
+                          }`}
+                        >
+                          {initials}
+                        </div>
+                      )}
                       {unread && (
                         <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-primary ring-2 ring-white dark:ring-[#0b1220]" />
                       )}
@@ -219,7 +283,7 @@ export async function ChatSidebar({
                         <div
                           className={`text-sm truncate ${unread || isActive ? "font-bold" : "font-semibold"} text-foreground`}
                         >
-                          {otherNames || "Conversation"}
+                          {title}
                         </div>
                         {preview && (
                           <span
@@ -229,7 +293,7 @@ export async function ChatSidebar({
                           </span>
                         )}
                       </div>
-                      {tenantName && (
+                      {tenantName && tenantName !== title && (
                         <p className="text-[11px] text-light-grey truncate mb-1">
                           {tenantName}
                         </p>
