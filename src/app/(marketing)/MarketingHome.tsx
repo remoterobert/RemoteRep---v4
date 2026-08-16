@@ -1,5 +1,15 @@
 import Link from "next/link";
+import {
+  BoltIcon,
+  UsersIcon,
+  ClipboardDocumentCheckIcon,
+  ArrowRightIcon,
+  SparklesIcon,
+  StarIcon,
+  CheckIcon,
+} from "@heroicons/react/24/solid";
 import GlobeConnections from "../(auth)/GlobeConnections";
+import { Reveal } from "./Reveal";
 
 // The app lives at app.remoterep.com; marketing CTAs send visitors there.
 const APP = "https://app.remoterep.com";
@@ -31,71 +41,87 @@ const PLANS = [
   { name: "Concierge", price: "$299", featured: false },
 ];
 
-function Check({ className = "" }: { className?: string }) {
+const CLIENTS = [
+  "BookProfits.com",
+  "The Legion of Loan Officers",
+  "FUELED",
+  "Acadium",
+  "Raider T Recruiting",
+  "Locus Digital",
+  "Valued Merchants",
+  "Exit Advisor",
+];
+
+function GoldCta({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <svg viewBox="0 0 20 20" fill="currentColor" className={className}>
-      <path d="M16.7 5.3a1 1 0 0 1 0 1.4l-7.4 7.4a1 1 0 0 1-1.42 0l-3.6-3.6a1 1 0 0 1 1.42-1.42l2.89 2.9 6.69-6.68a1 1 0 0 1 1.42 0Z" />
-    </svg>
+    <Link
+      href={`${APP}/signup`}
+      className={`group relative inline-flex items-center justify-center gap-2 rounded-xl bg-secondary px-6 py-3.5 text-sm font-bold text-dark-background shadow-[0_8px_30px_-8px_rgba(251,220,59,0.6)] transition hover:shadow-[0_12px_40px_-8px_rgba(251,220,59,0.75)] hover:brightness-105 ${className}`}
+    >
+      {children}
+      <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+    </Link>
   );
 }
 
-// Reusable pair of primary CTAs used throughout the page.
-function CtaRow({ center = false }: { center?: boolean }) {
+function GhostCta({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <div
-      className={`flex flex-col sm:flex-row gap-3 ${center ? "justify-center" : ""}`}
+    <Link
+      href={`${APP}/signup`}
+      className={`inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-3.5 text-sm font-semibold text-white backdrop-blur transition hover:border-white/30 hover:bg-white/10 ${className}`}
     >
-      <Link
-        href={`${APP}/signup`}
-        className="rounded-lg bg-secondary px-6 py-3 text-center text-sm font-bold text-dark-background shadow-sm transition hover:opacity-90"
-      >
-        Looking For Talent? Add Your Listing Now!
-      </Link>
-      <Link
-        href={`${APP}/signup`}
-        className="rounded-lg border border-white/25 px-6 py-3 text-center text-sm font-semibold text-white transition hover:bg-white/10"
-      >
-        Sales Rep? Click here to get hired.
-      </Link>
-    </div>
+      {children}
+    </Link>
   );
 }
 
 export function MarketingHome() {
   return (
-    <div className="fixed inset-0 z-40 overflow-y-auto bg-white text-zinc-900">
-      {/* ── Header ─────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 border-b border-black/5 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3">
+    <div className="fixed inset-0 z-40 overflow-y-auto overflow-x-hidden bg-[#05070f] text-white antialiased [scrollbar-width:thin]">
+      {/* ── Sticky glass nav ───────────────────────────────────── */}
+      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#05070f]/70 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
           <Link href="/" className="flex items-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/v3-logo-with-text.svg"
+              src="/v3-white-logo-with-text.svg"
               alt="RemoteRep.com"
               className="h-8 w-auto"
             />
           </Link>
-          <nav className="hidden items-center gap-7 text-sm font-medium text-zinc-600 md:flex">
-            <a href="#why" className="hover:text-primary">
-              Why RemoteRep.com
+          <nav className="hidden items-center gap-8 text-sm font-medium text-white/60 md:flex">
+            <a href="#why" className="transition hover:text-white">
+              Why RemoteRep
             </a>
-            <a href="#pricing" className="hover:text-primary">
+            <a href="#how" className="transition hover:text-white">
+              How it works
+            </a>
+            <a href="#pricing" className="transition hover:text-white">
               Pricing
             </a>
-            <Link href={`${APP}/signup`} className="hover:text-primary">
-              Sales Rep
-            </Link>
           </nav>
-          <div className="flex items-center gap-3 text-sm">
+          <div className="flex items-center gap-2.5 text-sm">
             <Link
               href={`${APP}/login`}
-              className="font-medium text-zinc-600 hover:text-primary"
+              className="rounded-lg px-3 py-2 font-medium text-white/70 transition hover:text-white"
             >
               Login
             </Link>
             <Link
               href={`${APP}/signup`}
-              className="rounded-lg bg-primary px-4 py-2 font-semibold text-white transition hover:bg-primary-blue"
+              className="rounded-lg bg-white px-4 py-2 font-semibold text-dark-background transition hover:bg-white/90"
             >
               Sign Up
             </Link>
@@ -104,92 +130,159 @@ export function MarketingHome() {
       </header>
 
       {/* ── Hero ───────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-dark-background text-white">
+      <section className="relative overflow-hidden">
+        {/* aurora + grid */}
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -left-24 top-0 h-96 w-96 rounded-full bg-primary-blue/25 blur-3xl" />
-          <div className="absolute right-0 top-1/3 h-96 w-96 rounded-full bg-primary/30 blur-3xl" />
+          <div className="mkt-aurora-a absolute -left-32 -top-40 h-[38rem] w-[38rem] rounded-full bg-primary-blue/25 blur-[120px]" />
+          <div className="mkt-aurora-b absolute -right-40 top-0 h-[42rem] w-[42rem] rounded-full bg-[#7c5cff]/20 blur-[130px]" />
+          <div className="mkt-aurora-c absolute bottom-0 left-1/3 h-[30rem] w-[30rem] rounded-full bg-secondary/10 blur-[120px]" />
+          <div className="mkt-grid absolute inset-0 [mask-image:radial-gradient(ellipse_at_center,black,transparent_75%)] opacity-60" />
         </div>
-        <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-5 py-20 lg:grid-cols-[1.1fr_1fr] lg:py-28">
+
+        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-5 pb-24 pt-16 lg:grid-cols-[1.05fr_0.95fr] lg:pb-28 lg:pt-24">
           <div>
-            <h1 className="text-4xl font-extrabold leading-[1.08] tracking-tight sm:text-5xl">
-              Save <span className="text-secondary">20 to 30 hours</span> hiring
-              your next remote sales rep.
-            </h1>
-            <p className="mt-6 max-w-xl text-lg text-white/75">
-              List your job in minutes. Automatically match your job listing
-              with perfect fit candidates.
-            </p>
-            <div className="mt-8">
-              <CtaRow />
+            <Reveal>
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-xs font-semibold text-white/80 backdrop-blur">
+                <SparklesIcon className="h-3.5 w-3.5 text-secondary" />
+                The sales-specific hiring platform
+              </span>
+            </Reveal>
+            <Reveal delay={80}>
+              <h1 className="mt-6 text-[2.75rem] font-extrabold leading-[1.03] tracking-tight sm:text-6xl">
+                Save{" "}
+                <span className="mkt-shine bg-gradient-to-r from-secondary via-amber-200 to-secondary bg-clip-text text-transparent">
+                  20 to 30 hours
+                </span>{" "}
+                hiring your next remote sales rep.
+              </h1>
+            </Reveal>
+            <Reveal delay={160}>
+              <p className="mt-6 max-w-xl text-lg leading-relaxed text-white/65">
+                List your job in minutes. Automatically match your job listing
+                with perfect fit candidates.
+              </p>
+            </Reveal>
+            <Reveal delay={240}>
+              <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+                <GoldCta>Add Your Listing Now</GoldCta>
+                <GhostCta>Sales Rep? Get hired</GhostCta>
+              </div>
+              <p className="mt-4 text-sm text-white/45">
+                Already have an account?{" "}
+                <Link
+                  href={`${APP}/login`}
+                  className="font-semibold text-white/80 underline-offset-4 hover:underline"
+                >
+                  Login
+                </Link>
+              </p>
+            </Reveal>
+
+            {/* stat strip */}
+            <Reveal delay={320}>
+              <dl className="mt-12 grid max-w-lg grid-cols-3 gap-4 border-t border-white/10 pt-8">
+                {[
+                  ["110+", "Sales teams built"],
+                  ["50%", "Less time to hire"],
+                  ["3 min", "To your first listing"],
+                ].map(([n, l]) => (
+                  <div key={l}>
+                    <dt className="text-2xl font-extrabold text-white sm:text-3xl">
+                      {n}
+                    </dt>
+                    <dd className="mt-1 text-xs text-white/50">{l}</dd>
+                  </div>
+                ))}
+              </dl>
+            </Reveal>
+          </div>
+
+          {/* globe */}
+          <Reveal delay={200} className="hidden lg:block">
+            <div className="mkt-float relative mx-auto aspect-square w-full max-w-[34rem]">
+              <div className="absolute inset-0 rounded-full bg-primary/10 blur-3xl" />
+              <GlobeConnections className="absolute inset-0 h-full w-full" />
             </div>
-            <p className="mt-4 text-sm text-white/60">
-              Already have an account?{" "}
-              <Link
-                href={`${APP}/login`}
-                className="font-semibold text-secondary hover:underline"
-              >
-                Login.
-              </Link>
-            </p>
-          </div>
-          <div className="relative hidden aspect-square w-full lg:block">
-            <GlobeConnections className="absolute inset-0 h-full w-full" />
-          </div>
+          </Reveal>
         </div>
       </section>
 
-      {/* ── Social proof ───────────────────────────────────────── */}
-      <section className="border-b border-black/5 bg-zinc-50 py-10">
-        <p className="text-center text-xs font-bold uppercase tracking-widest text-zinc-400">
+      {/* ── Client marquee ─────────────────────────────────────── */}
+      <section className="border-y border-white/10 bg-white/[0.02] py-8">
+        <p className="mb-6 text-center text-xs font-bold uppercase tracking-[0.2em] text-white/35">
           Companies We&apos;ve Worked With
         </p>
+        <div className="relative overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_12%,black_88%,transparent)]">
+          <div className="mkt-marquee flex w-max gap-12 whitespace-nowrap pr-12">
+            {[...CLIENTS, ...CLIENTS].map((c, i) => (
+              <span
+                key={`${c}-${i}`}
+                className="text-lg font-semibold text-white/40"
+              >
+                {c}
+              </span>
+            ))}
+          </div>
+        </div>
       </section>
 
       {/* ── Value proposition ──────────────────────────────────── */}
-      <section className="mx-auto max-w-6xl px-5 py-20">
-        <h2 className="mx-auto max-w-3xl text-center text-3xl font-bold tracking-tight sm:text-4xl">
-          Find and Hire Your Next Remote Sales Rep in One Convenient Location
-        </h2>
-        <div className="mt-12 grid gap-6 md:grid-cols-3">
+      <section className="mx-auto max-w-6xl px-5 py-24">
+        <Reveal>
+          <h2 className="mx-auto max-w-3xl text-center text-3xl font-bold tracking-tight sm:text-[2.6rem] sm:leading-[1.1]">
+            Find and Hire Your Next Remote Sales Rep in One Convenient Location
+          </h2>
+        </Reveal>
+        <div className="mt-14 grid gap-5 md:grid-cols-3">
           {[
             {
               t: "Remote Sales Reps",
               b: "Browse reps that match your specific needs, skip over the ones that don't.",
+              icon: UsersIcon,
             },
             {
               t: "RemoteRep.com",
               b: "We connect the perfect sales candidates with your job listing in one easy to use location.",
+              icon: BoltIcon,
             },
             {
               t: "Company",
               b: "Create your job listing with specific criteria to find the perfect fit.",
+              icon: ClipboardDocumentCheckIcon,
             },
-          ].map((c) => (
-            <div
-              key={c.t}
-              className="rounded-2xl border border-black/5 bg-white p-6 shadow-sm"
-            >
-              <h3 className="text-lg font-bold text-primary">{c.t}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-600">
-                {c.b}
-              </p>
-            </div>
+          ].map((c, i) => (
+            <Reveal key={c.t} delay={i * 90}>
+              <div className="group h-full rounded-2xl border border-white/10 bg-white/[0.03] p-7 backdrop-blur transition hover:border-secondary/40 hover:bg-white/[0.05]">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-secondary/25 to-secondary/5 text-secondary ring-1 ring-secondary/20">
+                  <c.icon className="h-5 w-5" />
+                </div>
+                <h3 className="mt-5 text-lg font-bold">{c.t}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-white/55">
+                  {c.b}
+                </p>
+              </div>
+            </Reveal>
           ))}
         </div>
       </section>
 
       {/* ── How it works ───────────────────────────────────────── */}
-      <section className="bg-zinc-50 py-20">
-        <div className="mx-auto max-w-6xl px-5">
-          <h2 className="mx-auto max-w-3xl text-center text-3xl font-bold tracking-tight sm:text-4xl">
-            The New Way to Affordably Hire Qualified Remote Sales Reps.
-          </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-center text-zinc-600">
-            Traditional hiring and recruiting can take up to 150 candidate
-            applications and 30 to 60 hours of interviews just to find one sales
-            rep. We cut that time in half. Here&apos;s how.
-          </p>
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
+      <section id="how" className="relative overflow-hidden py-24">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute left-1/2 top-0 h-96 w-96 -translate-x-1/2 rounded-full bg-primary-blue/10 blur-[120px]" />
+        </div>
+        <div className="relative mx-auto max-w-6xl px-5">
+          <Reveal>
+            <h2 className="mx-auto max-w-3xl text-center text-3xl font-bold tracking-tight sm:text-[2.6rem] sm:leading-[1.1]">
+              The New Way to Affordably Hire Qualified Remote Sales Reps.
+            </h2>
+            <p className="mx-auto mt-5 max-w-2xl text-center text-white/60">
+              Traditional hiring and recruiting can take up to 150 candidate
+              applications and 30 to 60 hours of interviews just to find one
+              sales rep. We cut that time in half. Here&apos;s how.
+            </p>
+          </Reveal>
+          <div className="mt-16 grid gap-5 md:grid-cols-3">
             {[
               {
                 n: "01",
@@ -206,32 +299,34 @@ export function MarketingHome() {
                 t: "Hire the Perfect Remote Sales Rep In Half the Time",
                 b: "Save 40 hours off the hiring process by only interviewing the best candidates matched to your job listings using our candidate matching system.",
               },
-            ].map((s) => (
-              <div
-                key={s.n}
-                className="rounded-2xl border border-black/5 bg-white p-6 shadow-sm"
-              >
-                <div className="text-sm font-black text-secondary">
-                  STEP {s.n}
+            ].map((s, i) => (
+              <Reveal key={s.n} delay={i * 100}>
+                <div className="relative h-full rounded-2xl border border-white/10 bg-white/[0.03] p-7 backdrop-blur">
+                  <div className="bg-gradient-to-br from-white to-white/40 bg-clip-text text-5xl font-black tracking-tighter text-transparent">
+                    {s.n}
+                  </div>
+                  <h3 className="mt-4 text-lg font-bold">{s.t}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-white/55">
+                    {s.b}
+                  </p>
                 </div>
-                <h3 className="mt-2 text-lg font-bold">{s.t}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-zinc-600">
-                  {s.b}
-                </p>
-              </div>
+              </Reveal>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── Why RemoteRep ──────────────────────────────────────── */}
-      <section id="why" className="mx-auto max-w-6xl px-5 py-20">
-        <h2 className="text-center text-3xl font-bold tracking-tight sm:text-4xl">
-          Why RemoteRep?
-        </h2>
-        <div className="mt-12 grid gap-8 md:grid-cols-3">
+      {/* ── Why RemoteRep (bento) ──────────────────────────────── */}
+      <section id="why" className="mx-auto max-w-6xl px-5 py-24">
+        <Reveal>
+          <h2 className="text-center text-3xl font-bold tracking-tight sm:text-[2.6rem]">
+            Why RemoteRep?
+          </h2>
+        </Reveal>
+        <div className="mt-14 grid gap-5 md:grid-cols-3">
           {[
             {
+              icon: BoltIcon,
               t: "Hire your next rep in days, not weeks.",
               items: [
                 "Set up your profile in just 3 minutes",
@@ -240,6 +335,7 @@ export function MarketingHome() {
               ],
             },
             {
+              icon: UsersIcon,
               t: "Unrestricted access to a large pool of talented remote sales reps.",
               items: [
                 "Sales specific job board makes it easier for you to find the best candidates in less time",
@@ -248,6 +344,7 @@ export function MarketingHome() {
               ],
             },
             {
+              icon: ClipboardDocumentCheckIcon,
               t: "Easily manage the hiring process from start to finish.",
               items: [
                 "Compare reps quickly to match them to your listing(s)",
@@ -255,44 +352,60 @@ export function MarketingHome() {
                 "Communicate with candidates and receive instant notifications when reps are interested",
               ],
             },
-          ].map((b) => (
-            <div key={b.t}>
-              <h3 className="text-lg font-bold">{b.t}</h3>
-              <ul className="mt-4 space-y-3">
-                {b.items.map((it) => (
-                  <li key={it} className="flex gap-3 text-sm text-zinc-600">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                    <span>{it}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          ].map((b, i) => (
+            <Reveal key={b.t} delay={i * 90}>
+              <div className="h-full rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.05] to-transparent p-7">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/20 text-primary-blue ring-1 ring-primary/30">
+                  <b.icon className="h-5 w-5" />
+                </div>
+                <h3 className="mt-5 text-lg font-bold leading-snug">{b.t}</h3>
+                <ul className="mt-5 space-y-3">
+                  {b.items.map((it) => (
+                    <li key={it} className="flex gap-3 text-sm text-white/60">
+                      <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-secondary" />
+                      <span>{it}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </Reveal>
           ))}
         </div>
       </section>
 
       {/* ── Differentiation ────────────────────────────────────── */}
-      <section className="bg-dark-background py-20 text-white">
-        <div className="mx-auto max-w-3xl px-5 text-center">
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            The Faster Way To Hire Remote Sales Reps Accurately.
-          </h2>
-          <p className="mt-6 text-lg leading-relaxed text-white/75">
-            Let&apos;s face it; the traditional recruiting process usually takes
-            way too long. Most of the time it&apos;s because recruiters
-            don&apos;t even know what they&apos;re looking for when hiring for
-            remote sales roles. At RemoteRep, we&apos;re sales pros first. We ask
-            candidates all the hard questions recruiters don&apos;t even know to
-            ask, saving you hundreds of hours sifting through candidates, reading
-            resumes, and first round interviews. Then our algorithm uses the
-            information to help you make accurate hiring decisions faster.
-          </p>
+      <section className="relative overflow-hidden py-28">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="mkt-aurora-a absolute left-1/2 top-1/2 h-[36rem] w-[36rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#7c5cff]/15 blur-[130px]" />
+        </div>
+        <div className="relative mx-auto max-w-3xl px-5 text-center">
+          <Reveal>
+            <h2 className="text-3xl font-bold tracking-tight sm:text-[2.6rem] sm:leading-[1.1]">
+              The Faster Way To Hire Remote Sales Reps{" "}
+              <span className="bg-gradient-to-r from-primary-blue to-[#7c5cff] bg-clip-text text-transparent">
+                Accurately.
+              </span>
+            </h2>
+          </Reveal>
+          <Reveal delay={120}>
+            <p className="mt-7 text-lg leading-relaxed text-white/65">
+              Let&apos;s face it; the traditional recruiting process usually
+              takes way too long. Most of the time it&apos;s because recruiters
+              don&apos;t even know what they&apos;re looking for when hiring for
+              remote sales roles. At RemoteRep, we&apos;re sales pros first. We
+              ask candidates all the hard questions recruiters don&apos;t even
+              know to ask, saving you hundreds of hours sifting through
+              candidates, reading resumes, and first round interviews. Then our
+              algorithm uses the information to help you make accurate hiring
+              decisions faster.
+            </p>
+          </Reveal>
         </div>
       </section>
 
       {/* ── Testimonials ───────────────────────────────────────── */}
-      <section className="mx-auto max-w-6xl px-5 py-20">
-        <div className="grid gap-6 md:grid-cols-3">
+      <section className="mx-auto max-w-6xl px-5 py-24">
+        <div className="grid gap-5 md:grid-cols-3">
           {[
             {
               q: "Almost six figures in one month…",
@@ -309,168 +422,202 @@ export function MarketingHome() {
               b: "Robert and his team at RemoteRep.com have worked directly with me and my sales team to help craft our sales system. Our sales process is now much smoother and we deliver higher perceived value when pitching to prospects thanks to implementing Robert's recommendations. His system is amazing.",
               a: "Ammon M., Director of Growth at FUELED",
             },
-          ].map((t) => (
-            <figure
-              key={t.a}
-              className="flex flex-col rounded-2xl border border-black/5 bg-white p-6 shadow-sm"
-            >
-              <div className="text-secondary">★★★★★</div>
-              <blockquote className="mt-3 text-base font-bold">
-                {t.q}
-              </blockquote>
-              <p className="mt-3 flex-1 text-sm leading-relaxed text-zinc-600">
-                {t.b}
-              </p>
-              <figcaption className="mt-4 text-sm font-semibold text-zinc-500">
-                {t.a}
-              </figcaption>
-            </figure>
+          ].map((t, i) => (
+            <Reveal key={t.a} delay={i * 90}>
+              <figure className="flex h-full flex-col rounded-2xl border border-white/10 bg-white/[0.03] p-7 backdrop-blur transition hover:border-white/20">
+                <div className="flex gap-0.5 text-secondary">
+                  {Array.from({ length: 5 }).map((_, s) => (
+                    <StarIcon key={s} className="h-4 w-4" />
+                  ))}
+                </div>
+                <blockquote className="mt-4 text-lg font-bold leading-snug">
+                  {t.q}
+                </blockquote>
+                <p className="mt-3 flex-1 text-sm leading-relaxed text-white/55">
+                  {t.b}
+                </p>
+                <figcaption className="mt-5 border-t border-white/10 pt-4 text-sm font-semibold text-white/45">
+                  {t.a}
+                </figcaption>
+              </figure>
+            </Reveal>
           ))}
         </div>
       </section>
 
-      {/* ── Sign-up CTA band ───────────────────────────────────── */}
-      <section className="bg-primary py-16 text-white">
-        <div className="mx-auto max-w-3xl px-5 text-center">
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Set up your account in just 3 minutes and start browsing remote
-            sales reps.
-          </h2>
-          <p className="mt-3 text-lg text-white/85">
-            Hire as many reps as you want, for each listing.
-          </p>
-          <div className="mt-8">
-            <CtaRow center />
-          </div>
-        </div>
-      </section>
-
       {/* ── Founder letter ─────────────────────────────────────── */}
-      <section className="mx-auto max-w-3xl px-5 py-20">
-        <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-          Letter From Founder
-        </h2>
-        <div className="mt-6 space-y-4 text-zinc-600 leading-relaxed">
-          <p>
-            At 12 years old I knew I wanted to do something big. I wanted to
-            change the world. At 18 years old I found my way into sales. A few
-            years later, I was boots on the ground, selling, as a freelance
-            closer for hire. My client, at the time, asked me to find more
-            people like me, so I obliged. That was the first sales team I had the
-            opportunity to build. This experience taught me that my hours were
-            numbered and if I wanted to expand my impact it would have to be
-            through other, amazing sales professionals. One became many, and
-            we&apos;ve since gone on to build 110 remote sales teams. We
-            developed three rules that allowed us to thrive:
-          </p>
-          <ol className="ml-5 list-decimal space-y-1">
-            <li>
-              You must provide a significant, measurable return on investment.
-            </li>
-            <li>
-              We must have a complete, 100% belief in the people, product, and
-              process.
-            </li>
-            <li>We have to be able to laugh together.</li>
-          </ol>
-          <p>
-            As long as our clients checked these boxes, we were successful. So
-            we stopped taking clients that didn&apos;t match. The result was that
-            we were able to place phenomenal salespeople in phenomenal roles.
-            Both the rep and the company were able to thrive in this way. We were
-            able to change the world through the teams we built and the products
-            they sold. The problem was we wanted to expand that same result to
-            scale our impact even further. RemoteRep is the product of that
-            story. A platform built to give companies like yours access to a
-            powerful network of sales professionals, and increase the speed and
-            accuracy at which you&apos;re able to hire amazing people. Our hope
-            is that this tool will allow you to achieve more impact and revenue
-            through these same phenomenal people.
-          </p>
+      <section className="relative py-24">
+        <div className="mx-auto max-w-3xl px-5">
+          <Reveal>
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-secondary">
+              Letter From Founder
+            </p>
+            <div className="mt-6 space-y-5 text-lg leading-relaxed text-white/65">
+              <p>
+                At 12 years old I knew I wanted to do something big. I wanted to
+                change the world. At 18 years old I found my way into sales. A
+                few years later, I was boots on the ground, selling, as a
+                freelance closer for hire. My client, at the time, asked me to
+                find more people like me, so I obliged. That was the first sales
+                team I had the opportunity to build. This experience taught me
+                that my hours were numbered and if I wanted to expand my impact
+                it would have to be through other, amazing sales professionals.
+                One became many, and we&apos;ve since gone on to build 110 remote
+                sales teams. We developed three rules that allowed us to thrive:
+              </p>
+              <ol className="space-y-3">
+                {[
+                  "You must provide a significant, measurable return on investment.",
+                  "We must have a complete, 100% belief in the people, product, and process.",
+                  "We have to be able to laugh together.",
+                ].map((rule, i) => (
+                  <li key={rule} className="flex gap-4">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary/15 text-sm font-bold text-secondary">
+                      {i + 1}
+                    </span>
+                    <span className="pt-0.5 text-base text-white/75">
+                      {rule}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+              <p>
+                As long as our clients checked these boxes, we were successful.
+                So we stopped taking clients that didn&apos;t match. The result
+                was that we were able to place phenomenal salespeople in
+                phenomenal roles. Both the rep and the company were able to
+                thrive in this way. We were able to change the world through the
+                teams we built and the products they sold. The problem was we
+                wanted to expand that same result to scale our impact even
+                further. RemoteRep is the product of that story. A platform built
+                to give companies like yours access to a powerful network of
+                sales professionals, and increase the speed and accuracy at which
+                you&apos;re able to hire amazing people. Our hope is that this
+                tool will allow you to achieve more impact and revenue through
+                these same phenomenal people.
+              </p>
+            </div>
+          </Reveal>
         </div>
       </section>
 
       {/* ── Pricing ────────────────────────────────────────────── */}
-      <section id="pricing" className="bg-zinc-50 py-20">
-        <div className="mx-auto max-w-6xl px-5">
-          <h2 className="text-center text-3xl font-bold tracking-tight sm:text-4xl">
+      <section id="pricing" className="mx-auto max-w-6xl px-5 py-24">
+        <Reveal>
+          <h2 className="text-center text-3xl font-bold tracking-tight sm:text-[2.6rem]">
             Pricing
           </h2>
-          <div className="mt-12 grid gap-6 md:grid-cols-3">
-            {PLANS.map((p) => (
+          <p className="mx-auto mt-4 max-w-xl text-center text-white/55">
+            Every plan includes the full platform. Set up your account in just 3
+            minutes and start browsing remote sales reps.
+          </p>
+        </Reveal>
+        <div className="mt-14 grid items-start gap-5 md:grid-cols-3">
+          {PLANS.map((p, i) => (
+            <Reveal key={p.name} delay={i * 90}>
               <div
-                key={p.name}
-                className={`relative flex flex-col rounded-2xl border bg-white p-6 shadow-sm ${
-                  p.featured
-                    ? "border-primary ring-2 ring-primary/20"
-                    : "border-black/5"
-                }`}
+                className={`relative rounded-2xl p-[1px] ${p.featured ? "mkt-ring shadow-[0_20px_60px_-20px_rgba(0,121,254,0.5)]" : ""}`}
               >
-                {p.featured && (
-                  <span className="absolute -top-3 left-6 rounded-full bg-primary px-3 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">
-                    Most popular
-                  </span>
-                )}
-                <h3 className="text-lg font-bold">{p.name}</h3>
-                <div className="mt-2 text-4xl font-extrabold">
-                  {p.price}
-                  <span className="text-base font-medium text-zinc-400">
-                    /month
-                  </span>
-                </div>
-                <p className="mt-2 text-sm text-zinc-500">
-                  Great for teams who need to hire multiple people for multiple
-                  roles!
-                </p>
-                <Link
-                  href={`${APP}/signup`}
-                  className={`mt-6 rounded-lg px-4 py-2.5 text-center text-sm font-semibold transition ${
+                <div
+                  className={`relative flex h-full flex-col rounded-2xl border p-7 ${
                     p.featured
-                      ? "bg-primary text-white hover:bg-primary-blue"
-                      : "border border-primary text-primary hover:bg-primary/5"
+                      ? "border-transparent bg-[#0a0f1f]"
+                      : "border-white/10 bg-white/[0.03]"
                   }`}
                 >
-                  Get Started Now
-                </Link>
+                  {p.featured && (
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-secondary to-amber-300 px-3 py-0.5 text-[11px] font-bold uppercase tracking-wide text-dark-background">
+                      Most popular
+                    </span>
+                  )}
+                  <h3 className="text-lg font-bold">{p.name}</h3>
+                  <div className="mt-3 flex items-end gap-1">
+                    <span className="text-5xl font-extrabold tracking-tight">
+                      {p.price}
+                    </span>
+                    <span className="pb-1.5 text-sm font-medium text-white/40">
+                      /month
+                    </span>
+                  </div>
+                  <p className="mt-3 text-sm text-white/50">
+                    Great for teams who need to hire multiple people for multiple
+                    roles!
+                  </p>
+                  <Link
+                    href={`${APP}/signup`}
+                    className={`mt-6 rounded-xl px-4 py-3 text-center text-sm font-bold transition ${
+                      p.featured
+                        ? "bg-secondary text-dark-background hover:brightness-105"
+                        : "border border-white/15 bg-white/5 text-white hover:bg-white/10"
+                    }`}
+                  >
+                    Get Started Now
+                  </Link>
+                </div>
               </div>
-            ))}
-          </div>
+            </Reveal>
+          ))}
+        </div>
 
-          <div className="mx-auto mt-12 max-w-3xl rounded-2xl border border-black/5 bg-white p-6 shadow-sm">
-            <p className="text-center text-sm font-bold uppercase tracking-wide text-zinc-500">
+        <Reveal delay={120}>
+          <div className="mx-auto mt-10 max-w-3xl rounded-2xl border border-white/10 bg-white/[0.02] p-7">
+            <p className="text-center text-xs font-bold uppercase tracking-[0.2em] text-white/40">
               Every plan includes
             </p>
-            <ul className="mt-5 grid gap-x-8 gap-y-2.5 sm:grid-cols-2">
+            <ul className="mt-6 grid gap-x-8 gap-y-2.5 sm:grid-cols-2">
               {PLAN_FEATURES.map((f) => (
-                <li key={f} className="flex gap-2.5 text-sm text-zinc-700">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                <li key={f} className="flex gap-2.5 text-sm text-white/65">
+                  <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-secondary" />
                   <span>{f}</span>
                 </li>
               ))}
             </ul>
           </div>
+        </Reveal>
+      </section>
+
+      {/* ── Final CTA ──────────────────────────────────────────── */}
+      <section className="relative overflow-hidden px-5 py-24">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="mkt-aurora-b absolute left-1/4 top-0 h-[30rem] w-[30rem] rounded-full bg-primary-blue/25 blur-[120px]" />
+          <div className="mkt-aurora-c absolute bottom-0 right-1/4 h-[26rem] w-[26rem] rounded-full bg-secondary/15 blur-[120px]" />
         </div>
+        <Reveal className="relative">
+          <div className="mx-auto max-w-3xl rounded-3xl border border-white/10 bg-white/[0.03] px-6 py-14 text-center backdrop-blur-xl sm:px-12">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-[2.6rem] sm:leading-[1.1]">
+              Set up your account in just 3 minutes and start browsing remote
+              sales reps.
+            </h2>
+            <p className="mt-4 text-lg text-white/60">
+              Hire as many reps as you want, for each listing.
+            </p>
+            <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
+              <GoldCta>Add Your Listing Now</GoldCta>
+              <GhostCta>Sales Rep? Get hired</GhostCta>
+            </div>
+          </div>
+        </Reveal>
       </section>
 
       {/* ── Footer ─────────────────────────────────────────────── */}
-      <footer className="bg-dark-background py-12 text-white/70">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 px-5 text-center text-sm">
+      <footer className="border-t border-white/10 py-12">
+        <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 px-5 text-center text-sm text-white/50">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/v3-white-logo-with-text.svg"
             alt="RemoteRep.com"
-            className="h-8 w-auto"
+            className="h-8 w-auto opacity-90"
           />
           <p>1 Innovation Way Woodstock, GA 30188</p>
           <div className="flex gap-6">
-            <Link href="/privacy" className="hover:text-white">
+            <Link href="/privacy" className="transition hover:text-white">
               Privacy Policy
             </Link>
-            <Link href="/terms" className="hover:text-white">
+            <Link href="/terms" className="transition hover:text-white">
               Terms of Services
             </Link>
           </div>
-          <p className="text-white/40">©2023. All rights reserved.</p>
+          <p className="text-white/30">©2023. All rights reserved.</p>
         </div>
       </footer>
     </div>

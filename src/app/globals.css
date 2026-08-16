@@ -95,3 +95,62 @@ body {
 html {
   overflow-x: hidden;
 }
+
+/* ===================================================================
+   Marketing landing page — motion + effects
+   =================================================================== */
+@keyframes mkt-aurora-a {
+  0%, 100% { transform: translate3d(-6%, -4%, 0) scale(1); }
+  50%      { transform: translate3d(6%, 5%, 0) scale(1.18); }
+}
+@keyframes mkt-aurora-b {
+  0%, 100% { transform: translate3d(6%, 4%, 0) scale(1.12); }
+  50%      { transform: translate3d(-6%, -4%, 0) scale(1); }
+}
+@keyframes mkt-aurora-c {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.5; }
+  50%      { transform: translate3d(-4%, 6%, 0) scale(1.1); opacity: 0.8; }
+}
+@keyframes mkt-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes mkt-shine { to { background-position: 200% center; } }
+@keyframes mkt-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+@keyframes mkt-spin-slow { to { transform: rotate(360deg); } }
+
+.mkt-aurora-a { animation: mkt-aurora-a 20s ease-in-out infinite; }
+.mkt-aurora-b { animation: mkt-aurora-b 26s ease-in-out infinite; }
+.mkt-aurora-c { animation: mkt-aurora-c 16s ease-in-out infinite; }
+.mkt-marquee { animation: mkt-marquee 45s linear infinite; }
+.mkt-float { animation: mkt-float 8s ease-in-out infinite; }
+.mkt-spin-slow { animation: mkt-spin-slow 24s linear infinite; }
+
+/* Animated gradient (shine) text — pair with a bg-clip-text gradient. */
+.mkt-shine { background-size: 200% auto; animation: mkt-shine 6s linear infinite; }
+
+/* Scroll-reveal — toggled by the <Reveal> client component. */
+.mkt-reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition:
+    opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+.mkt-reveal.is-visible { opacity: 1; transform: none; }
+
+/* Fine dotted grid used behind hero sections. */
+.mkt-grid {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.09) 1px, transparent 1px);
+  background-size: 30px 30px;
+}
+
+/* Conic gradient border for the featured pricing card. */
+.mkt-ring {
+  background:
+    conic-gradient(from 180deg, #fbdc3b, #0079fe, #7c5cff, #fbdc3b);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mkt-aurora-a, .mkt-aurora-b, .mkt-aurora-c,
+  .mkt-marquee, .mkt-float, .mkt-shine, .mkt-spin-slow { animation: none; }
+  .mkt-reveal { opacity: 1; transform: none; transition: none; }
+}
