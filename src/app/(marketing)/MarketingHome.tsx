@@ -7,6 +7,7 @@ import {
   SparklesIcon,
   StarIcon,
   CheckIcon,
+  CpuChipIcon,
 } from "@heroicons/react/24/solid";
 import GlobeConnections from "../(auth)/GlobeConnections";
 import { Reveal } from "./Reveal";
@@ -14,31 +15,46 @@ import { Reveal } from "./Reveal";
 // The app lives at app.remoterep.com; marketing CTAs send visitors there.
 const APP = "https://app.remoterep.com";
 
-const PLAN_FEATURES = [
-  "Create job listings",
-  "Automatically match candidates to job listings",
-  "Filter reps to find your best fit",
-  "Browse all remote sales reps",
-  "Build custom or templated applications for each listing",
-  "View candidates intro video",
-  "Bookmark top candidates",
-  "Rate and rank top candidates",
-  "Easily compare top candidates side by side",
-  "Keep notes on bookmarked candidates",
-  "Get instant notifications of new candidates matching your job listings",
-  "Easily invite candidates to apply",
-  "Track candidate progress through hiring pipeline",
-  "In-app messaging with candidates",
-  "View hiring pipeline analytics",
-  "Add team members to your account",
-  "Priority customer support",
-  "Full Service Hiring Concierge",
-];
-
 const PLANS = [
-  { name: "Unlimited", price: "$0", featured: false },
-  { name: "Featured", price: "$69", featured: true },
-  { name: "Concierge", price: "$299", featured: false },
+  {
+    name: "Free",
+    price: "$0",
+    featured: false,
+    tagline: "Everything you need to start hiring.",
+    lead: null as string | null,
+    features: [
+      "Unlimited job listings",
+      "Kanban ATS + in-app chat",
+      "Browse the full candidate directory",
+      "Automatic candidate matching",
+    ],
+  },
+  {
+    name: "Premium",
+    price: "$59",
+    featured: true,
+    tagline: "AI-assisted hiring for growing teams.",
+    lead: "Everything in Free, plus:" as string | null,
+    features: [
+      "AI listing writer (Default / Repel / Inclusive styles)",
+      "Featured listing placement",
+      "AI profile assist (coming soon)",
+      "Priority support",
+    ],
+  },
+  {
+    name: "Concierge",
+    price: "$299",
+    featured: false,
+    tagline: "A full AI hiring manager, working 24/7.",
+    lead: "Everything in Premium, plus:" as string | null,
+    features: [
+      "AI sources + invites your best-fit candidates 24/7",
+      "AI replies to candidates and offers to book interviews",
+      "Every action logged — final decisions stay with your team",
+      "No listing cap",
+    ],
+  },
 ];
 
 const CLIENTS = [
@@ -402,6 +418,86 @@ export function MarketingHome() {
         </div>
       </section>
 
+      {/* ── AI showcase ────────────────────────────────────────── */}
+      <section id="ai" className="mx-auto max-w-6xl px-5 py-24">
+        <Reveal>
+          <div className="text-center">
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-xs font-semibold text-white/80 backdrop-blur">
+              <CpuChipIcon className="h-3.5 w-3.5 text-secondary" />
+              Powered by AI
+            </span>
+            <h2 className="mx-auto mt-6 max-w-3xl text-3xl font-bold tracking-tight sm:text-[2.6rem] sm:leading-[1.1]">
+              Your AI hiring manager works{" "}
+              <span className="mkt-shine bg-gradient-to-r from-secondary via-amber-200 to-secondary bg-clip-text text-transparent">
+                while you sleep.
+              </span>
+            </h2>
+            <p className="mx-auto mt-5 max-w-2xl text-white/60">
+              On the Concierge plan, AI does the heavy lifting — so your best-fit
+              reps come to you.
+            </p>
+          </div>
+        </Reveal>
+
+        <div className="mt-14 grid gap-5 lg:grid-cols-6">
+          <Reveal className="lg:col-span-4">
+            <div className="relative h-full overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-8 backdrop-blur">
+              <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-secondary/10 blur-3xl" />
+              <div className="relative flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-secondary/25 to-secondary/5 text-secondary ring-1 ring-secondary/20">
+                <CpuChipIcon className="h-6 w-6" />
+              </div>
+              <h3 className="relative mt-5 text-xl font-bold">
+                A 24/7 AI hiring manager
+              </h3>
+              <p className="relative mt-3 max-w-lg leading-relaxed text-white/60">
+                It sources, sifts, and bookmarks your best-fit reps around the
+                clock — then opens the conversation, replies to candidates, and
+                offers to book interviews. Automatically.
+              </p>
+            </div>
+          </Reveal>
+
+          <Reveal delay={80} className="lg:col-span-2">
+            <div className="h-full rounded-2xl border border-white/10 bg-white/[0.03] p-7 backdrop-blur">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/20 text-primary-blue ring-1 ring-primary/30">
+                <SparklesIcon className="h-5 w-5" />
+              </div>
+              <h3 className="mt-5 text-lg font-bold">AI listing writer</h3>
+              <p className="mt-2 text-sm leading-relaxed text-white/55">
+                Write compelling job posts in seconds — in Default, Repel, or
+                Inclusive styles.
+              </p>
+            </div>
+          </Reveal>
+
+          <Reveal delay={120} className="lg:col-span-3">
+            <div className="h-full rounded-2xl border border-white/10 bg-white/[0.03] p-7 backdrop-blur">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/20 text-primary-blue ring-1 ring-primary/30">
+                <BoltIcon className="h-5 w-5" />
+              </div>
+              <h3 className="mt-5 text-lg font-bold">AI-ranked matching</h3>
+              <p className="mt-2 text-sm leading-relaxed text-white/55">
+                Every candidate is scored against your listing, so the best fit
+                rises to the top of your list.
+              </p>
+            </div>
+          </Reveal>
+
+          <Reveal delay={160} className="lg:col-span-3">
+            <div className="h-full rounded-2xl border border-white/10 bg-white/[0.03] p-7 backdrop-blur">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/20 text-primary-blue ring-1 ring-primary/30">
+                <ClipboardDocumentCheckIcon className="h-5 w-5" />
+              </div>
+              <h3 className="mt-5 text-lg font-bold">You stay in control</h3>
+              <p className="mt-2 text-sm leading-relaxed text-white/55">
+                Every AI action is logged, and final hiring decisions always stay
+                with your team.
+              </p>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
       {/* ── Testimonials ───────────────────────────────────────── */}
       <section className="mx-auto max-w-6xl px-5 py-24">
         <div className="grid gap-5 md:grid-cols-3">
@@ -504,18 +600,18 @@ export function MarketingHome() {
       <section id="pricing" className="mx-auto max-w-6xl px-5 py-24">
         <Reveal>
           <h2 className="text-center text-3xl font-bold tracking-tight sm:text-[2.6rem]">
-            Pricing
+            Simple pricing. Start free.
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-center text-white/55">
-            Every plan includes the full platform. Set up your account in just 3
-            minutes and start browsing remote sales reps.
+            Set up your account in just 3 minutes. Upgrade when you want AI doing
+            the hiring work for you.
           </p>
         </Reveal>
-        <div className="mt-14 grid items-start gap-5 md:grid-cols-3">
+        <div className="mt-14 grid items-stretch gap-5 md:grid-cols-3">
           {PLANS.map((p, i) => (
-            <Reveal key={p.name} delay={i * 90}>
+            <Reveal key={p.name} delay={i * 90} className="h-full">
               <div
-                className={`relative rounded-2xl p-[1px] ${p.featured ? "mkt-ring shadow-[0_20px_60px_-20px_rgba(0,121,254,0.5)]" : ""}`}
+                className={`relative h-full rounded-2xl p-[1px] ${p.featured ? "mkt-ring shadow-[0_20px_60px_-20px_rgba(0,121,254,0.5)]" : ""}`}
               >
                 <div
                   className={`relative flex h-full flex-col rounded-2xl border p-7 ${
@@ -538,10 +634,27 @@ export function MarketingHome() {
                       /month
                     </span>
                   </div>
-                  <p className="mt-3 text-sm text-white/50">
-                    Great for teams who need to hire multiple people for multiple
-                    roles!
-                  </p>
+                  <p className="mt-3 text-sm text-white/50">{p.tagline}</p>
+
+                  <div className="mt-6 flex-1 border-t border-white/10 pt-5">
+                    {p.lead && (
+                      <p className="mb-3 text-xs font-semibold text-white/70">
+                        {p.lead}
+                      </p>
+                    )}
+                    <ul className="space-y-2.5">
+                      {p.features.map((f) => (
+                        <li
+                          key={f}
+                          className="flex gap-2.5 text-sm text-white/65"
+                        >
+                          <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-secondary" />
+                          <span>{f}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
                   <Link
                     href={`${APP}/signup`}
                     className={`mt-6 rounded-xl px-4 py-3 text-center text-sm font-bold transition ${
@@ -557,22 +670,6 @@ export function MarketingHome() {
             </Reveal>
           ))}
         </div>
-
-        <Reveal delay={120}>
-          <div className="mx-auto mt-10 max-w-3xl rounded-2xl border border-white/10 bg-white/[0.02] p-7">
-            <p className="text-center text-xs font-bold uppercase tracking-[0.2em] text-white/40">
-              Every plan includes
-            </p>
-            <ul className="mt-6 grid gap-x-8 gap-y-2.5 sm:grid-cols-2">
-              {PLAN_FEATURES.map((f) => (
-                <li key={f} className="flex gap-2.5 text-sm text-white/65">
-                  <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-secondary" />
-                  <span>{f}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </Reveal>
       </section>
 
       {/* ── Final CTA ──────────────────────────────────────────── */}
