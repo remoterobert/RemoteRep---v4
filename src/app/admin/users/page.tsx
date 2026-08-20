@@ -13,6 +13,7 @@ import {
   toggleArchive,
   deleteUserPermanently,
 } from "./actions";
+import AddUserModal from "./AddUserModal";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,7 @@ const OK_MESSAGES: Record<string, string> = {
   archived: "User archived.",
   unarchived: "User unarchived.",
   deleted: "User permanently deleted.",
+  created: "User created.",
 };
 
 export default async function AdminUsersPage({
@@ -151,6 +153,9 @@ export default async function AdminUsersPage({
           <p className="text-sm text-light-grey">
             Full-platform user management with impersonation + admin controls.
           </p>
+        </div>
+        <div className="ml-auto">
+          <AddUserModal />
         </div>
       </div>
 
