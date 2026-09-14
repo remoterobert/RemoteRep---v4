@@ -10,6 +10,7 @@ import { BookmarkIcon as BookmarkSolid } from "@heroicons/react/24/solid";
 import { createClient } from "@/lib/supabase/server";
 import { inviteCandidate, toggleCandidateBookmark } from "./actions";
 import { MatchListingSelect } from "./MatchListingSelect";
+import { CandidateFilterPanel } from "./CandidateFilterPanel";
 import { MatchBadges } from "@/components/MatchBadges";
 import {
   computeExperienceMatch,
@@ -30,12 +31,34 @@ const EMPTY_GOALS_TOOLTIP =
 const EMPTY_EXPERIENCE_TOOLTIP =
   "Your listing doesn't specify enough requirements to score against.";
 
-type SearchParams = Promise<{
-  view?: "list" | "tile";
-  role?: string;
-  listing?: string;
-  error?: string;
-}>;
+// Facets arrive as repeated query params (?tech=A&tech=B), so values can be
+// arrays. Mirrors the rep-side /opportunities page.
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+function toArray(v: string | string[] | undefined): string[] {
+  if (!v) return [];
+  return Array.isArray(v) ? v : [v];
+}
+
+/**
+ * Industries are stored inconsistently on rep profiles: the v4 profile form
+ * writes INDUSTRIES labels ("SaaS"), while reps imported from v3 carry
+ * slugs ("fitness-and-wellness"). Match on both so an imported rep isn't
+ * invisible to the filter.
+ */
+function industryVariants(values: string[]): string[] {
+  const out = new Set<string>();
+  for (const v of values) {
+    out.add(v);
+    out.add(
+      v
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, ""),
+    );
+  }
+  return [...out];
+}
 
 type CandidateRow = {
   user_id: string;
@@ -45,6 +68,7 @@ type CandidateRow = {
   photo_url: string | null;
   years_of_experience: number | null;
   education: string | null;
+  industry_slugs: string[] | null;
   sales_types: string[] | null;
   deal_amounts: string[] | null;
   sales_volumes: string[] | null;
@@ -96,8 +120,44 @@ export default async function CandidatesPage({
 
   const params = await searchParams;
   const view = params.view === "tile" ? "tile" : "list";
-  const selectedRole = params.role ?? null;
-  const error = params.error;
+  const error = typeof params.error === "string" ? params.error : undefined;
+
+  // ---- Active filters -------------------------------------------------
+  // "all" was the old opt-out value for the single-role filter; it now means
+  // "no role filter" so existing links keep working.
+  const roleF = toArray(params.role).filter((r) => r !== "all");
+  const minExp = typeof params.min_exp === "string" ? params.min_exp : "";
+  const educationF = toArray(params.education);
+  const industryF = toArray(params.industry);
+  const salesTypeF = toArray(params.sales_type);
+  const decisionF = toArray(params.decision_maker);
+  const envF = toArray(params.environment);
+  const cycleF = toArray(params.cycle);
+  const dealF = toArray(params.deal);
+  const volumeF = toArray(params.volume);
+  const leadF = toArray(params.lead);
+  const techF = toArray(params.tech);
+
+  const minExpNum =
+    minExp && !Number.isNaN(Number(minExp)) ? Number(minExp) : null;
+
+  // Everything except role lives on candidate_profiles. Tracked separately
+  // because a rep with no profile row should still be listed when no
+  // profile-level filter is active.
+  const hasProfileFilter =
+    minExpNum !== null ||
+    [
+      educationF,
+      industryF,
+      salesTypeF,
+      decisionF,
+      envF,
+      cycleF,
+      dealF,
+      volumeF,
+      leadF,
+      techF,
+    ].some((f) => f.length > 0);
 
   // -------- Fetch tenant listings + intents in parallel --------
   const [{ data: intents }, { data: tenantListings }, { data: clientProfile }] =
@@ -159,28 +219,49 @@ export default async function CandidatesPage({
     : null;
 
   // -------- Fetch candidate data --------
-  // NOTE: candidate_profiles is NOT directly embeddable on candidate_specialties
-  // — the two tables relate only through users, so PostgREST rejects the embed
-  // (which silently returned zero candidates). Fetch specialties first, then
-  // load the matching profiles by user_id and join them in memory.
-  const { data: specRows } = await supabase
+  // candidate_profiles is NOT directly embeddable on candidate_specialties —
+  // the two tables relate only through users, so PostgREST rejects that embed
+  // (it silently returned zero candidates). Nesting it under users works, and
+  // lets the database do the filtering: every facet below is applied as a
+  // WHERE clause across ALL reps, rather than filtering a page of rows in
+  // memory after the fact.
+  const PROFILE_COLS =
+    "user_id, headline, photo_url, years_of_experience, education, sales_types, deal_amounts, decision_makers, sales_environments, sales_cycles, sales_volumes, lead_types, technologies, industry_slugs, city, state_region, visibility";
+
+  // Inner-join the profile only when filtering on it, so a rep who hasn't
+  // filled in a profile yet still shows up in the unfiltered list.
+  const profileEmbed = hasProfileFilter
+    ? `candidate_profiles!inner(${PROFILE_COLS})`
+    : `candidate_profiles(${PROFILE_COLS})`;
+
+  let specQ = supabase
     .from("candidate_specialties")
-    .select("user_id, sales_role, users!inner(first_name, last_name)")
-    .limit(500);
+    .select(
+      `user_id, sales_role, users!inner(first_name, last_name, ${profileEmbed})`,
+    );
 
-  const specialtyUserIds = Array.from(
-    new Set((specRows ?? []).map((r) => (r as { user_id: string }).user_id)),
-  );
+  if (roleF.length) specQ = specQ.in("sales_role", roleF);
 
-  const { data: profileRows } =
-    specialtyUserIds.length > 0
-      ? await supabase
-          .from("candidate_profiles")
-          .select(
-            "user_id, headline, photo_url, years_of_experience, education, sales_types, deal_amounts, decision_makers, sales_environments, sales_cycles, sales_volumes, lead_types, technologies, industry_slugs, city, state_region, visibility",
-          )
-          .in("user_id", specialtyUserIds)
-      : { data: [] };
+  // Filters on the nested profile. overlaps(A, B) is true when the two arrays
+  // share at least one value, so picking two tools finds reps who know either.
+  const P = "users.candidate_profiles";
+  if (minExpNum !== null)
+    specQ = specQ.gte(`${P}.years_of_experience`, minExpNum);
+  // education is a single column, not an array — hence `in`, not `overlaps`.
+  if (educationF.length) specQ = specQ.in(`${P}.education`, educationF);
+  if (industryF.length)
+    specQ = specQ.overlaps(`${P}.industry_slugs`, industryVariants(industryF));
+  if (salesTypeF.length) specQ = specQ.overlaps(`${P}.sales_types`, salesTypeF);
+  if (decisionF.length)
+    specQ = specQ.overlaps(`${P}.decision_makers`, decisionF);
+  if (envF.length) specQ = specQ.overlaps(`${P}.sales_environments`, envF);
+  if (cycleF.length) specQ = specQ.overlaps(`${P}.sales_cycles`, cycleF);
+  if (dealF.length) specQ = specQ.overlaps(`${P}.deal_amounts`, dealF);
+  if (volumeF.length) specQ = specQ.overlaps(`${P}.sales_volumes`, volumeF);
+  if (leadF.length) specQ = specQ.overlaps(`${P}.lead_types`, leadF);
+  if (techF.length) specQ = specQ.overlaps(`${P}.technologies`, techF);
+
+  const { data: specRows } = await specQ.limit(500);
 
   type ProfileRow = {
     user_id: string;
@@ -201,15 +282,21 @@ export default async function CandidatesPage({
     state_region: string | null;
     visibility: string | null;
   };
-  const profileByUser = new Map<string, ProfileRow>();
-  for (const p of (profileRows ?? []) as unknown as ProfileRow[]) {
-    profileByUser.set(p.user_id, p);
-  }
 
   type RawRow = {
     user_id: string;
     sales_role: string;
-    users: { first_name: string | null; last_name: string | null };
+    users: {
+      first_name: string | null;
+      last_name: string | null;
+      // PostgREST returns a to-one embed as an object, but types it loosely.
+      candidate_profiles: ProfileRow | ProfileRow[] | null;
+    };
+  };
+
+  const profileOf = (r: RawRow): ProfileRow | null => {
+    const cp = r.users.candidate_profiles;
+    return (Array.isArray(cp) ? (cp[0] ?? null) : cp) ?? null;
   };
 
   // Group specialties by user_id and gather ProfileForMatch data.
@@ -223,6 +310,7 @@ export default async function CandidatesPage({
       photo_url: string | null;
       years_of_experience: number | null;
       education: string | null;
+      industry_slugs: string[] | null;
       sales_types: string[] | null;
       deal_amounts: string[] | null;
       sales_volumes: string[] | null;
@@ -244,7 +332,7 @@ export default async function CandidatesPage({
       existing.specialties.push(r.sales_role);
       existing.candidateForMatch.specialties = existing.specialties;
     } else {
-      const cp = profileByUser.get(r.user_id) ?? null;
+      const cp = profileOf(r);
       byUser.set(r.user_id, {
         user_id: r.user_id,
         first_name: r.users.first_name,
@@ -253,6 +341,7 @@ export default async function CandidatesPage({
         photo_url: cp?.photo_url ?? null,
         years_of_experience: cp?.years_of_experience ?? null,
         education: cp?.education ?? null,
+        industry_slugs: cp?.industry_slugs ?? null,
         sales_types: cp?.sales_types ?? null,
         deal_amounts: cp?.deal_amounts ?? null,
         sales_volumes: cp?.sales_volumes ?? null,
@@ -330,6 +419,7 @@ export default async function CandidatesPage({
       photo_url: c.photo_url,
       years_of_experience: c.years_of_experience,
       education: c.education,
+      industry_slugs: c.industry_slugs,
       sales_types: c.sales_types,
       deal_amounts: c.deal_amounts,
       sales_volumes: c.sales_volumes,
@@ -349,15 +439,13 @@ export default async function CandidatesPage({
     };
   });
 
-  // Show ALL candidates by default — never hide a rep just because their role
-  // isn't what this company is actively hiring for. A specific role chip is the
-  // only thing that narrows the list; ranking (below) surfaces best-fit first.
-  const filtered = candidates.filter((c) => {
-    if (selectedRole && selectedRole !== "all") {
-      return new Set(c.specialties).has(selectedRole);
-    }
-    return true;
-  });
+  // Show ALL reps by default — never hide someone just because their role
+  // isn't what this company is actively hiring for. Only an explicit filter
+  // narrows the list; ranking (below) surfaces best-fit first.
+  //
+  // Every facet is already applied as a database filter above, so there is
+  // nothing left to exclude here.
+  const filtered = [...candidates];
 
   // Rank best-fit first, but NEVER exclude: weaker matches simply sink lower.
   if (selectedListingForMatch) {
@@ -406,14 +494,44 @@ export default async function CandidatesPage({
     (bookmarkRows ?? []).map((b) => b.target_id as string),
   );
 
+  // Carry every active filter onto the page's own links (invite, bookmark,
+  // listing selector) so acting on a rep doesn't silently reset the filters.
   const baseQs = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (k === "error") continue;
+    if (Array.isArray(v)) v.forEach((x) => baseQs.append(k, x));
+    else if (v !== undefined) baseQs.set(k, v);
+  }
   if (selectedListingId) baseQs.set("listing", selectedListingId);
-  if (selectedRole) baseQs.set("role", selectedRole);
   const qsWith = (extra: Record<string, string>) => {
     const p = new URLSearchParams(baseQs);
     for (const [k, v] of Object.entries(extra)) p.set(k, v);
     return `?${p.toString()}`;
   };
+
+  // "My hiring roles" now actually filters to the roles this company is
+  // hiring for. It previously cleared the role param, so it showed everyone —
+  // identical to "All roles" despite the different label.
+  const withoutRoles = () => {
+    const p = new URLSearchParams(baseQs);
+    p.delete("role");
+    return p;
+  };
+  const myRolesParams = withoutRoles();
+  for (const r of activeIntentRoles) myRolesParams.append("role", r);
+  const myRolesHref = `?${myRolesParams.toString()}`;
+  const allRolesHref = `?${withoutRoles().toString()}`;
+  const myRolesActive =
+    roleF.length > 0 &&
+    roleF.length === activeIntentRoles.size &&
+    roleF.every((r) => activeIntentRoles.has(r));
+
+  // Link that drops every filter but keeps the listing being scored against.
+  const clearFiltersParams = new URLSearchParams();
+  if (selectedListingId) clearFiltersParams.set("listing", selectedListingId);
+  if (typeof params.view === "string")
+    clearFiltersParams.set("view", params.view);
+  const clearFiltersHref = `?${clearFiltersParams.toString()}`;
 
   return (
     <main className="flex-1 p-6 max-w-7xl mx-auto w-full">
@@ -479,30 +597,28 @@ export default async function CandidatesPage({
         </div>
       )}
 
-      {intents && intents.length > 0 && (
+      {/* Full facet filter — same bar reps get on /opportunities. Always
+          visible: it used to be hidden entirely unless the company had
+          hiring intents set, which read as "there is no filter". */}
+      <CandidateFilterPanel showResultsCount={filtered.length} />
+
+      {activeIntentRoles.size > 0 && (
         <div className="flex items-center gap-2 mb-4 flex-wrap">
-          <span className="text-xs text-light-grey">Filter:</span>
+          <span className="text-xs text-light-grey">Quick filter:</span>
           <Link
-            href={qsWith({}).replace(/&?role=[^&]*/, "")}
-            className={`text-xs rounded px-2 py-1 ${!selectedRole ? "bg-zinc-200 dark:bg-zinc-800" : "border border-zinc-300 dark:border-zinc-700"}`}
+            href={myRolesHref}
+            className={`text-xs rounded px-2 py-1 ${myRolesActive ? "bg-zinc-200 dark:bg-zinc-800" : "border border-zinc-300 dark:border-zinc-700"}`}
           >
             My hiring roles
           </Link>
-          <Link
-            href={qsWith({ role: "all" })}
-            className={`text-xs rounded px-2 py-1 ${selectedRole === "all" ? "bg-zinc-200 dark:bg-zinc-800" : "border border-zinc-300 dark:border-zinc-700"}`}
-          >
-            All roles
-          </Link>
-          {intents.map((i) => (
+          {roleF.length > 0 && (
             <Link
-              key={i.sales_role}
-              href={qsWith({ role: i.sales_role })}
-              className={`text-xs rounded px-2 py-1 ${selectedRole === i.sales_role ? "bg-zinc-200 dark:bg-zinc-800" : "border border-zinc-300 dark:border-zinc-700"}`}
+              href={allRolesHref}
+              className="text-xs rounded px-2 py-1 border border-zinc-300 dark:border-zinc-700"
             >
-              {i.sales_role}
+              All roles
             </Link>
-          ))}
+          )}
         </div>
       )}
 
@@ -511,7 +627,7 @@ export default async function CandidatesPage({
           <p className="text-sm text-light-grey mb-2">
             {candidates.length === 0
               ? "No sales reps have signed up yet."
-              : "No reps match your active hiring roles."}
+              : "No reps match those filters."}
           </p>
           <p className="text-xs text-light-grey">
             {candidates.length === 0 ? (
@@ -519,8 +635,8 @@ export default async function CandidatesPage({
             ) : (
               <>
                 Try{" "}
-                <Link href={qsWith({ role: "all" })} className="underline">
-                  All roles
+                <Link href={clearFiltersHref} className="underline">
+                  clearing your filters
                 </Link>
                 .
               </>
