@@ -252,6 +252,7 @@ export default async function CompanyListingsPage({
                       <ListingRowActions
                         listingId={row.id}
                         status={row.status}
+                        visibility={row.visibility}
                         isFeatured={isFeaturedListing(row)}
                         setStatusAction={setListingStatus}
                         deleteAction={deleteListing}

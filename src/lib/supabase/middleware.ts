@@ -47,6 +47,13 @@ export async function updateSession(request: NextRequest) {
   // Public shareable routes (/listings/*, /profiles/*) are deliberately
   // NOT protected — anyone can view a published listing or public profile.
   const pathname = request.nextUrl.pathname;
+
+  // "/opportunities/<id>" is a legacy share link that only forwards to the
+  // public "/listings/<id>" page. Keeping it behind the login wall meant
+  // anyone sent an old link hit a login form instead of the job, so the
+  // detail route is public while the browse index stays protected.
+  const legacyOpportunityLink = /^\/opportunities\/[^/]+\/?$/.test(pathname);
+
   const isProtected =
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/onboarding") ||
@@ -57,12 +64,26 @@ export async function updateSession(request: NextRequest) {
     // match with a trailing slash, not a bare prefix.
     pathname === "/profile" ||
     pathname.startsWith("/profile/") ||
-    pathname.startsWith("/opportunities") ||
+    (pathname.startsWith("/opportunities") && !legacyOpportunityLink) ||
     pathname.startsWith("/company") ||
     pathname.startsWith("/chats") ||
     pathname.startsWith("/settings");
 
   if (isProtected && !user) {
+    // A signed-out visitor on the members-only listing manager is almost
+    // always holding a link a hiring manager copied out of the address bar.
+    // Send them to the public version of that listing instead of a login
+    // form. Deeper pages (/edit) and /company/listings/new still sign in.
+    const sharedListing = pathname.match(
+      /^\/company\/listings\/([^/]+)\/?$/,
+    );
+    if (sharedListing && sharedListing[1] !== "new") {
+      const url = request.nextUrl.clone();
+      url.pathname = `/listings/${sharedListing[1]}`;
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("error", "Please sign in to continue.");

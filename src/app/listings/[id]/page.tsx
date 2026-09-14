@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -42,6 +43,96 @@ const PROMPT_APPLY_BODY =
   "You don't have a profile yet. Create your account now to save and apply to this and thousands of other listings.";
 const PROMPT_BOOKMARK_BODY =
   "Sign up to bookmark listings and keep track of the roles you're interested in.";
+
+const DEFAULT_SHARE_BLURB =
+  "See the full role, compensation and requirements on RemoteRep.";
+
+/**
+ * Link preview for shared listings. Without this, a listing pasted into
+ * Slack, LinkedIn or a text message showed the generic site card, so a
+ * shared job looked like a link to the homepage.
+ *
+ * Only published, public listings get a rich card — drafts fall back to
+ * the plain site title so an unpublished role can't leak through a
+ * preview even though the page itself 404s.
+ */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("listings")
+      .select(
+        "id, tenant_id, title, description, status, visibility, tenants!inner(name)",
+      )
+      .eq("id", id)
+      .eq("status", "published")
+      .eq("visibility", "public")
+      .maybeSingle();
+
+    if (!data) return {};
+
+    const row = data as unknown as {
+      tenant_id: string;
+      title: string;
+      description: string | null;
+      tenants: { name: string } | Array<{ name: string }> | null;
+    };
+    const company = Array.isArray(row.tenants)
+      ? row.tenants[0]?.name
+      : row.tenants?.name;
+
+    const title = company ? `${row.title} at ${company}` : row.title;
+    const description = summarize(row.description) ?? DEFAULT_SHARE_BLURB;
+
+    const { data: profile } = await supabase
+      .from("client_profiles")
+      .select("logo_url")
+      .eq("tenant_id", row.tenant_id)
+      .maybeSingle();
+    const logo = (profile as { logo_url: string | null } | null)?.logo_url;
+
+    return {
+      title,
+      description,
+      alternates: { canonical: `/listings/${id}` },
+      openGraph: {
+        type: "website",
+        title,
+        description,
+        url: `/listings/${id}`,
+        siteName: "RemoteRep",
+        ...(logo ? { images: [{ url: logo }] } : {}),
+      },
+      twitter: {
+        card: logo ? "summary_large_image" : "summary",
+        title,
+        description,
+        ...(logo ? { images: [logo] } : {}),
+      },
+    };
+  } catch {
+    // Never let a preview lookup take the page down with it.
+    return {};
+  }
+}
+
+/** Flattens a listing description into a one-line preview blurb. */
+function summarize(text: string | null): string | null {
+  if (!text) return null;
+  const flat = text
+    .replace(/<[^>]*>/g, " ")
+    .replace(/[#*_`>\[\]]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!flat) return null;
+  return flat.length > 155 ? `${flat.slice(0, 152).trimEnd()}...` : flat;
+}
 
 export default async function PublicListingPage({
   params,

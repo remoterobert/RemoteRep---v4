@@ -506,3 +506,83 @@ export async function sendPasswordReset(formData: FormData) {
     redirect("/admin/users?ok=reset-sent");
   });
 }
+
+/**
+ * Create a new user via the admin API and set public.users fields.
+ */
+export async function createUser(formData: FormData) {
+  await safelyRun(async () => {
+    const { user: admin } = await requireAdmin();
+
+    const email = String(formData.get("email") ?? "").trim();
+    const first_name = String(formData.get("first_name") ?? "").trim();
+    const last_name = String(formData.get("last_name") ?? "").trim();
+    const access_level = String(formData.get("access_level") ?? "free").trim();
+    const reference_source = String(formData.get("reference_source") ?? "").trim();
+    const notes = String(formData.get("notes") ?? "").trim();
+    const tagsRaw = String(formData.get("tags") ?? "").trim();
+    const tags = tagsRaw
+      ? tagsRaw.split(",").map((t) => t.trim()).filter(Boolean)
+      : [];
+
+    if (!email) redirect("/admin/users?error=missing-email");
+
+    const adminClient = createAdminClient();
+
+    // Create in auth; mark email confirmed for admin-created accounts.
+    const { data: created, error: createErr } =
+      await adminClient.auth.admin.createUser({
+        email,
+        email_confirm: true,
+        user_metadata: { first_name, last_name, reference_source },
+      });
+    if (createErr) {
+      throw new Error(`Auth create failed: ${createErr.message}`);
+    }
+
+    // Find the public.users row created by DB trigger (if present).
+    const { data: pubUser, error: lookupErr } = await adminClient
+      .from("users")
+      .select("id")
+      .eq("email", email)
+      .maybeSingle();
+    if (lookupErr) throw new Error(`User lookup failed: ${lookupErr.message}`);
+    if (!pubUser || !pubUser.id) {
+      // If no public.users row exists, try to insert one.
+      const { error: insErr } = await adminClient.from("users").insert({
+        id: created.user?.id,
+        email,
+        first_name: first_name || null,
+        last_name: last_name || null,
+        access_level: access_level || "free",
+        reference_source: reference_source || null,
+        tags: tags.length ? tags : null,
+        notes: notes || null,
+      });
+      if (insErr) throw new Error(`Insert public user failed: ${insErr.message}`);
+    } else {
+      const { error: updErr } = await adminClient
+        .from("users")
+        .update({
+          first_name: first_name || null,
+          last_name: last_name || null,
+          access_level: access_level || "free",
+          reference_source: reference_source || null,
+          tags: tags.length ? tags : null,
+          notes: notes || null,
+        })
+        .eq("id", pubUser.id);
+      if (updErr) throw new Error(`Update public user failed: ${updErr.message}`);
+    }
+
+    await adminClient.from("audit_log").insert({
+      actor_user_id: admin.id,
+      action: "user_created",
+      target_type: "user",
+      target_id: created.user?.id ?? null,
+      metadata: { email },
+    });
+
+    redirect("/admin/users?ok=created");
+  });
+}
