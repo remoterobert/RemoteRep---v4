@@ -1,5 +1,6 @@
-import { redirect, notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import Link from "next/link";
+import { ShareButton } from "@/components/ShareButton";
 import {
   UserGroupIcon,
   BookmarkIcon,
@@ -95,7 +96,11 @@ export default async function CompanyListingDetailPage({
     .limit(1)
     .maybeSingle();
 
-  if (!membership) redirect("/dashboard");
+  // Someone who isn't on a hiring team opened this members-only URL —
+  // almost always a shared link. Send them to the public version of the
+  // listing rather than the dashboard, which looks like the app losing
+  // their click.
+  if (!membership) redirect(`/listings/${id}`);
 
   const { data: listing } = await supabase
     .from("listings")
@@ -106,7 +111,11 @@ export default async function CompanyListingDetailPage({
     .eq("tenant_id", membership.tenant_id)
     .maybeSingle();
 
-  if (!listing) notFound();
+  // Either the listing doesn't exist, or it belongs to a different company
+  // (the tenant_id filter above). We can't tell the two apart here, and the
+  // public page handles both correctly — it renders a listing the viewer is
+  // allowed to see, and 404s otherwise.
+  if (!listing) redirect(`/listings/${id}`);
 
   type ListingRow = {
     id: string;
@@ -224,6 +233,11 @@ export default async function CompanyListingDetailPage({
 
   const statusCls = STATUS_STYLES[l.status] ?? STATUS_STYLES.draft;
   const statusLabel = STATUS_LABEL[l.status] ?? l.status;
+
+  // Mirrors the gate on the public page (/listings/[id]): anything not
+  // published-and-public 404s there, so there is nothing to share yet.
+  const isPubliclyShareable =
+    l.status === "published" && l.visibility === "public";
 
   const { tier } = await getTenantSubscription(membership.tenant_id);
   const conciergeAllowed = hasConciergeAccess(tier);
@@ -344,13 +358,27 @@ export default async function CompanyListingDetailPage({
               )}`}
           </p>
         </div>
-        <Link
-          href={`/company/listings/${l.id}/edit`}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-2 px-3 py-1.5 text-sm font-medium hover:bg-surface-3 transition-colors"
-        >
-          <PencilSquareIcon className="h-4 w-4" />
-          Edit
-        </Link>
+        <div className="flex items-center gap-2">
+          {/* Shares the PUBLIC listing URL, not this members-only page —
+              copying the address bar here sends people to a page they
+              can't open. Drafts have no public page yet, so the button
+              explains itself instead of handing over a dead link. */}
+          <ShareButton
+            path={`/listings/${l.id}`}
+            disabledReason={
+              !isPubliclyShareable
+                ? "Publish this listing to share it. Reps can't open it yet."
+                : undefined
+            }
+          />
+          <Link
+            href={`/company/listings/${l.id}/edit`}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface-2 px-3 py-1.5 text-sm font-medium hover:bg-surface-3 transition-colors"
+          >
+            <PencilSquareIcon className="h-4 w-4" />
+            Edit
+          </Link>
+        </div>
       </div>
 
       {/* Metrics */}

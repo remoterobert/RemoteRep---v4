@@ -6,6 +6,8 @@ import { createPortal } from "react-dom";
 import {
   EllipsisHorizontalIcon,
   PencilSquareIcon,
+  ShareIcon,
+  CheckIcon,
   BoltIcon,
   PauseCircleIcon,
   PlayCircleIcon,
@@ -14,7 +16,9 @@ import {
 
 /**
  * Actions available for one listing row. Streamlined per the owner's
- * ask down to the four essentials:
+ * ask down to the essentials:
+ *   - Copy link      → the PUBLIC /listings/{id} URL, so a manager can
+ *                     grab a shareable link without opening the listing
  *   - Edit           → /company/listings/{id}/edit
  *   - Boost          → /company/listings/{id}?offer=featured (pops the
  *                     FeatureListingModal if not already boosted)
@@ -26,12 +30,14 @@ import {
 export function ListingRowActions({
   listingId,
   status,
+  visibility,
   isFeatured,
   setStatusAction,
   deleteAction,
 }: {
   listingId: string;
   status: string;
+  visibility: string;
   isFeatured: boolean;
   setStatusAction: (fd: FormData) => void;
   deleteAction: (fd: FormData) => void;
@@ -40,9 +46,14 @@ export function ListingRowActions({
   const [confirming, setConfirming] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+  const [copied, setCopied] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
 
   const isPublished = status === "published";
+  // Matches the gate on the public page: anything else 404s for reps, so
+  // there is no link worth handing out yet.
+  const isShareable = isPublished && visibility === "public";
+
   const inactiveLabel = isPublished ? "Mark inactive" : "Mark active";
   const inactiveAction = isPublished ? "unpublish" : "publish";
 
@@ -50,6 +61,27 @@ export function ListingRowActions({
     setOpen(false);
     setConfirming(false);
     setConfirmText("");
+  }
+
+  async function copyShareLink() {
+    const url = new URL(
+      `/listings/${listingId}`,
+      window.location.origin,
+    ).toString();
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      // Leave the confirmation on screen briefly before closing the menu.
+      setTimeout(() => {
+        setCopied(false);
+        close();
+      }, 1200);
+    } catch {
+      // Clipboard blocked (non-HTTPS origin, or permission denied) — show
+      // the link so it can still be copied by hand.
+      window.prompt("Copy this link to share the listing:", url);
+      close();
+    }
   }
   function toggle() {
     if (!open && btnRef.current) {
@@ -84,6 +116,37 @@ export function ListingRowActions({
             style={{ position: "fixed", top: pos.top, right: pos.right }}
             className="w-56 rounded-lg border border-border bg-surface-2 shadow-xl z-[101] py-1 text-left"
           >
+            {/* Copy link — the public listing URL, never this
+                members-only page. */}
+            {isShareable ? (
+              <button
+                type="button"
+                onClick={copyShareLink}
+                role="menuitem"
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-white/[0.06]"
+              >
+                {copied ? (
+                  <>
+                    <CheckIcon className="h-4 w-4 text-success" />
+                    Link copied
+                  </>
+                ) : (
+                  <>
+                    <ShareIcon className="h-4 w-4 text-light-grey" />
+                    Copy share link
+                  </>
+                )}
+              </button>
+            ) : (
+              <div
+                className="flex items-center gap-2 px-3 py-2 text-sm opacity-50 cursor-not-allowed"
+                title={"Publish this listing to share it. Reps can't open it yet."}
+              >
+                <ShareIcon className="h-4 w-4 text-light-grey" />
+                Publish to share
+              </div>
+            )}
+
             {/* Edit */}
             <Link
               href={`/company/listings/${listingId}/edit`}

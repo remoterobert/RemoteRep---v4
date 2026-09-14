@@ -15,6 +15,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  // Lets per-page metadata (e.g. a shared listing's link preview) use
+  // site-relative URLs and still resolve to absolute ones for crawlers.
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://remoterep.com",
+  ),
   title: "RemoteRep",
   description: "Connecting remote sales talent with companies hiring.",
   icons: {
