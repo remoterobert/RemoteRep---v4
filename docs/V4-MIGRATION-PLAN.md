@@ -244,7 +244,18 @@ For each phase, you'll see:
 
 ### Phase 6 — GHL Integration (Week 11)
 
-**Goal:** New v4 signups create GHL opportunities (same as v3). Tags update on payment/affiliate events. The GHL Express login link for affiliate dashboards works.
+**Goal:** New v4 signups create GHL opportunities (same as v3). Tags update on subscription-tier events.
+
+> **Updated 2026-09-15 — this phase has been built.** See `docs/GOHIGHLEVEL.md`.
+> Three corrections to what's written below:
+> 1. There is no "GHL Express login". That's Stripe Connect Express, and the
+>    affiliate dashboard doesn't depend on GoHighLevel at all.
+> 2. The v1 API this phase assumed we'd port reached end-of-support on
+>    2025-12-31. v4 was built against the v2 API instead, which needs a
+>    Private Integration Token and a Location id — **not** the old
+>    `GHL_CLIENT_KEY` / `GHL_TALENT_KEY`.
+> 3. Payment and affiliate tags have no trigger yet, because neither feature
+>    exists in v4. The hooks are in place for when they do.
 
 **What I build:**
 - Port the v3 GHL service code to v4 (TypeScript, modern HTTP client)
@@ -254,8 +265,12 @@ For each phase, you'll see:
 - Background retry queue for failed GHL API calls (because GHL can be flaky)
 
 **What you need to do:**
-- Provide the v3 GHL API keys (`GHL_CLIENT_KEY`, `GHL_TALENT_KEY`).
-- Confirm the GHL pipelines / tags are the same as v3 (we use what v3 uses unless you want changes).
+- ~~Provide the v3 GHL API keys~~ — superseded: create a **Private
+  Integration Token** in GHL (Settings → Private Integrations) and provide
+  the **Location id**. The old v1 keys will not work against the v2 API.
+- Confirm the GHL pipelines still exist (the v3 ids are used as defaults).
+- Tag names were kept identical to v3 so existing GHL automations keep
+  firing (decided 2026-09-15).
 
 **Risks:**
 - GHL API quirks (the v3 code probably has some workarounds baked in — we need to preserve them).

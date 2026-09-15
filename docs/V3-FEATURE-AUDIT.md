@@ -204,7 +204,7 @@ Translating from DynamoDB-speak to plain English:
 v3 uses GHL heavily and v4 will inherit this:
 - Creates "opportunities" in GHL pipelines when a user registers (talent pipeline vs client pipeline)
 - Updates GHL **tags** based on user actions: `'$299'`, `'$780'`, `'Affiliate'`, `'talent'`, `'client'`, `'self-registered'`, `'Administrator-registered'`
-- Drives the affiliate dashboard via "GHL Express login"
+- ~~Drives the affiliate dashboard via "GHL Express login"~~ — **incorrect, corrected 2026-09-15.** That login is Stripe Connect Express (`stripe.accounts.createLoginLink`), not GoHighLevel. The affiliate dashboard does not depend on GHL at all.
 - **Two separate API keys** in env vars: `GHL_CLIENT_KEY` and `GHL_TALENT_KEY` (different pipelines)
 
 This is non-trivial to migrate. The v4 plan needs a dedicated GHL section.

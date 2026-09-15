@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -10,6 +11,7 @@ import {
   writeImpersonationMarker,
   clearImpersonationMarker,
 } from "@/lib/impersonation";
+import { pushUserTags, syncUserToGhl } from "@/lib/ghl/sync";
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -315,6 +317,12 @@ export async function updateUserFields(formData: FormData) {
       },
     });
 
+    // The tags field has always been labelled "used to trigger GHL
+    // automations" — this is where that finally becomes true. Additive
+    // only: clearing a tag here does not remove it in GHL, because GHL's
+    // own automations add tags we must not clobber.
+    if (tags.length) after(() => pushUserTags(targetUserId, tags));
+
     redirect("/admin/users?ok=updated");
   });
 }
@@ -582,6 +590,13 @@ export async function createUser(formData: FormData) {
       target_id: created.user?.id ?? null,
       metadata: { email },
     });
+
+    // Admin-created accounts have no role yet — that's chosen at onboarding —
+    // so this usually records "pipeline unknown" and the real sync happens
+    // when they finish onboarding. Called anyway so the attempt is visible
+    // rather than silently skipped.
+    const newUserId = created.user?.id;
+    if (newUserId) after(() => syncUserToGhl(newUserId));
 
     redirect("/admin/users?ok=created");
   });
