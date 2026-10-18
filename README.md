@@ -24,6 +24,7 @@ Before contributing or making changes, read:
 | [docs/V3-FEATURE-AUDIT.md](docs/V3-FEATURE-AUDIT.md) | Everything v3 does today (so v4 doesn't drop anything) |
 | [docs/V4-DATA-MODEL.md](docs/V4-DATA-MODEL.md) | Postgres schema, multi-tenancy, RBAC |
 | [docs/V4-MIGRATION-PLAN.md](docs/V4-MIGRATION-PLAN.md) | Phased build plan, cutover runbook |
+| [docs/REP-LANDING-PAGES.md](docs/REP-LANDING-PAGES.md) | `/reps` and `/fractional-cro` landing pages, CRO intake settings |
 
 ---
 

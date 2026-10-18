@@ -87,15 +87,17 @@ function GoldCta({
 }
 
 function GhostCta({
+  href = `${APP}/signup`,
   children,
   className = "",
 }: {
+  href?: string;
   children: React.ReactNode;
   className?: string;
 }) {
   return (
     <Link
-      href={`${APP}/signup`}
+      href={href}
       className={`inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-6 py-3.5 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/10 ${className}`}
     >
       {children}
@@ -186,7 +188,7 @@ export function MarketingHome() {
             <Reveal delay={240}>
               <div className="mt-9 flex flex-col gap-3 sm:flex-row">
                 <GoldCta>Add Your Listing Now</GoldCta>
-                <GhostCta>Sales Rep? Get hired</GhostCta>
+                <GhostCta href="/reps">Sales Rep? Get hired</GhostCta>
               </div>
               <p className="mt-4 text-sm text-white/45">
                 Already have an account?{" "}
@@ -685,7 +687,7 @@ export function MarketingHome() {
             </p>
             <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
               <GoldCta>Add Your Listing Now</GoldCta>
-              <GhostCta>Sales Rep? Get hired</GhostCta>
+              <GhostCta href="/reps">Sales Rep? Get hired</GhostCta>
             </div>
           </div>
         </Reveal>
