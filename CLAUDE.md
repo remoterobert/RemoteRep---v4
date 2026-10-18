@@ -52,7 +52,7 @@ These are non-negotiable defaults. The owner can override case-by-case, but the 
 
 See [BACKUPS.md](BACKUPS.md) for the plain-English version. Summary of what Claude must do:
 
-- **GitHub is the safety net.** After any meaningful change, commit and push to GitHub. The repo is at `github.com/RemoteRep-com/remoterep-v3`.
+- **GitHub is the safety net.** After any meaningful change, commit and push to GitHub. The repo is at `github.com/remoterobert/RemoteRep---v4`.
 - **Work on feature branches, not `main`.** For anything beyond a trivial fix, create a branch like `dev-<short-description>` and work there. Open a pull request when ready.
 - **Commit early, commit often.** Many small commits beat one giant one. They're easier to undo if something goes wrong.
 - **Tag milestones.** Before a big change (new feature, refactor, dependency upgrade), create a git tag like `before-<change>-YYYY-MM-DD` so we have a named restore point.
