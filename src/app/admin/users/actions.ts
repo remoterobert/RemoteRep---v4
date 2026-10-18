@@ -5,6 +5,8 @@ import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isPlatformAdmin } from "@/lib/is-platform-admin";
+import { sendPasswordResetEmail } from "@/lib/password-reset";
+import { getSiteOrigin } from "@/lib/site-origin";
 import {
   readImpersonationMarker,
   writeImpersonationMarker,
@@ -460,8 +462,8 @@ export async function deleteUserPermanently(formData: FormData) {
 }
 
 /**
- * Send a password-reset email to the target user. Uses the admin API
- * so the admin doesn't have to know the user's email password.
+ * Email the target user a password-reset link (same email as the public
+ * "Forgot password?" flow — see src/lib/password-reset.ts).
  */
 export async function sendPasswordReset(formData: FormData) {
   await safelyRun(async () => {
@@ -482,10 +484,11 @@ export async function sendPasswordReset(formData: FormData) {
       redirect("/admin/users?error=target-not-found");
     }
 
-    const { error } = await adminClient.auth.admin.generateLink({
-      type: "recovery",
-      email: target.email,
-    });
+    const result = await sendPasswordResetEmail(target.email, await getSiteOrigin());
+    const error =
+      result.status === "sent"
+        ? null
+        : { message: result.status === "failed" ? result.error : "no auth account for this email" };
 
     await adminClient.from("audit_log").insert({
       actor_user_id: admin.id,

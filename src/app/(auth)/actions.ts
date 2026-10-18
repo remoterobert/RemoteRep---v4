@@ -1,22 +1,10 @@
 "use server";
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { tryLegacyLogin } from "@/lib/legacy-login";
-
-async function getSiteOrigin(): Promise<string> {
-  // Prefer explicit env var — most reliable, especially on Railway where
-  // x-forwarded-host isn't consistently set.
-  if (process.env.NEXT_PUBLIC_SITE_URL) {
-    return process.env.NEXT_PUBLIC_SITE_URL;
-  }
-  // Fallback: try headers.
-  const headerList = await headers();
-  const host = headerList.get("x-forwarded-host") ?? headerList.get("host");
-  const proto = headerList.get("x-forwarded-proto") ?? "https";
-  return `${proto}://${host}`;
-}
+import { getSiteOrigin } from "@/lib/site-origin";
+import { sendPasswordResetEmail } from "@/lib/password-reset";
 
 export async function signup(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
@@ -146,4 +134,60 @@ export async function logout() {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/");
+}
+
+/**
+ * "Forgot password?" — email a reset link. Always lands on the same
+ * confirmation, whether or not the account exists, so the form can't be used
+ * to discover who has an account.
+ */
+export async function requestPasswordReset(formData: FormData) {
+  const email = String(formData.get("email") ?? "").trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    redirect(
+      `/forgot-password?error=${encodeURIComponent("Please enter a valid email address.")}`,
+    );
+  }
+
+  const result = await sendPasswordResetEmail(email, await getSiteOrigin());
+  if (result.status === "failed") {
+    // Logged for us; the visitor still sees the neutral confirmation.
+    console.error("[password-reset] could not send:", result.error);
+  }
+
+  redirect(`/forgot-password?sent=1&email=${encodeURIComponent(email)}`);
+}
+
+/** Set a new password for the user signed in via a reset link. */
+export async function setNewPassword(formData: FormData) {
+  const password = String(formData.get("password") ?? "");
+  const confirmPassword = String(formData.get("confirm_password") ?? "");
+
+  if (password.length < 8) {
+    redirect(
+      `/reset-password?error=${encodeURIComponent("Password must be at least 8 characters.")}`,
+    );
+  }
+  if (password !== confirmPassword) {
+    redirect(
+      `/reset-password?error=${encodeURIComponent("Passwords don't match — check for a typo.")}`,
+    );
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    redirect(
+      `/forgot-password?error=${encodeURIComponent("Your reset link has expired. Enter your email to get a new one.")}`,
+    );
+  }
+
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    redirect(`/reset-password?error=${encodeURIComponent(error.message)}`);
+  }
+
+  redirect("/dashboard");
 }
