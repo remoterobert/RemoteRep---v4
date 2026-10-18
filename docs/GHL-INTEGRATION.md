@@ -14,11 +14,11 @@ The website does three things per lead, and nothing else:
 
 | Lead | When | GHL sub-account | Tags | Trigger tag for workflows |
 |---|---|---|---|---|
-| Fractional CRO application | Submitted on `/fractional-cro` | Talent | `fcro-application`, `self-registered` | `fcro-application` |
+| Fractional CRO application | Submitted on `/fractional-cro` | Talent | `fcro-application` | `fcro-application` |
 | Sales rep signup | Finishes "I'm a rep" onboarding | Talent | `rep-signup`, `talent`, `self-registered` | `rep-signup` |
 | Company signup | Finishes "I'm hiring" onboarding | Client | `client-signup`, `client`, `self-registered` | `client-signup` |
 
-`talent`, `client` and `self-registered` are the tags v3 used, so older automations keep working.
+`talent`, `client` and `self-registered` are the tags v3 used, so older automations keep working. `self-registered` means *a platform user who signed themselves up*, so it's only added to signups, never to CRO applications.
 
 Rep and company signups sync **in the background after the page responds**, so a slow or broken GHL never slows down or breaks signup. Their GHL contact ID is saved in the `ghl_user_state` table.
 

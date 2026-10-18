@@ -117,7 +117,8 @@ export async function submitCroIntake(
     firstName: lead.first_name,
     lastName: lead.last_name,
     phone: lead.phone,
-    tags: ["fcro-application", "self-registered"],
+    // Applicants haven't signed up for the platform, so no `self-registered`.
+    tags: ["fcro-application"],
     source: source || "RemoteRep website — Fractional CRO application",
     note: [
       "Fractional CRO application (remoterep.com/fractional-cro)",
