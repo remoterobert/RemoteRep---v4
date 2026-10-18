@@ -13,6 +13,7 @@ import { Eyebrow, GoldCta, MarketingFrame, SectionLabel } from "../MarketingFram
 import { Spotlight, StickyBar } from "../fx";
 import { EXAMPLE_ANNUAL, PortfolioOrbit } from "../PortfolioOrbit";
 import { IntakeForm } from "./IntakeForm";
+import { pickUtm } from "@/lib/utm";
 
 export const metadata: Metadata = {
   title: "Become a Fractional CRO | RemoteRep",
@@ -48,11 +49,7 @@ export default async function FractionalCroPage({
   searchParams: SearchParams;
 }) {
   const sp = await searchParams;
-  const utm = {
-    source: first(sp.utm_source),
-    medium: first(sp.utm_medium),
-    campaign: first(sp.utm_campaign),
-  };
+  const utm = pickUtm((k) => first(sp[k]));
 
   return (
     <MarketingFrame

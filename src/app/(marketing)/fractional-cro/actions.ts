@@ -3,7 +3,16 @@
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
+import { cookies } from "next/headers";
 import { logGhl, syncLead } from "@/lib/ghl";
+import {
+  UTM_COOKIE,
+  hasUtm,
+  parseUtmCookie,
+  pickUtm,
+  utmNoteLines,
+  utmSource,
+} from "@/lib/utm";
 import {
   INCOME_RANGES,
   LEADERSHIP_YEARS,
@@ -17,9 +26,9 @@ import {
  *
  * Every delivery channel is best-effort and env-gated, so the form keeps
  * working while channels are being wired up:
- *   1. GoHighLevel talent sub-account — contact, tags, a note with the
- *      answers, and an opportunity on the CRO pipeline (see src/lib/ghl.ts).
- *      This is where the sales team works the lead.
+ *   1. GoHighLevel talent sub-account — contact, `fcro-application` tag,
+ *      and a note with the answers + UTMs (see src/lib/ghl.ts). A GHL
+ *      workflow on that tag puts them on the FCRO pipeline.
  *   2. Supabase `cro_leads` table (needs SUPABASE_SERVICE_ROLE_KEY).
  *   3. CRO_LEADS_WEBHOOK_URL — POST JSON (e.g. a GoHighLevel inbound webhook
  *      to drop the lead into the CRM / sales pipeline).
@@ -75,9 +84,6 @@ export async function submitCroIntake(
     income_range: getStr(formData, "income_range", 40),
     timeline: getStr(formData, "timeline", 40),
     why_now: getStr(formData, "why_now", 3000) || null,
-    utm_source: getStr(formData, "utm_source", 200) || null,
-    utm_medium: getStr(formData, "utm_medium", 200) || null,
-    utm_campaign: getStr(formData, "utm_campaign", 200) || null,
   };
 
   const errors: string[] = [];
@@ -97,18 +103,22 @@ export async function submitCroIntake(
     errors.push("Please answer each of the multiple-choice questions.");
   if (errors.length > 0) return { error: errors.join(" ") };
 
+  // UTMs from the page URL (hidden fields), else the latest tagged visit.
+  const formUtm = pickUtm((k) => formData.get(k));
+  const utm = hasUtm(formUtm)
+    ? formUtm
+    : parseUtmCookie((await cookies()).get(UTM_COOKIE)?.value);
+  const source = utmSource(utm, "");
+
   // 1. GoHighLevel
-  const source =
-    [lead.utm_source, lead.utm_medium, lead.utm_campaign].filter(Boolean).join(" / ") || null;
   const ghlResult = await syncLead({
     type: "cro",
     email: lead.email,
     firstName: lead.first_name,
     lastName: lead.last_name,
     phone: lead.phone,
-    tags: ["fractional-cro", "cro-application", "self-registered"],
-    source: "RemoteRep website — Fractional CRO application",
-    opportunityName: `${lead.first_name} ${lead.last_name} — Fractional CRO`,
+    tags: ["fcro-application", "self-registered"],
+    source: source || "RemoteRep website — Fractional CRO application",
     note: [
       "Fractional CRO application (remoterep.com/fractional-cro)",
       "",
@@ -119,7 +129,8 @@ export async function submitCroIntake(
       `Timeline: ${lead.timeline}`,
       `LinkedIn: ${lead.linkedin_url ?? "—"}`,
       `Why now: ${lead.why_now ?? "—"}`,
-      `Traffic source: ${source ?? "direct"}`,
+      "",
+      ...utmNoteLines(utm),
     ].join("\n"),
   });
   logGhl("cro-intake", ghlResult);
@@ -130,7 +141,14 @@ export async function submitCroIntake(
   let db: Outcome = "skipped";
   if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
     try {
-      const { error } = await createAdminClient().from("cro_leads").insert(lead);
+      const { error } = await createAdminClient()
+        .from("cro_leads")
+        .insert({
+          ...lead,
+          utm_source: utm.utm_source ?? null,
+          utm_medium: utm.utm_medium ?? null,
+          utm_campaign: utm.utm_campaign ?? null,
+        });
       db = error ? "failed" : "sent";
       if (error) console.error("[cro-intake] db insert failed:", error.message);
     } catch (e) {
@@ -151,6 +169,7 @@ export async function submitCroIntake(
           source: "remoterep-fractional-cro-intake",
           submitted_at: new Date().toISOString(),
           ...lead,
+          ...utm,
         }),
       });
       webhook = res.ok ? "sent" : "failed";
@@ -176,7 +195,7 @@ export async function submitCroIntake(
       ["Current income", lead.income_range],
       ["Timeline", lead.timeline],
       ["Why now", lead.why_now],
-      ["Source", source],
+      ["Source", source || null],
     ];
     const html = `<h2>New Fractional CRO application</h2><table cellpadding="6">${rows
       .map(

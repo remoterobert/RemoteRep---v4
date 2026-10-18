@@ -26,9 +26,9 @@ Note: individual listing pages (`/listings/<id>`) are still public by design so 
 
 ## Fractional CRO intake (`/fractional-cro`)
 
-The form asks for name, email, phone, LinkedIn (optional), current title, years leading sales teams, largest team, income range, timeline and "why now" (optional). UTM tags in the page URL (`?utm_source=…`) are saved with the application. A hidden "honeypot" field quietly drops spam bots.
+The form asks for name, email, phone, LinkedIn (optional), current title, years leading sales teams, largest team, income range, timeline and "why now" (optional). All five UTMs in the page URL (`?utm_source=…`) are sent with the application, falling back to the visitor's latest tagged visit. See [GHL-INTEGRATION.md](GHL-INTEGRATION.md#utm-tracking). A hidden "honeypot" field quietly drops spam bots.
 
-On submit, the application goes to **GoHighLevel** (talent sub-account: contact, tags, a note with the answers, and an opportunity on the CRO pipeline; see [GHL-INTEGRATION.md](GHL-INTEGRATION.md)) and to every other channel that's set up:
+On submit, the application goes to **GoHighLevel** (talent sub-account: contact, the `fcro-application` tag and a note with the answers and UTMs, and a GHL workflow on that tag puts them on the FCRO pipeline; see [GHL-INTEGRATION.md](GHL-INTEGRATION.md)) and to every other channel that's set up:
 
 | Setting (environment variable) | What it does |
 |---|---|

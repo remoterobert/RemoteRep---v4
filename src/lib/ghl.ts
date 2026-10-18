@@ -7,11 +7,10 @@
  *   - client: companies hiring
  *       GHL_CLIENT_API_TOKEN, GHL_CLIENT_LOCATION_ID
  *
- * Pipelines are optional and set per lead type (find the IDs on
- * /admin/env-check). Without them we still create the contact + tags.
- *   GHL_REP_PIPELINE_ID / GHL_REP_STAGE_ID        (talent account)
- *   GHL_CRO_PIPELINE_ID / GHL_CRO_STAGE_ID        (talent account)
- *   GHL_CLIENT_PIPELINE_ID / GHL_CLIENT_STAGE_ID  (client account)
+ * The site only creates/updates the contact, adds tags, and attaches a note.
+ * Everything downstream (pipelines, assignments, follow-up) is a GHL workflow
+ * triggered by the tags — so a new form or split test needs a new tag, not a
+ * new env variable. Tag list: docs/GHL-INTEGRATION.md.
  *
  * Every function here is best-effort: it never throws, it returns what
  * happened, and callers decide whether that matters. Tokens never leave
@@ -37,13 +36,6 @@ function accountConfig(account: GhlAccount) {
   const token = process.env[`${prefix}_API_TOKEN`];
   const locationId = process.env[`${prefix}_LOCATION_ID`];
   return token && locationId ? { token, locationId } : null;
-}
-
-function pipelineConfig(lead: GhlLeadType) {
-  const prefix = `GHL_${lead.toUpperCase()}`;
-  const pipelineId = process.env[`${prefix}_PIPELINE_ID`];
-  const stageId = process.env[`${prefix}_STAGE_ID`];
-  return pipelineId && stageId ? { pipelineId, stageId } : null;
 }
 
 export function isGhlConfigured(account: GhlAccount): boolean {
@@ -90,8 +82,6 @@ export type GhlLead = {
   companyName?: string;
   tags: string[];
   source: string;
-  /** Opportunity title; defaults to the person's name. */
-  opportunityName?: string;
   /** Free-text note attached to the contact (e.g. intake answers). */
   note?: string;
 };
@@ -99,17 +89,9 @@ export type GhlLead = {
 export type GhlSyncResult =
   | { status: "skipped"; reason: string }
   | { status: "failed"; error: string }
-  | {
-      status: "synced";
-      contactId: string;
-      opportunityId: string | null;
-      warnings: string[];
-    };
+  | { status: "synced"; contactId: string; warnings: string[] };
 
-/**
- * Create-or-update the contact, add tags, attach an optional note, and put
- * them on the lead type's pipeline (once per contact per pipeline).
- */
+/** Create-or-update the contact, add tags, and attach an optional note. */
 export async function syncLead(lead: GhlLead): Promise<GhlSyncResult> {
   const account = ACCOUNT_FOR[lead.type];
   const cfg = accountConfig(account);
@@ -144,43 +126,7 @@ export async function syncLead(lead: GhlLead): Promise<GhlSyncResult> {
     if (!n.ok) warnings.push(`note: ${n.error}`);
   }
 
-  // 4. Opportunity — skip if they're already on this pipeline.
-  let opportunityId: string | null = null;
-  const pipe = pipelineConfig(lead.type);
-  if (pipe) {
-    const params = new URLSearchParams({
-      location_id: cfg.locationId,
-      contact_id: contactId,
-      pipeline_id: pipe.pipelineId,
-    });
-    const existing = await call<{ opportunities?: { id: string }[] }>(
-      account,
-      "GET",
-      `/opportunities/search?${params.toString()}`,
-    );
-    opportunityId = existing.ok ? (existing.data.opportunities?.[0]?.id ?? null) : null;
-    if (!existing.ok) warnings.push(`opportunity search: ${existing.error}`);
-
-    if (!opportunityId) {
-      const name =
-        lead.opportunityName ||
-        [lead.firstName, lead.lastName].filter(Boolean).join(" ") ||
-        lead.email;
-      const opp = await call<{ opportunity?: { id?: string } }>(account, "POST", "/opportunities/", {
-        locationId: cfg.locationId,
-        pipelineId: pipe.pipelineId,
-        pipelineStageId: pipe.stageId,
-        contactId,
-        name,
-        status: "open",
-        source: lead.source,
-      });
-      if (opp.ok) opportunityId = opp.data.opportunity?.id ?? null;
-      else warnings.push(`opportunity: ${opp.error}`);
-    }
-  }
-
-  return { status: "synced", contactId, opportunityId, warnings };
+  return { status: "synced", contactId, warnings };
 }
 
 /** Log a sync result in one consistent line (Railway captures stdout). */
@@ -188,7 +134,6 @@ export function logGhl(label: string, result: GhlSyncResult) {
   if (result.status === "synced") {
     console.log(`[ghl] ${label} synced`, {
       contactId: result.contactId,
-      opportunityId: result.opportunityId,
       ...(result.warnings.length ? { warnings: result.warnings } : {}),
     });
   } else if (result.status === "failed") {
@@ -196,32 +141,4 @@ export function logGhl(label: string, result: GhlSyncResult) {
   } else {
     console.log(`[ghl] ${label} skipped:`, result.reason);
   }
-}
-
-export type GhlPipeline = {
-  id: string;
-  name: string;
-  stages: { id: string; name: string }[];
-};
-
-/** Pipelines + stages for an account — powers the IDs table on /admin/env-check. */
-export async function listPipelines(
-  account: GhlAccount,
-): Promise<{ ok: true; pipelines: GhlPipeline[] } | { ok: false; error: string }> {
-  const cfg = accountConfig(account);
-  if (!cfg) return { ok: false, error: "not configured" };
-  const r = await call<{ pipelines?: GhlPipeline[] }>(
-    account,
-    "GET",
-    `/opportunities/pipelines?locationId=${encodeURIComponent(cfg.locationId)}`,
-  );
-  if (!r.ok) return r;
-  return {
-    ok: true,
-    pipelines: (r.data.pipelines ?? []).map((p) => ({
-      id: p.id,
-      name: p.name,
-      stages: (p.stages ?? []).map((s) => ({ id: s.id, name: s.name })),
-    })),
-  };
 }

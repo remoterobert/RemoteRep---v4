@@ -2,9 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { syncSignupToGhl } from "@/lib/ghl-signups";
+import { UTM_COOKIE, parseUtmCookie } from "@/lib/utm";
 import { isSalesRole, type SalesRole } from "@/lib/sales-roles";
 
 export async function completeHiringOnboarding(formData: FormData) {
@@ -42,17 +44,21 @@ export async function completeHiringOnboarding(formData: FormData) {
   } = await supabase.auth.getUser();
   if (user?.email) {
     const email = user.email;
+    const utm = parseUtmCookie((await cookies()).get(UTM_COOKIE)?.value);
     after(() =>
-      syncSignupToGhl(user.id, {
-        type: "client",
-        email,
-        firstName,
-        lastName,
-        companyName,
-        tags: ["client", "self-registered"],
-        opportunityName: `${firstName} ${lastName} | ${companyName}`,
-        note: `Signed up on remoterep.com as a hiring company.\nHiring for: ${hiringFor.join(", ")}`,
-      }),
+      syncSignupToGhl(
+        user.id,
+        {
+          type: "client",
+          email,
+          firstName,
+          lastName,
+          companyName,
+          tags: ["client-signup", "client", "self-registered"],
+          note: `Signed up on remoterep.com as a hiring company.\nHiring for: ${hiringFor.join(", ")}`,
+        },
+        utm,
+      ),
     );
   }
 
@@ -97,15 +103,20 @@ export async function completeCandidateOnboarding(formData: FormData) {
   } = await supabase.auth.getUser();
   if (user?.email) {
     const email = user.email;
+    const utm = parseUtmCookie((await cookies()).get(UTM_COOKIE)?.value);
     after(() =>
-      syncSignupToGhl(user.id, {
-        type: "rep",
-        email,
-        firstName,
-        lastName,
-        tags: ["talent", "self-registered"],
-        note: `Signed up on remoterep.com as a sales rep.\nSpecialties: ${specialties.join(", ")}`,
-      }),
+      syncSignupToGhl(
+        user.id,
+        {
+          type: "rep",
+          email,
+          firstName,
+          lastName,
+          tags: ["rep-signup", "talent", "self-registered"],
+          note: `Signed up on remoterep.com as a sales rep.\nSpecialties: ${specialties.join(", ")}`,
+        },
+        utm,
+      ),
     );
   }
 

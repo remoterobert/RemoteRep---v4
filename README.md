@@ -25,7 +25,7 @@ Before contributing or making changes, read:
 | [docs/V4-DATA-MODEL.md](docs/V4-DATA-MODEL.md) | Postgres schema, multi-tenancy, RBAC |
 | [docs/V4-MIGRATION-PLAN.md](docs/V4-MIGRATION-PLAN.md) | Phased build plan, cutover runbook |
 | [docs/REP-LANDING-PAGES.md](docs/REP-LANDING-PAGES.md) | `/reps` and `/fractional-cro` landing pages, CRO intake settings |
-| [docs/GHL-INTEGRATION.md](docs/GHL-INTEGRATION.md) | How site leads flow into GoHighLevel, and its settings |
+| [docs/GHL-INTEGRATION.md](docs/GHL-INTEGRATION.md) | How site leads flow into GoHighLevel (tags + UTMs), and its settings |
 
 ---
 
