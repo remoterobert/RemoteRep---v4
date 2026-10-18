@@ -3,6 +3,16 @@
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
+import { cookies } from "next/headers";
+import { logGhl, syncLead } from "@/lib/ghl";
+import {
+  UTM_COOKIE,
+  hasUtm,
+  parseUtmCookie,
+  pickUtm,
+  utmNoteLines,
+  utmSource,
+} from "@/lib/utm";
 import {
   INCOME_RANGES,
   LEADERSHIP_YEARS,
@@ -16,10 +26,13 @@ import {
  *
  * Every delivery channel is best-effort and env-gated, so the form keeps
  * working while channels are being wired up:
- *   1. Supabase `cro_leads` table (needs SUPABASE_SERVICE_ROLE_KEY).
- *   2. CRO_LEADS_WEBHOOK_URL — POST JSON (e.g. a GoHighLevel inbound webhook
+ *   1. GoHighLevel talent sub-account — contact, `fcro-application` tag,
+ *      and a note with the answers + UTMs (see src/lib/ghl.ts). A GHL
+ *      workflow on that tag puts them on the FCRO pipeline.
+ *   2. Supabase `cro_leads` table (needs SUPABASE_SERVICE_ROLE_KEY).
+ *   3. CRO_LEADS_WEBHOOK_URL — POST JSON (e.g. a GoHighLevel inbound webhook
  *      to drop the lead into the CRM / sales pipeline).
- *   3. CRO_LEADS_NOTIFY_EMAIL — email alert via Resend.
+ *   4. CRO_LEADS_NOTIFY_EMAIL — email alert via Resend.
  * If at least one channel accepts the lead we send the applicant on to book
  * their call. If every configured channel fails we show an error instead of
  * silently losing the lead.
@@ -71,9 +84,6 @@ export async function submitCroIntake(
     income_range: getStr(formData, "income_range", 40),
     timeline: getStr(formData, "timeline", 40),
     why_now: getStr(formData, "why_now", 3000) || null,
-    utm_source: getStr(formData, "utm_source", 200) || null,
-    utm_medium: getStr(formData, "utm_medium", 200) || null,
-    utm_campaign: getStr(formData, "utm_campaign", 200) || null,
   };
 
   const errors: string[] = [];
@@ -93,11 +103,53 @@ export async function submitCroIntake(
     errors.push("Please answer each of the multiple-choice questions.");
   if (errors.length > 0) return { error: errors.join(" ") };
 
-  // 1. Database
+  // UTMs from the page URL (hidden fields), else the latest tagged visit.
+  const formUtm = pickUtm((k) => formData.get(k));
+  const utm = hasUtm(formUtm)
+    ? formUtm
+    : parseUtmCookie((await cookies()).get(UTM_COOKIE)?.value);
+  const source = utmSource(utm, "");
+
+  // 1. GoHighLevel
+  const ghlResult = await syncLead({
+    type: "cro",
+    email: lead.email,
+    firstName: lead.first_name,
+    lastName: lead.last_name,
+    phone: lead.phone,
+    // Applicants haven't signed up for the platform, so no `self-registered`.
+    tags: ["fcro-application"],
+    source: source || "RemoteRep website — Fractional CRO application",
+    note: [
+      "Fractional CRO application (remoterep.com/fractional-cro)",
+      "",
+      `Current title: ${lead.current_title}`,
+      `Years leading sales teams: ${lead.leadership_years}`,
+      `Largest team led: ${lead.team_size}`,
+      `Current income: ${lead.income_range}`,
+      `Timeline: ${lead.timeline}`,
+      `LinkedIn: ${lead.linkedin_url ?? "—"}`,
+      `Why now: ${lead.why_now ?? "—"}`,
+      "",
+      ...utmNoteLines(utm),
+    ].join("\n"),
+  });
+  logGhl("cro-intake", ghlResult);
+  const ghl: Outcome =
+    ghlResult.status === "synced" ? "sent" : ghlResult.status === "failed" ? "failed" : "skipped";
+
+  // 2. Database
   let db: Outcome = "skipped";
   if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
     try {
-      const { error } = await createAdminClient().from("cro_leads").insert(lead);
+      const { error } = await createAdminClient()
+        .from("cro_leads")
+        .insert({
+          ...lead,
+          utm_source: utm.utm_source ?? null,
+          utm_medium: utm.utm_medium ?? null,
+          utm_campaign: utm.utm_campaign ?? null,
+        });
       db = error ? "failed" : "sent";
       if (error) console.error("[cro-intake] db insert failed:", error.message);
     } catch (e) {
@@ -106,7 +158,7 @@ export async function submitCroIntake(
     }
   }
 
-  // 2. CRM webhook
+  // 3. CRM webhook
   let webhook: Outcome = "skipped";
   const webhookUrl = process.env.CRO_LEADS_WEBHOOK_URL;
   if (webhookUrl) {
@@ -118,6 +170,7 @@ export async function submitCroIntake(
           source: "remoterep-fractional-cro-intake",
           submitted_at: new Date().toISOString(),
           ...lead,
+          ...utm,
         }),
       });
       webhook = res.ok ? "sent" : "failed";
@@ -128,7 +181,7 @@ export async function submitCroIntake(
     }
   }
 
-  // 3. Email alert
+  // 4. Email alert
   let email: Outcome = "skipped";
   const notifyTo = process.env.CRO_LEADS_NOTIFY_EMAIL;
   if (notifyTo) {
@@ -143,7 +196,7 @@ export async function submitCroIntake(
       ["Current income", lead.income_range],
       ["Timeline", lead.timeline],
       ["Why now", lead.why_now],
-      ["Source", [lead.utm_source, lead.utm_medium, lead.utm_campaign].filter(Boolean).join(" / ") || null],
+      ["Source", source || null],
     ];
     const html = `<h2>New Fractional CRO application</h2><table cellpadding="6">${rows
       .map(
@@ -161,8 +214,8 @@ export async function submitCroIntake(
     email = "sent" in result ? (result.sent ? "sent" : "failed") : "skipped";
   }
 
-  const outcomes = [db, webhook, email];
-  console.log("[cro-intake] delivered", { db, webhook, email });
+  const outcomes = [ghl, db, webhook, email];
+  console.log("[cro-intake] delivered", { ghl, db, webhook, email });
 
   // Something was configured and nothing accepted the lead — don't lose it.
   if (outcomes.includes("failed") && !outcomes.includes("sent")) {

@@ -15,6 +15,7 @@ import {
   TIMELINES,
   type IntakeState,
 } from "./options";
+import { UTM_KEYS, type Utm } from "@/lib/utm";
 
 // Multi-step application: four one-tap questions, then contact details.
 // Starting with easy taps (instead of a wall of fields) gets far more people
@@ -61,7 +62,7 @@ function Field({
 export function IntakeForm({
   utm,
 }: {
-  utm: { source?: string; medium?: string; campaign?: string };
+  utm: Utm;
 }) {
   const [state, formAction, pending] = useActionState(submitCroIntake, initialState);
   const [step, setStep] = useState(0);
@@ -180,9 +181,9 @@ export function IntakeForm({
         <label htmlFor="company_website">Company website</label>
         <input id="company_website" name="company_website" tabIndex={-1} autoComplete="off" />
       </div>
-      <input type="hidden" name="utm_source" value={utm.source ?? ""} />
-      <input type="hidden" name="utm_medium" value={utm.medium ?? ""} />
-      <input type="hidden" name="utm_campaign" value={utm.campaign ?? ""} />
+      {UTM_KEYS.map((k) => (
+        <input key={k} type="hidden" name={k} value={utm[k] ?? ""} />
+      ))}
 
       {state.error && (
         <div role="alert" className="mt-5 rounded-xl border border-danger/40 bg-danger/10 p-3 text-sm text-red-200">

@@ -16,6 +16,11 @@ export default async function EnvCheckPage() {
     { name: "NEXT_PUBLIC_SUPABASE_ANON_KEY", required: true },
     { name: "SUPABASE_SERVICE_ROLE_KEY", required: true },
     { name: "ANTHROPIC_API_KEY", required: false },
+    { name: "GHL_TALENT_API_TOKEN", required: false },
+    { name: "GHL_TALENT_LOCATION_ID", required: false },
+    { name: "GHL_CLIENT_API_TOKEN", required: false },
+    { name: "GHL_CLIENT_LOCATION_ID", required: false },
+    { name: "CRO_BOOKING_URL", required: false },
     { name: "PORT", required: false },
     { name: "NODE_ENV", required: false },
   ];
