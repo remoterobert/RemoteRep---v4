@@ -16,6 +16,12 @@ export default async function EnvCheckPage() {
     { name: "NEXT_PUBLIC_SUPABASE_ANON_KEY", required: true },
     { name: "SUPABASE_SERVICE_ROLE_KEY", required: true },
     { name: "ANTHROPIC_API_KEY", required: false },
+    { name: "NEXT_PUBLIC_SITE_URL", required: true },
+    { name: "RESEND_API_KEY", required: true },
+    { name: "RESEND_FROM_EMAIL", required: true },
+    // Test mode: when set, emails ONLY go to these addresses. Should be
+    // absent in production or password resets won't reach users.
+    { name: "RESEND_ALLOWLIST_EMAILS", required: false },
     { name: "GHL_TALENT_API_TOKEN", required: false },
     { name: "GHL_TALENT_LOCATION_ID", required: false },
     { name: "GHL_CLIENT_API_TOKEN", required: false },

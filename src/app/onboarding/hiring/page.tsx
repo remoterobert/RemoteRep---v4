@@ -30,6 +30,10 @@ export default async function HiringOnboardingPage({
 
   const params = await searchParams;
   const error = params.error;
+  // Entered at signup; confirmed here (and required for anyone who signed up
+  // before phone was collected).
+  const savedPhone =
+    typeof user.user_metadata?.phone === "string" ? user.user_metadata.phone : "";
 
   return (
     <main className="flex-1 flex items-center justify-center p-6">
@@ -90,6 +94,22 @@ export default async function HiringOnboardingPage({
                 className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
               />
             </div>
+          </div>
+
+          <div>
+            <label htmlFor="phone" className="block text-sm font-medium mb-1">
+              Mobile phone
+            </label>
+            <input
+              id="phone"
+              name="phone"
+              type="tel"
+              required
+              autoComplete="tel"
+              placeholder="(555) 123-4567"
+              defaultValue={savedPhone}
+              className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
+            />
           </div>
 
           <div>

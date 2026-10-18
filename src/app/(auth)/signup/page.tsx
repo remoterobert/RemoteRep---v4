@@ -49,6 +49,21 @@ export default async function SignupPage({
         </div>
 
         <div>
+          <label htmlFor="phone" className="mb-1.5 block text-sm font-medium">
+            Mobile phone
+          </label>
+          <input
+            id="phone"
+            name="phone"
+            type="tel"
+            required
+            autoComplete="tel"
+            placeholder="(555) 123-4567"
+            className={FIELD}
+          />
+        </div>
+
+        <div>
           <label
             htmlFor="password"
             className="mb-1.5 block text-sm font-medium"
