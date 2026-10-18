@@ -1,7 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
-import { ArrowRightIcon, LockClosedIcon } from "@heroicons/react/24/solid";
+import { useActionState, useState } from "react";
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  CheckIcon,
+  LockClosedIcon,
+} from "@heroicons/react/24/solid";
 import { submitCroIntake } from "./actions";
 import {
   INCOME_RANGES,
@@ -11,10 +16,25 @@ import {
   type IntakeState,
 } from "./options";
 
+// Multi-step application: four one-tap questions, then contact details.
+// Starting with easy taps (instead of a wall of fields) gets far more people
+// to begin; by the contact step they've already invested. All answers post
+// together to the same server action as before.
+
 const initialState: IntakeState = { error: null };
 
+const QUESTIONS = [
+  { name: "leadership_years", q: "How long have you led sales teams?", options: LEADERSHIP_YEARS },
+  { name: "team_size", q: "What's the largest team you've led?", options: TEAM_SIZES },
+  { name: "income_range", q: "What's your current annual income?", options: INCOME_RANGES },
+  { name: "timeline", q: "When would you like to start?", options: TIMELINES },
+] as const;
+
+type QName = (typeof QUESTIONS)[number]["name"];
+const TOTAL = QUESTIONS.length + 1;
+
 const inputCls =
-  "w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white placeholder:text-white/30 outline-none transition focus:border-secondary/60 focus:bg-white/[0.06] focus:ring-2 focus:ring-secondary/20";
+  "w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-[15px] text-white placeholder:text-white/30 outline-none transition focus:border-secondary/60 focus:bg-white/[0.06] focus:ring-4 focus:ring-secondary/10";
 
 function Field({
   label,
@@ -29,46 +49,12 @@ function Field({
 }) {
   return (
     <div>
-      <label
-        htmlFor={htmlFor}
-        className="mb-1.5 block text-sm font-medium text-white/80"
-      >
+      <label htmlFor={htmlFor} className="mb-1.5 block text-xs font-semibold text-white/60">
         {label}
-        {optional && <span className="ml-1 text-white/35">(optional)</span>}
+        {optional && <span className="ml-1 font-normal text-white/30">(optional)</span>}
       </label>
       {children}
     </div>
-  );
-}
-
-function Select({
-  name,
-  options,
-}: {
-  name: string;
-  options: readonly string[];
-}) {
-  return (
-    <select
-      id={name}
-      name={name}
-      required
-      defaultValue=""
-      className={`${inputCls} appearance-none bg-[length:16px] bg-[right_1rem_center] bg-no-repeat [&>option]:bg-[#0a0f1f]`}
-      style={{
-        backgroundImage:
-          "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23ffffff80'%3E%3Cpath d='M5.3 7.3a1 1 0 0 1 1.4 0L10 10.6l3.3-3.3a1 1 0 1 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 0-1.4z'/%3E%3C/svg%3E\")",
-      }}
-    >
-      <option value="" disabled>
-        Choose one
-      </option>
-      {options.map((o) => (
-        <option key={o} value={o}>
-          {o}
-        </option>
-      ))}
-    </select>
   );
 }
 
@@ -77,56 +63,117 @@ export function IntakeForm({
 }: {
   utm: { source?: string; medium?: string; campaign?: string };
 }) {
-  const [state, formAction, pending] = useActionState(
-    submitCroIntake,
-    initialState,
-  );
+  const [state, formAction, pending] = useActionState(submitCroIntake, initialState);
+  const [step, setStep] = useState(0);
+  const [answers, setAnswers] = useState<Partial<Record<QName, string>>>({});
+
+  const onContact = step === QUESTIONS.length;
+  const progress = ((step + (onContact ? 1 : 0)) / TOTAL) * 100;
+
+  function choose(name: QName, value: string) {
+    setAnswers((a) => ({ ...a, [name]: value }));
+    // brief pause so the tap registers visually before advancing
+    setTimeout(() => setStep((s) => Math.min(s + 1, QUESTIONS.length)), 180);
+  }
 
   return (
-    <form action={formAction} className="space-y-5">
-      <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="First name" htmlFor="first_name">
-          <input id="first_name" name="first_name" required maxLength={100} autoComplete="given-name" className={inputCls} />
-        </Field>
-        <Field label="Last name" htmlFor="last_name">
-          <input id="last_name" name="last_name" required maxLength={100} autoComplete="family-name" className={inputCls} />
-        </Field>
-        <Field label="Email" htmlFor="email">
-          <input id="email" name="email" type="email" required maxLength={200} autoComplete="email" className={inputCls} />
-        </Field>
-        <Field label="Phone" htmlFor="phone">
-          <input id="phone" name="phone" type="tel" required maxLength={40} autoComplete="tel" className={inputCls} />
-        </Field>
-        <Field label="Current title" htmlFor="current_title">
-          <input id="current_title" name="current_title" required maxLength={150} placeholder="VP of Sales" autoComplete="organization-title" className={inputCls} />
-        </Field>
-        <Field label="LinkedIn profile" htmlFor="linkedin_url" optional>
-          <input id="linkedin_url" name="linkedin_url" type="url" maxLength={300} placeholder="https://linkedin.com/in/…" className={inputCls} />
-        </Field>
-        <Field label="Years leading sales teams" htmlFor="leadership_years">
-          <Select name="leadership_years" options={LEADERSHIP_YEARS} />
-        </Field>
-        <Field label="Largest team you've led" htmlFor="team_size">
-          <Select name="team_size" options={TEAM_SIZES} />
-        </Field>
-        <Field label="Current annual income" htmlFor="income_range">
-          <Select name="income_range" options={INCOME_RANGES} />
-        </Field>
-        <Field label="When would you like to start?" htmlFor="timeline">
-          <Select name="timeline" options={TIMELINES} />
-        </Field>
+    <form action={formAction}>
+      {/* progress */}
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-bold uppercase tracking-[0.2em] text-secondary">
+          {onContact ? "Last step" : `Question ${step + 1} of ${QUESTIONS.length}`}
+        </span>
+        {step > 0 ? (
+          <button
+            type="button"
+            onClick={() => setStep((s) => s - 1)}
+            className="inline-flex items-center gap-1 font-semibold text-white/50 transition hover:text-white"
+          >
+            <ArrowLeftIcon className="h-3.5 w-3.5" /> Back
+          </button>
+        ) : (
+          <span className="text-white/40">About 60 seconds</span>
+        )}
+      </div>
+      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-secondary to-amber-300 transition-all duration-500"
+          style={{ width: `${Math.max(progress, 6)}%` }}
+        />
       </div>
 
-      <Field label="Why is now the right time for you?" htmlFor="why_now" optional>
-        <textarea
-          id="why_now"
-          name="why_now"
-          rows={4}
-          maxLength={3000}
-          placeholder="What would change for you if this worked?"
-          className={inputCls}
-        />
-      </Field>
+      {/* answers travel with the form regardless of which step is showing */}
+      {QUESTIONS.map((q) => (
+        <input key={q.name} type="hidden" name={q.name} value={answers[q.name] ?? ""} />
+      ))}
+
+      {!onContact ? (
+        <div key={step} className="mt-7">
+          <h3 className="text-2xl font-bold leading-tight tracking-tight">
+            {QUESTIONS[step].q}
+          </h3>
+          <div className="mt-5 grid gap-2.5 sm:grid-cols-2">
+            {QUESTIONS[step].options.map((o) => {
+              const picked = answers[QUESTIONS[step].name] === o;
+              return (
+                <button
+                  key={o}
+                  type="button"
+                  onClick={() => choose(QUESTIONS[step].name, o)}
+                  className={`group flex items-center justify-between gap-3 rounded-2xl border px-4 py-4 text-left text-[15px] font-semibold transition ${
+                    picked
+                      ? "border-secondary bg-secondary/15 text-white"
+                      : "border-white/10 bg-white/[0.03] text-white/85 hover:border-white/25 hover:bg-white/[0.06]"
+                  }`}
+                >
+                  {o}
+                  <span
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition ${
+                      picked ? "border-secondary bg-secondary" : "border-white/20 group-hover:border-white/40"
+                    }`}
+                  >
+                    {picked && <CheckIcon className="h-3 w-3 text-dark-background" />}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div className="mt-7 space-y-4">
+          <div>
+            <h3 className="text-2xl font-bold leading-tight tracking-tight">
+              Where should we send your call details?
+            </h3>
+            <p className="mt-1.5 text-sm text-white/45">
+              You&apos;ll pick your call time on the next screen.
+            </p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="First name" htmlFor="first_name">
+              <input id="first_name" name="first_name" required maxLength={100} autoComplete="given-name" className={inputCls} />
+            </Field>
+            <Field label="Last name" htmlFor="last_name">
+              <input id="last_name" name="last_name" required maxLength={100} autoComplete="family-name" className={inputCls} />
+            </Field>
+            <Field label="Email" htmlFor="email">
+              <input id="email" name="email" type="email" required maxLength={200} autoComplete="email" className={inputCls} />
+            </Field>
+            <Field label="Phone" htmlFor="phone">
+              <input id="phone" name="phone" type="tel" required maxLength={40} autoComplete="tel" className={inputCls} />
+            </Field>
+            <Field label="Current title" htmlFor="current_title">
+              <input id="current_title" name="current_title" required maxLength={150} placeholder="VP of Sales" autoComplete="organization-title" className={inputCls} />
+            </Field>
+            <Field label="LinkedIn" htmlFor="linkedin_url" optional>
+              <input id="linkedin_url" name="linkedin_url" type="url" maxLength={300} placeholder="https://linkedin.com/in/…" className={inputCls} />
+            </Field>
+          </div>
+          <Field label="Why is now the right time?" htmlFor="why_now" optional>
+            <textarea id="why_now" name="why_now" rows={2} maxLength={3000} className={inputCls} />
+          </Field>
+        </div>
+      )}
 
       {/* Honeypot — hidden from people, irresistible to bots. */}
       <div aria-hidden className="absolute left-[-9999px] h-0 w-0 overflow-hidden">
@@ -138,25 +185,23 @@ export function IntakeForm({
       <input type="hidden" name="utm_campaign" value={utm.campaign ?? ""} />
 
       {state.error && (
-        <div
-          role="alert"
-          className="rounded-xl border border-danger/40 bg-danger/10 p-3 text-sm text-red-200"
-        >
+        <div role="alert" className="mt-5 rounded-xl border border-danger/40 bg-danger/10 p-3 text-sm text-red-200">
           {state.error}
         </div>
       )}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-secondary px-6 py-4 text-base font-bold text-dark-background shadow-[0_8px_30px_-8px_rgba(251,220,59,0.6)] transition hover:brightness-105 disabled:cursor-wait disabled:opacity-70"
-      >
-        {pending ? "Submitting…" : "Submit & Choose My Call Time"}
-        {!pending && (
-          <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-        )}
-      </button>
-      <p className="flex items-center justify-center gap-1.5 text-xs text-white/40">
+      {onContact && (
+        <button
+          type="submit"
+          disabled={pending}
+          className="group relative mt-6 inline-flex w-full items-center justify-center gap-2 overflow-hidden rounded-full bg-secondary px-6 py-4 text-base font-bold text-dark-background shadow-[0_10px_40px_-10px_rgba(251,220,59,0.7),inset_0_1px_0_rgba(255,255,255,0.5)] transition hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-70"
+        >
+          {pending ? "Submitting…" : "Submit & choose my call time"}
+          {!pending && <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-1" />}
+        </button>
+      )}
+
+      <p className="mt-5 flex items-center justify-center gap-1.5 text-xs text-white/35">
         <LockClosedIcon className="h-3.5 w-3.5" />
         Confidential. We never share your details or contact your employer.
       </p>
