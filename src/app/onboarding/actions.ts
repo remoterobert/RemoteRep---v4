@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { syncSignupToGhl } from "@/lib/ghl-signups";
 import { isSalesRole, type SalesRole } from "@/lib/sales-roles";
 
 export async function completeHiringOnboarding(formData: FormData) {
@@ -31,6 +33,26 @@ export async function completeHiringOnboarding(formData: FormData) {
   if (error) {
     redirect(
       `/onboarding/hiring?error=${encodeURIComponent(error.message)}`,
+    );
+  }
+
+  // New company → GHL client sub-account, after the response is sent.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user?.email) {
+    const email = user.email;
+    after(() =>
+      syncSignupToGhl(user.id, {
+        type: "client",
+        email,
+        firstName,
+        lastName,
+        companyName,
+        tags: ["client", "self-registered"],
+        opportunityName: `${firstName} ${lastName} | ${companyName}`,
+        note: `Signed up on remoterep.com as a hiring company.\nHiring for: ${hiringFor.join(", ")}`,
+      }),
     );
   }
 
@@ -66,6 +88,24 @@ export async function completeCandidateOnboarding(formData: FormData) {
   if (error) {
     redirect(
       `/onboarding/candidate?error=${encodeURIComponent(error.message)}`,
+    );
+  }
+
+  // New rep → GHL talent sub-account, after the response is sent.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user?.email) {
+    const email = user.email;
+    after(() =>
+      syncSignupToGhl(user.id, {
+        type: "rep",
+        email,
+        firstName,
+        lastName,
+        tags: ["talent", "self-registered"],
+        note: `Signed up on remoterep.com as a sales rep.\nSpecialties: ${specialties.join(", ")}`,
+      }),
     );
   }
 

@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
+import { logGhl, syncLead } from "@/lib/ghl";
 import {
   INCOME_RANGES,
   LEADERSHIP_YEARS,
@@ -16,10 +17,13 @@ import {
  *
  * Every delivery channel is best-effort and env-gated, so the form keeps
  * working while channels are being wired up:
- *   1. Supabase `cro_leads` table (needs SUPABASE_SERVICE_ROLE_KEY).
- *   2. CRO_LEADS_WEBHOOK_URL — POST JSON (e.g. a GoHighLevel inbound webhook
+ *   1. GoHighLevel talent sub-account — contact, tags, a note with the
+ *      answers, and an opportunity on the CRO pipeline (see src/lib/ghl.ts).
+ *      This is where the sales team works the lead.
+ *   2. Supabase `cro_leads` table (needs SUPABASE_SERVICE_ROLE_KEY).
+ *   3. CRO_LEADS_WEBHOOK_URL — POST JSON (e.g. a GoHighLevel inbound webhook
  *      to drop the lead into the CRM / sales pipeline).
- *   3. CRO_LEADS_NOTIFY_EMAIL — email alert via Resend.
+ *   4. CRO_LEADS_NOTIFY_EMAIL — email alert via Resend.
  * If at least one channel accepts the lead we send the applicant on to book
  * their call. If every configured channel fails we show an error instead of
  * silently losing the lead.
@@ -93,7 +97,36 @@ export async function submitCroIntake(
     errors.push("Please answer each of the multiple-choice questions.");
   if (errors.length > 0) return { error: errors.join(" ") };
 
-  // 1. Database
+  // 1. GoHighLevel
+  const source =
+    [lead.utm_source, lead.utm_medium, lead.utm_campaign].filter(Boolean).join(" / ") || null;
+  const ghlResult = await syncLead({
+    type: "cro",
+    email: lead.email,
+    firstName: lead.first_name,
+    lastName: lead.last_name,
+    phone: lead.phone,
+    tags: ["fractional-cro", "cro-application", "self-registered"],
+    source: "RemoteRep website — Fractional CRO application",
+    opportunityName: `${lead.first_name} ${lead.last_name} — Fractional CRO`,
+    note: [
+      "Fractional CRO application (remoterep.com/fractional-cro)",
+      "",
+      `Current title: ${lead.current_title}`,
+      `Years leading sales teams: ${lead.leadership_years}`,
+      `Largest team led: ${lead.team_size}`,
+      `Current income: ${lead.income_range}`,
+      `Timeline: ${lead.timeline}`,
+      `LinkedIn: ${lead.linkedin_url ?? "—"}`,
+      `Why now: ${lead.why_now ?? "—"}`,
+      `Traffic source: ${source ?? "direct"}`,
+    ].join("\n"),
+  });
+  logGhl("cro-intake", ghlResult);
+  const ghl: Outcome =
+    ghlResult.status === "synced" ? "sent" : ghlResult.status === "failed" ? "failed" : "skipped";
+
+  // 2. Database
   let db: Outcome = "skipped";
   if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
     try {
@@ -106,7 +139,7 @@ export async function submitCroIntake(
     }
   }
 
-  // 2. CRM webhook
+  // 3. CRM webhook
   let webhook: Outcome = "skipped";
   const webhookUrl = process.env.CRO_LEADS_WEBHOOK_URL;
   if (webhookUrl) {
@@ -128,7 +161,7 @@ export async function submitCroIntake(
     }
   }
 
-  // 3. Email alert
+  // 4. Email alert
   let email: Outcome = "skipped";
   const notifyTo = process.env.CRO_LEADS_NOTIFY_EMAIL;
   if (notifyTo) {
@@ -143,7 +176,7 @@ export async function submitCroIntake(
       ["Current income", lead.income_range],
       ["Timeline", lead.timeline],
       ["Why now", lead.why_now],
-      ["Source", [lead.utm_source, lead.utm_medium, lead.utm_campaign].filter(Boolean).join(" / ") || null],
+      ["Source", source],
     ];
     const html = `<h2>New Fractional CRO application</h2><table cellpadding="6">${rows
       .map(
@@ -161,8 +194,8 @@ export async function submitCroIntake(
     email = "sent" in result ? (result.sent ? "sent" : "failed") : "skipped";
   }
 
-  const outcomes = [db, webhook, email];
-  console.log("[cro-intake] delivered", { db, webhook, email });
+  const outcomes = [ghl, db, webhook, email];
+  console.log("[cro-intake] delivered", { ghl, db, webhook, email });
 
   // Something was configured and nothing accepted the lead — don't lose it.
   if (outcomes.includes("failed") && !outcomes.includes("sent")) {

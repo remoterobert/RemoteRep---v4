@@ -28,7 +28,7 @@ Note: individual listing pages (`/listings/<id>`) are still public by design so 
 
 The form asks for name, email, phone, LinkedIn (optional), current title, years leading sales teams, largest team, income range, timeline and "why now" (optional). UTM tags in the page URL (`?utm_source=…`) are saved with the application. A hidden "honeypot" field quietly drops spam bots.
 
-On submit, the application is sent to every channel that's set up:
+On submit, the application goes to **GoHighLevel** (talent sub-account: contact, tags, a note with the answers, and an opportunity on the CRO pipeline; see [GHL-INTEGRATION.md](GHL-INTEGRATION.md)) and to every other channel that's set up:
 
 | Setting (environment variable) | What it does |
 |---|---|
@@ -45,6 +45,6 @@ Migration `supabase/migrations/20261018000000_cro_leads.sql` adds the `cro_leads
 
 ## Still to fill in
 
-- Booking link → set `CRO_BOOKING_URL`.
+- Booking link → set `CRO_BOOKING_URL` to your GHL calendar's booking link, so bookings land on the same GHL contact.
 - Program name, real results and testimonials. The copy currently makes no specific earnings claims, and the hero portfolio is clearly labelled as a hypothetical illustration.
 - The five program modules on `/fractional-cro` are a draft outline. Edit them to match the real curriculum.
