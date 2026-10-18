@@ -18,6 +18,8 @@ The website does three things per lead, and nothing else:
 | Sales rep signup | Finishes "I'm a rep" onboarding | Talent | `rep-signup`, `talent`, `self-registered` | `rep-signup` |
 | Company signup | Finishes "I'm hiring" onboarding | Client | `client-signup`, `client`, `self-registered` | `client-signup` |
 
+**Every lead has a phone number.** RemoteRep doesn't accept email-only leads, so phone is required on signup, at onboarding (pre-filled from signup, and required for anyone who signed up before phone was collected), and on the CRO application. Numbers are cleaned up to international format (`+15551234567`) so GHL can match contacts and text them. US and Canadian numbers can be typed any way; other countries start with `+`. Code: `src/lib/phone.ts`. For signups the number is also saved on the account (`users.phone`).
+
 `talent`, `client` and `self-registered` are the tags v3 used, so older automations keep working. `self-registered` means *a platform user who signed themselves up*, so it's only added to signups, never to CRO applications.
 
 Rep and company signups sync **in the background after the page responds**, so a slow or broken GHL never slows down or breaks signup. Their GHL contact ID is saved in the `ghl_user_state` table.

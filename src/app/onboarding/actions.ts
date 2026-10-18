@@ -7,12 +7,24 @@ import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { syncSignupToGhl } from "@/lib/ghl-signups";
 import { UTM_COOKIE, parseUtmCookie } from "@/lib/utm";
+import { normalizePhone, PHONE_ERROR } from "@/lib/phone";
 import { isSalesRole, type SalesRole } from "@/lib/sales-roles";
+
+/** Best-effort: keep the account's phone on file. Never blocks onboarding. */
+async function savePhone(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  phone: string,
+) {
+  const { error } = await supabase.from("users").update({ phone }).eq("id", userId);
+  if (error) console.error("[onboarding] could not save phone:", error.message);
+}
 
 export async function completeHiringOnboarding(formData: FormData) {
   const firstName = String(formData.get("first_name") ?? "").trim();
   const lastName = String(formData.get("last_name") ?? "").trim();
   const companyName = String(formData.get("company_name") ?? "").trim();
+  const phone = normalizePhone(String(formData.get("phone") ?? ""));
   const hiringFor = formData
     .getAll("hiring_for")
     .map((v) => String(v))
@@ -22,6 +34,9 @@ export async function completeHiringOnboarding(formData: FormData) {
     redirect(
       `/onboarding/hiring?error=${encodeURIComponent("Please fill in your name and company, and pick at least one role.")}`,
     );
+  }
+  if (!phone) {
+    redirect(`/onboarding/hiring?error=${encodeURIComponent(PHONE_ERROR)}`);
   }
 
   const supabase = await createClient();
@@ -42,6 +57,7 @@ export async function completeHiringOnboarding(formData: FormData) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (user) await savePhone(supabase, user.id, phone);
   if (user?.email) {
     const email = user.email;
     const utm = parseUtmCookie((await cookies()).get(UTM_COOKIE)?.value);
@@ -51,6 +67,7 @@ export async function completeHiringOnboarding(formData: FormData) {
         {
           type: "client",
           email,
+          phone,
           firstName,
           lastName,
           companyName,
@@ -73,6 +90,7 @@ export async function completeHiringOnboarding(formData: FormData) {
 export async function completeCandidateOnboarding(formData: FormData) {
   const firstName = String(formData.get("first_name") ?? "").trim();
   const lastName = String(formData.get("last_name") ?? "").trim();
+  const phone = normalizePhone(String(formData.get("phone") ?? ""));
   const specialties = formData
     .getAll("specialties")
     .map((v) => String(v))
@@ -82,6 +100,9 @@ export async function completeCandidateOnboarding(formData: FormData) {
     redirect(
       `/onboarding/candidate?error=${encodeURIComponent("Please fill in your name and pick at least one role.")}`,
     );
+  }
+  if (!phone) {
+    redirect(`/onboarding/candidate?error=${encodeURIComponent(PHONE_ERROR)}`);
   }
 
   const supabase = await createClient();
@@ -101,6 +122,7 @@ export async function completeCandidateOnboarding(formData: FormData) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (user) await savePhone(supabase, user.id, phone);
   if (user?.email) {
     const email = user.email;
     const utm = parseUtmCookie((await cookies()).get(UTM_COOKIE)?.value);
@@ -110,6 +132,7 @@ export async function completeCandidateOnboarding(formData: FormData) {
         {
           type: "rep",
           email,
+          phone,
           firstName,
           lastName,
           tags: ["rep-signup", "talent", "self-registered"],

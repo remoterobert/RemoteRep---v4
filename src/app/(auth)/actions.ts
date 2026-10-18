@@ -5,16 +5,21 @@ import { createClient } from "@/lib/supabase/server";
 import { tryLegacyLogin } from "@/lib/legacy-login";
 import { getSiteOrigin } from "@/lib/site-origin";
 import { sendPasswordResetEmail } from "@/lib/password-reset";
+import { normalizePhone, PHONE_ERROR } from "@/lib/phone";
 
 export async function signup(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const confirmPassword = String(formData.get("confirm_password") ?? "");
+  const phone = normalizePhone(String(formData.get("phone") ?? ""));
 
   if (!email || !password) {
     redirect(
       `/signup?error=${encodeURIComponent("Email and password are required.")}`,
     );
+  }
+  if (!phone) {
+    redirect(`/signup?error=${encodeURIComponent(PHONE_ERROR)}`);
   }
   if (password.length < 8) {
     redirect(
@@ -34,6 +39,8 @@ export async function signup(formData: FormData) {
     email,
     password,
     options: {
+      // Carried to onboarding, which saves it to users.phone and GHL.
+      data: { phone },
       emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(
         "/onboarding/choose-role",
       )}`,

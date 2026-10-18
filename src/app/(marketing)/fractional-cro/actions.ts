@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email";
 import { cookies } from "next/headers";
 import { logGhl, syncLead } from "@/lib/ghl";
+import { normalizePhone, PHONE_ERROR } from "@/lib/phone";
 import {
   UTM_COOKIE,
   hasUtm,
@@ -90,8 +91,9 @@ export async function submitCroIntake(
   if (!lead.first_name || !lead.last_name)
     errors.push("Please share your full name.");
   if (!isValidEmail(lead.email)) errors.push("Please share a valid email.");
-  if (lead.phone.replace(/\D/g, "").length < 7)
-    errors.push("Please share a phone number we can reach you on.");
+  const phone = normalizePhone(lead.phone);
+  if (!phone) errors.push(PHONE_ERROR);
+  else lead.phone = phone;
   if (lead.current_title.length < 2)
     errors.push("Please share your current title.");
   if (
