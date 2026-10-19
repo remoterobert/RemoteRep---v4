@@ -6,6 +6,7 @@ import { tryLegacyLogin } from "@/lib/legacy-login";
 import { getSiteOrigin } from "@/lib/site-origin";
 import { sendPasswordResetEmail } from "@/lib/password-reset";
 import { normalizePhone, PHONE_ERROR } from "@/lib/phone";
+import { readSmsConsent } from "@/lib/sms-consent";
 
 export async function signup(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
@@ -39,8 +40,9 @@ export async function signup(formData: FormData) {
     email,
     password,
     options: {
-      // Carried to onboarding, which saves it to users.phone and GHL.
-      data: { phone },
+      // Carried to onboarding, which saves it to users.phone and GHL. The SMS
+      // consent record (what they agreed to, when) lives with it.
+      data: { phone, ...readSmsConsent(formData, "signup") },
       emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(
         "/onboarding/choose-role",
       )}`,

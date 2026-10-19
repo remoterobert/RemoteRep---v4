@@ -36,6 +36,15 @@ export default function TermsPage() {
           p: "The service is provided “as is” without warranties. To the fullest extent permitted by law, RemoteRep isn't liable for indirect or consequential damages, and our total liability is limited to the amounts you paid us in the prior twelve months.",
         },
         {
+          // DRAFT — A2P 10DLC program terms, pending review by counsel.
+          h: "Text messaging",
+          id: "text-messaging",
+          p: [
+            "RemoteRep's text messages cover your account, job opportunities and RemoteRep programs. You receive them only if you opt in by checking the text-message consent box on one of our forms; consent is not a condition of signing up or purchase.",
+            "Message frequency varies. Message and data rates may apply. Reply STOP to cancel at any time; you'll receive one confirmation and no further messages. Reply HELP for help, or email support@remoterep.com. Carriers are not liable for delayed or undelivered messages. See our Privacy Policy for how we handle your mobile number and consent.",
+          ],
+        },
+        {
           h: "Changes & contact",
           p: "We may update these terms from time to time; continued use after an update means you accept the revised terms. Questions? Reach us any time using the contact details below.",
         },

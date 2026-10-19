@@ -2,6 +2,20 @@ import Link from "next/link";
 
 const APP = "https://app.remoterep.com";
 
+export type LegalSection = {
+  h: string;
+  /** Anchor for deep links, e.g. /privacy#text-messaging. */
+  id?: string;
+  /** One paragraph, or several. */
+  p?: string | string[];
+  /** Optional bullet list, shown after the paragraphs. */
+  list?: string[];
+  /** Optional paragraph(s) after the list. */
+  after?: string | string[];
+};
+
+const paras = (v?: string | string[]) => (v === undefined ? [] : Array.isArray(v) ? v : [v]);
+
 /**
  * Shared full-screen dark layout for the legal pages (Privacy, Terms) so they
  * match the marketing site. Renders a simple header, a prose body from the
@@ -16,7 +30,7 @@ export function LegalPage({
   title: string;
   updated: string;
   intro: string;
-  sections: { h: string; p: string }[];
+  sections: LegalSection[];
 }) {
   return (
     <div className="fixed inset-0 z-40 overflow-y-auto bg-[#05070f] text-white antialiased">
@@ -46,9 +60,25 @@ export function LegalPage({
 
         <div className="mt-10 space-y-8">
           {sections.map((s) => (
-            <section key={s.h}>
+            <section key={s.h} id={s.id} className="scroll-mt-24">
               <h2 className="text-xl font-bold">{s.h}</h2>
-              <p className="mt-2 leading-relaxed text-white/65">{s.p}</p>
+              {paras(s.p).map((t) => (
+                <p key={t} className="mt-2 leading-relaxed text-white/65">
+                  {t}
+                </p>
+              ))}
+              {s.list && (
+                <ul className="mt-3 list-disc space-y-1.5 pl-5 leading-relaxed text-white/65">
+                  {s.list.map((t) => (
+                    <li key={t}>{t}</li>
+                  ))}
+                </ul>
+              )}
+              {paras(s.after).map((t) => (
+                <p key={t} className="mt-3 leading-relaxed text-white/65">
+                  {t}
+                </p>
+              ))}
             </section>
           ))}
         </div>

@@ -27,6 +27,7 @@ Before contributing or making changes, read:
 | [docs/REP-LANDING-PAGES.md](docs/REP-LANDING-PAGES.md) | `/reps` and `/fractional-cro` landing pages, CRO intake settings |
 | [docs/GHL-INTEGRATION.md](docs/GHL-INTEGRATION.md) | How site leads flow into GoHighLevel (tags + UTMs), and its settings |
 | [docs/PASSWORD-RESET.md](docs/PASSWORD-RESET.md) | Forgot-password flow and the settings it needs |
+| [docs/SMS-CONSENT.md](docs/SMS-CONSENT.md) | Text-message consent checkbox (A2P 10DLC), Privacy Policy and Terms drafts |
 
 ---
 

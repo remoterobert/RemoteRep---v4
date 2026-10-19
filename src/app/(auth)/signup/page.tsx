@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signup } from "../actions";
 import AuthShell from "../AuthShell";
+import { SmsConsentCheckbox } from "@/components/forms/SmsConsentCheckbox";
 
 export const dynamic = "force-dynamic";
 
@@ -100,6 +101,8 @@ export default async function SignupPage({
             className={FIELD}
           />
         </div>
+
+        <SmsConsentCheckbox />
 
         <button
           type="submit"

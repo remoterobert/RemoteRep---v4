@@ -6,6 +6,7 @@ import { sendEmail } from "@/lib/email";
 import { cookies } from "next/headers";
 import { logGhl, syncLead } from "@/lib/ghl";
 import { normalizePhone, PHONE_ERROR } from "@/lib/phone";
+import { SMS_OPT_IN_TAG, readSmsConsent, smsConsentNoteLine } from "@/lib/sms-consent";
 import {
   UTM_COOKIE,
   hasUtm,
@@ -112,6 +113,8 @@ export async function submitCroIntake(
     : parseUtmCookie((await cookies()).get(UTM_COOKIE)?.value);
   const source = utmSource(utm, "");
 
+  const sms = readSmsConsent(formData, "Fractional CRO application (remoterep.com/fractional-cro)");
+
   // 1. GoHighLevel
   const ghlResult = await syncLead({
     type: "cro",
@@ -120,7 +123,7 @@ export async function submitCroIntake(
     lastName: lead.last_name,
     phone: lead.phone,
     // Applicants haven't signed up for the platform, so no `self-registered`.
-    tags: ["fcro-application"],
+    tags: ["fcro-application", ...(sms.sms_consent ? [SMS_OPT_IN_TAG] : [])],
     source: source || "RemoteRep website — Fractional CRO application",
     note: [
       "Fractional CRO application (remoterep.com/fractional-cro)",
@@ -134,6 +137,8 @@ export async function submitCroIntake(
       `Why now: ${lead.why_now ?? "—"}`,
       "",
       ...utmNoteLines(utm),
+      "",
+      smsConsentNoteLine(sms),
     ].join("\n"),
   });
   logGhl("cro-intake", ghlResult);
@@ -173,6 +178,7 @@ export async function submitCroIntake(
           submitted_at: new Date().toISOString(),
           ...lead,
           ...utm,
+          ...sms,
         }),
       });
       webhook = res.ok ? "sent" : "failed";
@@ -199,6 +205,7 @@ export async function submitCroIntake(
       ["Timeline", lead.timeline],
       ["Why now", lead.why_now],
       ["Source", source || null],
+      ["SMS consent", sms.sms_consent ? `Yes (wording v${sms.sms_consent_version})` : "No — do not text"],
     ];
     const html = `<h2>New Fractional CRO application</h2><table cellpadding="6">${rows
       .map(

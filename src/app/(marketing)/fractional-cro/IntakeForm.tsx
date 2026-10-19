@@ -16,6 +16,7 @@ import {
   type IntakeState,
 } from "./options";
 import { UTM_KEYS, type Utm } from "@/lib/utm";
+import { SmsConsentCheckbox } from "@/components/forms/SmsConsentCheckbox";
 
 // Multi-step application: four one-tap questions, then contact details.
 // Starting with easy taps (instead of a wall of fields) gets far more people
@@ -173,6 +174,7 @@ export function IntakeForm({
           <Field label="Why is now the right time?" htmlFor="why_now" optional>
             <textarea id="why_now" name="why_now" rows={2} maxLength={3000} className={inputCls} />
           </Field>
+          <SmsConsentCheckbox tone="dark" />
         </div>
       )}
 

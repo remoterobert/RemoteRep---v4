@@ -8,7 +8,38 @@ import { createClient } from "@/lib/supabase/server";
 import { syncSignupToGhl } from "@/lib/ghl-signups";
 import { UTM_COOKIE, parseUtmCookie } from "@/lib/utm";
 import { normalizePhone, PHONE_ERROR } from "@/lib/phone";
+import {
+  SMS_OPT_IN_TAG,
+  readSmsConsent,
+  smsConsentNoteLine,
+  type SmsConsent,
+} from "@/lib/sms-consent";
 import { isSalesRole, type SalesRole } from "@/lib/sales-roles";
+
+/**
+ * The user's SMS consent: recorded at signup, or — for accounts created
+ * before consent was collected — from the checkbox shown at onboarding,
+ * which we then save to their account.
+ */
+async function resolveSmsConsent(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  metadata: Record<string, unknown> | undefined,
+  formData: FormData,
+  source: string,
+): Promise<SmsConsent> {
+  if (typeof metadata?.sms_consent === "boolean") {
+    return {
+      sms_consent: metadata.sms_consent,
+      sms_consent_at: String(metadata.sms_consent_at ?? ""),
+      sms_consent_version: String(metadata.sms_consent_version ?? ""),
+      sms_consent_source: String(metadata.sms_consent_source ?? "signup"),
+    };
+  }
+  const consent = readSmsConsent(formData, source);
+  const { error } = await supabase.auth.updateUser({ data: consent });
+  if (error) console.error("[onboarding] could not save SMS consent:", error.message);
+  return consent;
+}
 
 /** Best-effort: keep the account's phone on file. Never blocks onboarding. */
 async function savePhone(
@@ -59,6 +90,7 @@ export async function completeHiringOnboarding(formData: FormData) {
   } = await supabase.auth.getUser();
   if (user) await savePhone(supabase, user.id, phone);
   if (user?.email) {
+    const sms = await resolveSmsConsent(supabase, user.user_metadata, formData, "onboarding (hiring)");
     const email = user.email;
     const utm = parseUtmCookie((await cookies()).get(UTM_COOKIE)?.value);
     after(() =>
@@ -71,8 +103,13 @@ export async function completeHiringOnboarding(formData: FormData) {
           firstName,
           lastName,
           companyName,
-          tags: ["client-signup", "client", "self-registered"],
-          note: `Signed up on remoterep.com as a hiring company.\nHiring for: ${hiringFor.join(", ")}`,
+          tags: [
+            "client-signup",
+            "client",
+            "self-registered",
+            ...(sms.sms_consent ? [SMS_OPT_IN_TAG] : []),
+          ],
+          note: `Signed up on remoterep.com as a hiring company.\nHiring for: ${hiringFor.join(", ")}\n${smsConsentNoteLine(sms)}`,
         },
         utm,
       ),
@@ -124,6 +161,7 @@ export async function completeCandidateOnboarding(formData: FormData) {
   } = await supabase.auth.getUser();
   if (user) await savePhone(supabase, user.id, phone);
   if (user?.email) {
+    const sms = await resolveSmsConsent(supabase, user.user_metadata, formData, "onboarding (rep)");
     const email = user.email;
     const utm = parseUtmCookie((await cookies()).get(UTM_COOKIE)?.value);
     after(() =>
@@ -135,8 +173,13 @@ export async function completeCandidateOnboarding(formData: FormData) {
           phone,
           firstName,
           lastName,
-          tags: ["rep-signup", "talent", "self-registered"],
-          note: `Signed up on remoterep.com as a sales rep.\nSpecialties: ${specialties.join(", ")}`,
+          tags: [
+            "rep-signup",
+            "talent",
+            "self-registered",
+            ...(sms.sms_consent ? [SMS_OPT_IN_TAG] : []),
+          ],
+          note: `Signed up on remoterep.com as a sales rep.\nSpecialties: ${specialties.join(", ")}\n${smsConsentNoteLine(sms)}`,
         },
         utm,
       ),

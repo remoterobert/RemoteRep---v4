@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SmsConsentCheckbox } from "@/components/forms/SmsConsentCheckbox";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { completeCandidateOnboarding } from "../actions";
@@ -33,6 +34,8 @@ export default async function CandidateOnboardingPage({
   // before phone was collected).
   const savedPhone =
     typeof user.user_metadata?.phone === "string" ? user.user_metadata.phone : "";
+  // Only people who signed up before SMS consent was collected are asked here.
+  const askSmsConsent = typeof user.user_metadata?.sms_consent !== "boolean";
 
   return (
     <main className="flex-1 flex items-center justify-center p-6">
@@ -110,6 +113,8 @@ export default async function CandidateOnboardingPage({
               className="w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm"
             />
           </div>
+
+          {askSmsConsent && <SmsConsentCheckbox />}
 
           <fieldset>
             <legend className="text-sm font-medium mb-2">
